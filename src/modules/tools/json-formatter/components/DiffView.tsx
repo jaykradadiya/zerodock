@@ -101,7 +101,6 @@ export function DiffView({ original, modified, originalModelId, modifiedModelId 
             readOnly: true,
             renderSideBySide: true,
             ignoreTrimWhitespace: true,
-            largeFileOptimizations: true,
           }}
           loading={
             <div className="flex-1 h-full flex items-center justify-center text-slate-400 text-sm">

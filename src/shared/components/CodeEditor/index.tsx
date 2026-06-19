@@ -10,10 +10,10 @@ interface CodeEditorProps extends Omit<EditorProps, 'theme' | 'onChange'> {
   language?: string;
   readOnly?: boolean;
   onChange?: (value: string | undefined) => void;
-  editorRefProp?: React.MutableRefObject<any>;
+  editorRef?: React.MutableRefObject<any>;
 }
 
-export function CodeEditor({ modelId, value, language = 'json', readOnly = false, onChange, editorRefProp, ...props }: CodeEditorProps) {
+export function CodeEditor({ modelId, value, language = 'json', readOnly = false, onChange, editorRef: externalEditorRef, ...props }: CodeEditorProps) {
   const { theme } = useGlobalStore();
   const getFileContent = useWorkspaceStore(s => s.getFileContent);
   const updateTabContent = useWorkspaceStore(s => s.updateTabContent);
@@ -154,8 +154,8 @@ export function CodeEditor({ modelId, value, language = 'json', readOnly = false
   const handleEditorDidMount = (editor: any, monaco: any) => {
     editorRef.current = editor;
     monacoRef.current = monaco;
-    if (editorRefProp) {
-      editorRefProp.current = editor;
+    if (externalEditorRef) {
+      externalEditorRef.current = editor;
     }
 
     editor.onDidChangeModelContent(() => {

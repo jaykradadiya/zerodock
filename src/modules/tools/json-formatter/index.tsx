@@ -716,7 +716,7 @@ export default function JsonFormatter() {
                   <CodeEditor 
                     modelId={activeTabId} 
                     language="json"
-                    editorRefProp={editorRef}
+                    editorRef={editorRef}
                     onChange={handleEditorChange}
                   />
                 ) : (

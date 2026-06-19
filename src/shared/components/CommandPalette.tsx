@@ -88,15 +88,21 @@ export function CommandPalette() {
 
   const allItems = [...toolItems, ...actionItems];
 
-  // Filter items based on search query and selected category tab
-  const filteredItems = allItems.filter((item) => {
-    const matchesSearch = 
-      item.name.toLowerCase().includes(search.toLowerCase()) ||
-      item.description.toLowerCase().includes(search.toLowerCase());
-      
-    if (activeCategory === 'All') return matchesSearch;
-    return matchesSearch && item.category === activeCategory;
-  });
+
+  // Derive active items first
+  const activeItems = activeCategory === 'All' 
+    ? allItems 
+    : allItems.filter(item => item.category === activeCategory);
+
+  const filteredItems = activeItems.filter(item => 
+    item.name.toLowerCase().includes(search.toLowerCase()) || 
+    (item.description && item.description.toLowerCase().includes(search.toLowerCase()))
+  );
+
+  // Force reset index if bounds are exceeded due to search/filter changes
+  if (selectedIndex >= filteredItems.length && filteredItems.length > 0) {
+    setSelectedIndex(0);
+  }
 
   // Keyboard navigation inside options list
   useEffect(() => {
@@ -118,11 +124,7 @@ export function CommandPalette() {
     return () => window.removeEventListener('keydown', handleListKeyDown);
   }, [commandPaletteOpen, filteredItems, selectedIndex]);
 
-  // Reset selected index when search query or category filter updates
-  useEffect(() => {
-    setSelectedIndex(0);
-  }, [search, activeCategory]);
-
+  // Remove useEffect causing synchronous state updates and rely on derive state directly when rendering
   if (!commandPaletteOpen) return null;
 
   return (

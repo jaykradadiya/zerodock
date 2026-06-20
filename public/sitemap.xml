@@ -1,73 +1,73 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://zerodock.dev/</loc>
+    <loc>https://zerodock.jaykradadiya2001.workers.dev/</loc>
     <lastmod>2026-06-15</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://zerodock.dev/diff-checker</loc>
+    <loc>https://zerodock.jaykradadiya2001.workers.dev/diff-checker</loc>
     <lastmod>2026-06-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://zerodock.dev/epoch-converter</loc>
+    <loc>https://zerodock.jaykradadiya2001.workers.dev/epoch-converter</loc>
     <lastmod>2026-06-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://zerodock.dev/json-type-converter</loc>
+    <loc>https://zerodock.jaykradadiya2001.workers.dev/json-type-converter</loc>
     <lastmod>2026-06-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://zerodock.dev/pdf-merger</loc>
+    <loc>https://zerodock.jaykradadiya2001.workers.dev/pdf-merger</loc>
     <lastmod>2026-06-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://zerodock.dev/json-formatter</loc>
+    <loc>https://zerodock.jaykradadiya2001.workers.dev/json-formatter</loc>
     <lastmod>2026-06-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://zerodock.dev/uuid-generator</loc>
+    <loc>https://zerodock.jaykradadiya2001.workers.dev/uuid-generator</loc>
     <lastmod>2026-06-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://zerodock.dev/base64-codec</loc>
+    <loc>https://zerodock.jaykradadiya2001.workers.dev/base64-codec</loc>
     <lastmod>2026-06-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://zerodock.dev/jwt-decoder</loc>
+    <loc>https://zerodock.jaykradadiya2001.workers.dev/jwt-decoder</loc>
     <lastmod>2026-06-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://zerodock.dev/hash-generator</loc>
+    <loc>https://zerodock.jaykradadiya2001.workers.dev/hash-generator</loc>
     <lastmod>2026-06-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://zerodock.dev/color-converter</loc>
+    <loc>https://zerodock.jaykradadiya2001.workers.dev/color-converter</loc>
     <lastmod>2026-06-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://zerodock.dev/url-encoder</loc>
+    <loc>https://zerodock.jaykradadiya2001.workers.dev/url-encoder</loc>
     <lastmod>2026-06-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>

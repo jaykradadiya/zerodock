@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { CodeEditor } from '../../../shared/components/CodeEditor';
-import { Play, Minimize2, AlertCircle, FileJson, Wrench, Settings2, ShieldCheck, GitCompare, Database, Upload, Download, Link as LinkIcon, Lock, TableProperties, Plus, X, LayoutTemplate, ChevronDown, Search, Code2 } from 'lucide-react';
+import { Play, Minimize2, AlertCircle, FileJson, Wrench, Settings2, ShieldCheck, GitCompare, Database, Upload, Download, Link as LinkIcon, Lock, TableProperties, Plus, X, LayoutTemplate, ChevronDown, Search, Code2, Maximize, Minimize } from 'lucide-react';
 import { json2csv, csv2json } from 'csv42';
 import type { WorkerMessage, WorkerError } from '../../../workers/base.worker';
 import { SchemaPanel } from './components/SchemaPanel';
@@ -53,6 +53,17 @@ export default function JsonFormatter() {
 
   const [showTransform, setShowTransform] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFullscreen) {
+        setIsFullscreen(false);
+      }
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [isFullscreen]);
 
   // Tab list dropdown finder
   const tabDropdownRef = useRef<HTMLDivElement | null>(null);
@@ -132,14 +143,14 @@ export default function JsonFormatter() {
   }, []);
 
   // Pipeline payload consumption
-  const { payload: pipelinePayload, clearPipelineData } = usePipelineStore();
+  const { payload: pipelinePayload, sourceToolId, clearPipelineData } = usePipelineStore();
   useEffect(() => {
-    if (pipelinePayload !== null) {
+    if (pipelinePayload !== null && sourceToolId !== 'json-formatter') {
       addTab(`Imported_${tabs.length + 1}.json`, pipelinePayload).then(() => {
         clearPipelineData();
       }).catch(console.error);
     }
-  }, [pipelinePayload]);
+  }, [pipelinePayload, sourceToolId]);
 
   useEffect(() => {
     workerRef.current = new JsonWorker();
@@ -459,7 +470,11 @@ export default function JsonFormatter() {
       </div>
 
       <div 
-        className={`w-full flex flex-col flex-1 min-h-0 bg-[var(--zd-surface)] rounded-2xl border ${isDragging ? 'border-[var(--zd-primary)] ring-4 ring-[var(--zd-primary-soft)]' : 'border-[var(--zd-border)]'} shadow-[var(--zd-shadow-md)] overflow-hidden transition-all`}
+        className={`
+          w-full flex flex-col flex-1 min-h-0 bg-[var(--zd-surface)] border shadow-[var(--zd-shadow-md)] overflow-hidden transition-all 
+          ${isDragging ? 'border-[var(--zd-primary)] ring-4 ring-[var(--zd-primary-soft)]' : 'border-[var(--zd-border)]'} 
+          ${isFullscreen ? 'fixed inset-0 z-[110] rounded-none' : 'rounded-2xl'}
+        `}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
@@ -498,7 +513,7 @@ export default function JsonFormatter() {
                         setEditingTabId(null);
                       }
                     }}
-                    className="flex-1 w-full min-w-0 text-sm bg-[var(--zd-surface-raised)] outline-none border border-[var(--zd-primary)] focus:ring-2 focus:ring-[var(--zd-primary-soft)] text-slate-900 dark:text-slate-100 font-medium px-1.5 py-0.5 rounded transition-all"
+                    className="flex-1 w-full min-w-0 text-sm bg-transparent outline-none border-b-2 border-b-[var(--zd-primary)] focus:bg-[var(--zd-primary-soft)]/10 text-[var(--zd-text-primary)] font-medium px-1 py-0.5 transition-all"
                     onClick={(e) => e.stopPropagation()}
                   />
                 ) : (
@@ -664,19 +679,51 @@ export default function JsonFormatter() {
             )}
           </div>
           
-          {viewMode === 'editor' && (
-            <div className="flex items-center gap-1 bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] p-1 rounded-lg">
-              <button onClick={() => handleOutputModeChange('hidden')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${outputMode === 'hidden' ? 'bg-[var(--zd-surface)] text-[var(--zd-primary)] border border-[var(--zd-border)]/50 shadow-sm' : 'text-slate-500 hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]/30'}`}>
-                Code
-              </button>
-              <button onClick={() => handleOutputModeChange('tree')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${outputMode === 'tree' ? 'bg-[var(--zd-surface)] text-[var(--zd-primary)] border border-[var(--zd-border)]/50 shadow-sm' : 'text-slate-500 hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]/30'}`}>
-                <LayoutTemplate className="w-4 h-4" /> Tree
-              </button>
-              <button onClick={() => handleOutputModeChange('table')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${outputMode === 'table' ? 'bg-[var(--zd-surface)] text-[var(--zd-primary)] border border-[var(--zd-border)]/50 shadow-sm' : 'text-slate-500 hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]/30'}`}>
-                <TableProperties className="w-4 h-4" /> Table
-              </button>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            {viewMode === 'editor' && (
+              <div className="flex items-center gap-1 bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] p-1 rounded-lg">
+                <button 
+                  onClick={() => handleOutputModeChange('hidden')} 
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                    outputMode === 'hidden' 
+                      ? 'bg-[var(--zd-surface)] text-[var(--zd-primary)] border border-[var(--zd-border)]/50 shadow-sm' 
+                      : 'text-slate-500 hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]/30'
+                  }`}
+                >
+                  Code
+                </button>
+                <button 
+                  onClick={() => handleOutputModeChange('tree')} 
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                    outputMode === 'tree' 
+                      ? 'bg-[var(--zd-surface)] text-[var(--zd-primary)] border border-[var(--zd-border)]/50 shadow-sm' 
+                      : 'text-slate-500 hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]/30'
+                  }`}
+                >
+                  <LayoutTemplate className="w-4 h-4" /> Tree
+                </button>
+                <button 
+                  onClick={() => handleOutputModeChange('table')} 
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                    outputMode === 'table' 
+                      ? 'bg-[var(--zd-surface)] text-[var(--zd-primary)] border border-[var(--zd-border)]/50 shadow-sm' 
+                      : 'text-slate-500 hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]/30'
+                  }`}
+                >
+                  <TableProperties className="w-4 h-4" /> Table
+                </button>
+              </div>
+            )}
+            
+            <div className="h-8 w-px bg-[var(--zd-border)]" />
+            <button 
+              onClick={() => setIsFullscreen(!isFullscreen)} 
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium text-slate-500 hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]/30 transition-all"
+            >
+              {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+              <span className="hidden sm:inline">{isFullscreen ? 'Exit' : 'Expand'}</span>
+            </button>
+          </div>
         </div>
 
         {error && (
@@ -726,7 +773,7 @@ export default function JsonFormatter() {
               
               {/* Optional Right Pane (Tree / Table) */}
               {outputMode !== 'hidden' && (
-                <div className="w-full md:w-1/2 flex flex-col border-t md:border-t-0 md:border-l border-[var(--zd-border)] min-h-[300px] md:min-h-0 bg-[var(--zd-surface-raised)]/20">
+                <div className="w-full md:w-1/2 flex flex-col border-t md:border-t-0 md:border-l border-[var(--zd-border)] min-h-[300px] md:min-h-0 bg-[var(--zd-surface-raised)]/20 min-h-0">
                   <div className="flex-1 min-h-0 flex flex-col">
                     <ErrorBoundary>
                       {outputMode === 'tree' && (

@@ -49,17 +49,23 @@ export function CommandPalette() {
   }, [commandPaletteOpen]);
 
   // Command items definitions
-  const toolItems = toolRegistry.map((tool) => ({
-    id: tool.id,
-    name: tool.name,
-    description: tool.metadata.description,
-    icon: tool.icon,
-    category: 'Tools',
-    action: () => {
-      navigate({ to: tool.route as any });
-      setCommandPaletteOpen(false);
-    },
-  }));
+  const toolItems = toolRegistry
+    .map((tool) => ({
+      id: tool.id,
+      name: tool.name,
+      description: tool.metadata.description,
+      icon: tool.icon,
+      category: 'Tools',
+      action: () => {
+        navigate({ to: tool.route as any });
+        setCommandPaletteOpen(false);
+      },
+    }))
+    .sort((a, b) => {
+      if (a.id === 'json-formatter') return -1;
+      if (b.id === 'json-formatter') return 1;
+      return 0;
+    });
 
   const actionItems = [
     {

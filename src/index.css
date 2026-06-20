@@ -128,6 +128,44 @@
    ═══════════════════════════════════════════════════════ */
 
 @layer components {
+  /* Scrollbars */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--zd-border-hover);
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--zd-text-muted);
+  }
+
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Animations */
+  .animate-pulse-glow {
+    animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  /* UI Effects */
+  .glass-panel {
+    @apply backdrop-blur-md bg-white/80 dark:bg-slate-900/80;
+  }
+
+  .btn-micro {
+    @apply transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98];
+  }
+
   /* Gutter for split panes (preserved from existing) */
   .gutter {
     @apply cursor-col-resize transition-colors bg-no-repeat bg-center;

@@ -225,7 +225,7 @@ export function TableView({ jsonString }: TableViewProps) {
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[var(--zd-surface)] overflow-hidden">
+    <div className="flex-1 flex flex-col h-full bg-[var(--zd-surface)] overflow-hidden min-h-0">
       {/* Path Selector Toolbar */}
       {pathOptions.length > 1 && (
         <div className="flex items-center gap-2 p-2 border-b border-[var(--zd-border)] bg-[var(--zd-surface-raised)]/30 shrink-0">
@@ -243,7 +243,7 @@ export function TableView({ jsonString }: TableViewProps) {
       )}
 
       {/* Table grid wrapper */}
-      <div className="flex-1 overflow-auto custom-scrollbar">
+      <div className="flex-1 overflow-auto custom-scrollbar min-h-0">
         <table className="w-full text-sm text-left border-collapse">
           <thead className="text-xs text-slate-500 uppercase bg-[var(--zd-surface-raised)] sticky top-0 z-10 border-b border-[var(--zd-border)]">
             <tr>

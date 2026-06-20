@@ -35,7 +35,7 @@ export function TreeView({ jsonString, tabId }: TreeViewProps) {
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[var(--zd-surface)] overflow-hidden">
+    <div className="flex-1 flex flex-col h-full bg-[var(--zd-surface)] overflow-hidden min-h-0">
       {/* Tree Toolbar */}
       <div className="flex items-center justify-between p-2 border-b border-[var(--zd-border)] bg-[var(--zd-surface-raised)]/30 shrink-0">
         <div className="flex items-center gap-2">
@@ -52,7 +52,7 @@ export function TreeView({ jsonString, tabId }: TreeViewProps) {
       </div>
 
       {/* Tree Content */}
-      <div className="flex-1 overflow-auto p-4 custom-scrollbar">
+      <div className="flex-1 overflow-auto p-4 custom-scrollbar min-h-0">
         <div key={`${expandAllKey}-${tabId || ''}`} className="min-w-fit">
           <TreeNode 
             name={null} 

@@ -11,7 +11,7 @@ import { useGlobalStore } from '../store/useGlobalStore';
 import { Navbar } from '../../landing/components/Navbar';
 import { ErrorBoundary } from '../../shared/components/ErrorBoundary';
 
-const LazyLandingPage = lazy(() => import('../../landing/LandingPage').then(m => ({ default: m.LandingPage })));
+import { LandingPage } from '../../landing/LandingPage';
 const LazyCommandPalette = lazy(() => import('../../shared/components/CommandPalette').then(m => ({ default: m.CommandPalette })));
 const LazyStorageWarningModal = lazy(() => import('../../shared/components/StorageWarningModal').then(m => ({ default: m.StorageWarningModal })));
 
@@ -152,9 +152,7 @@ const indexRoute = createRoute({
       title="Privacy-First Web Utility & Developer Toolbox"
       description="Format JSON, convert epochs, merge PDFs, generate UUIDs, encode URLs, check diffs, and inspect JWT tokens — all processed 100% locally in your browser."
     >
-      <Suspense fallback={<ToolLoadingFallback toolName="Home" />}>
-        <LazyLandingPage />
-      </Suspense>
+      <LandingPage />
     </SEOWrapper>
   ),
 });

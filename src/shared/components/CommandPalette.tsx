@@ -19,22 +19,16 @@ export function CommandPalette() {
   const navigate = useNavigate();
   const paletteRef = useRef<HTMLDivElement | null>(null);
 
-  // Toggle Command Palette on Cmd+K or Ctrl+K
+  // Handle Escape key to close
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        setCommandPaletteOpen(!commandPaletteOpen);
-        setSearch('');
-        setSelectedIndex(0);
-        setActiveCategory('All');
-      } else if (e.key === 'Escape') {
+      if (e.key === 'Escape') {
         setCommandPaletteOpen(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [commandPaletteOpen]);
+  }, [setCommandPaletteOpen]);
 
   // Dismiss on click outside
   useEffect(() => {

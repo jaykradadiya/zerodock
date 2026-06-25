@@ -6,13 +6,14 @@ import {
   Outlet,
 } from '@tanstack/react-router';
 import { toolRegistry } from '../registry/tools';
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { useGlobalStore } from '../store/useGlobalStore';
 import { Navbar } from '../../landing/components/Navbar';
-import { LandingPage } from '../../landing/LandingPage';
-import { CommandPalette } from '../../shared/components/CommandPalette';
-import { StorageWarningModal } from '../../shared/components/StorageWarningModal';
 import { ErrorBoundary } from '../../shared/components/ErrorBoundary';
+
+const LazyLandingPage = lazy(() => import('../../landing/LandingPage').then(m => ({ default: m.LandingPage })));
+const LazyCommandPalette = lazy(() => import('../../shared/components/CommandPalette').then(m => ({ default: m.CommandPalette })));
+const LazyStorageWarningModal = lazy(() => import('../../shared/components/StorageWarningModal').then(m => ({ default: m.StorageWarningModal })));
 
 /*
  * RootLayout — site-wide shell.
@@ -20,7 +21,19 @@ import { ErrorBoundary } from '../../shared/components/ErrorBoundary';
  * Tool pages get a self-contained layout; the landing page renders its own footer.
  */
 function RootLayout() {
-  const { theme } = useGlobalStore();
+  const { theme, commandPaletteOpen, setCommandPaletteOpen, storageWarning } = useGlobalStore();
+
+  // Toggle Command Palette globally
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setCommandPaletteOpen(!commandPaletteOpen);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [commandPaletteOpen, setCommandPaletteOpen]);
 
   return (
     <div
@@ -39,8 +52,16 @@ function RootLayout() {
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         <Outlet />
       </main>
-      <CommandPalette />
-      <StorageWarningModal />
+      {commandPaletteOpen && (
+        <Suspense fallback={null}>
+          <LazyCommandPalette />
+        </Suspense>
+      )}
+      {storageWarning?.isOpen && (
+        <Suspense fallback={null}>
+          <LazyStorageWarningModal />
+        </Suspense>
+      )}
     </div>
   );
 }
@@ -78,7 +99,7 @@ function ToolLoadingFallback({ toolName }: { toolName: string }) {
   );
 }
 
-import { useEffect } from 'react';
+// useEffect is imported at the top
 
 interface SEOWrapperProps {
   title: string;
@@ -131,7 +152,9 @@ const indexRoute = createRoute({
       title="Privacy-First Web Utility & Developer Toolbox"
       description="Format JSON, convert epochs, merge PDFs, generate UUIDs, encode URLs, check diffs, and inspect JWT tokens — all processed 100% locally in your browser."
     >
-      <LandingPage />
+      <Suspense fallback={<ToolLoadingFallback toolName="Home" />}>
+        <LazyLandingPage />
+      </Suspense>
     </SEOWrapper>
   ),
 });

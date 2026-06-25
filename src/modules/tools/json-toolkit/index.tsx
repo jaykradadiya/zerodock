@@ -65,6 +65,20 @@ export default function JsonFormatter() {
     return () => window.removeEventListener('keydown', handleEscape);
   }, [isFullscreen]);
 
+  // Global keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Alt+T (Option+T) or Cmd+M / Ctrl+M to add a new tab
+      if ((e.altKey && e.code === 'KeyT') || ((e.metaKey || e.ctrlKey) && e.code === 'KeyM')) {
+        e.preventDefault();
+        e.stopPropagation();
+        addTab(`Untitled-${tabs.length + 1}.json`, '');
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown, { capture: true });
+    return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
+  }, [tabs.length, addTab]);
+
   // Tab list dropdown finder
   const tabDropdownRef = useRef<HTMLDivElement | null>(null);
   const [showTabDropdown, setShowTabDropdown] = useState(false);
@@ -145,7 +159,7 @@ export default function JsonFormatter() {
   // Pipeline payload consumption
   const { payload: pipelinePayload, sourceToolId, clearPipelineData } = usePipelineStore();
   useEffect(() => {
-    if (pipelinePayload !== null && sourceToolId !== 'json-formatter') {
+    if (pipelinePayload !== null && sourceToolId !== 'json-toolkit') {
       addTab(`Imported_${tabs.length + 1}.json`, pipelinePayload).then(() => {
         clearPipelineData();
       }).catch(console.error);
@@ -368,7 +382,7 @@ export default function JsonFormatter() {
     if (!content) return;
     
     // Set pipeline data
-    usePipelineStore.getState().setPipelineData(content, 'json-formatter');
+    usePipelineStore.getState().setPipelineData(content, 'json-toolkit');
     // Navigate to Type Converter
     navigate({ to: '/json-type-converter' as any });
   };

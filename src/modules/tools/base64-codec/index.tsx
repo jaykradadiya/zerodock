@@ -74,7 +74,7 @@ export default function Base64Codec() {
 
   const handlePipelineToJson = () => {
     setPipelineData(output, 'base64-codec');
-    navigate({ to: '/json-formatter' as any });
+    navigate({ to: '/json-toolkit' as any });
   };
 
   return (

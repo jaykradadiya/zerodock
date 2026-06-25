@@ -1,7 +1,7 @@
 import { useRef, useEffect } from 'react';
 import { DiffEditor } from '@monaco-editor/react';
 import { useGlobalStore } from '../../../../core/store/useGlobalStore';
-import { useWorkspaceStore } from '../../../../modules/tools/json-formatter/store/workspaceStore';
+import { useWorkspaceStore } from '../../../../modules/tools/json-toolkit/store/workspaceStore';
 
 interface DiffViewProps {
   original?: string;
@@ -101,6 +101,9 @@ export function DiffView({ original, modified, originalModelId, modifiedModelId 
             readOnly: true,
             renderSideBySide: true,
             ignoreTrimWhitespace: true,
+            scrollbar: {
+              alwaysConsumeMouseWheel: false
+            }
           }}
           loading={
             <div className="flex-1 h-full flex items-center justify-center text-slate-400 text-sm">

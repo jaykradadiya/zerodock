@@ -2,7 +2,7 @@ import { useRef, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
 import type { EditorProps } from '@monaco-editor/react';
 import { useGlobalStore } from '../../../core/store/useGlobalStore';
-import { useWorkspaceStore } from '../../../modules/tools/json-formatter/store/workspaceStore';
+import { useWorkspaceStore } from '../../../modules/tools/json-toolkit/store/workspaceStore';
 
 interface CodeEditorProps extends Omit<EditorProps, 'theme' | 'onChange'> {
   modelId?: string;
@@ -198,6 +198,9 @@ export function CodeEditor({ modelId, value, language = 'json', readOnly = false
           colorDecorators: true,
           // Optimization for large files
           largeFileOptimizations: true,
+          scrollbar: {
+            alwaysConsumeMouseWheel: false
+          }
         }}
         loading={
           <div className="flex-1 h-full flex items-center justify-center text-slate-400 text-sm">

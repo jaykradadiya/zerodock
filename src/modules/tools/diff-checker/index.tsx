@@ -233,6 +233,9 @@ export default function DiffChecker() {
               readOnly: false,
               renderSideBySide: sideBySide,
               ignoreTrimWhitespace: true,
+              scrollbar: {
+                alwaysConsumeMouseWheel: false
+              }
             }}
             loading={
               <div className="flex-1 h-full flex items-center justify-center text-slate-400 text-sm bg-[var(--zd-surface-raised)]/20 animate-pulse">

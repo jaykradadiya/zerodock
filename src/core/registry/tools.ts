@@ -1,12 +1,12 @@
 import type { Tool } from '../../types/tool';
-import { 
-  FileJson, 
-  Layers, 
-  Fingerprint, 
-  Binary, 
-  KeyRound, 
-  Hash, 
-  Palette, 
+import {
+  FileJson,
+  Layers,
+  Fingerprint,
+  Binary,
+  KeyRound,
+  Hash,
+  Palette,
   Link2,
   GitCompare,
   Clock,
@@ -23,8 +23,8 @@ export const toolRegistry: Tool[] = [
     icon: GitCompare,
     component: () => import('../../modules/tools/diff-checker'),
     metadata: {
-      description: 'Compare two text files side-by-side with syntax highlighting.',
-      tags: ['diff', 'compare', 'text', 'match'],
+      description: 'Compare two text files or code snippets side-by-side with real-time syntax highlighting and inline diff views.',
+      tags: ['diff', 'compare', 'text', 'match', 'code', 'difference', 'checker', 'inline diff', 'side-by-side', 'version control'],
     },
   },
   {
@@ -35,8 +35,8 @@ export const toolRegistry: Tool[] = [
     icon: Clock,
     component: () => import('../../modules/tools/epoch-converter'),
     metadata: {
-      description: 'Convert Unix timestamps to human-readable dates and vice-versa.',
-      tags: ['epoch', 'timestamp', 'date', 'time', 'unix'],
+      description: 'Convert Unix epoch timestamps to human-readable dates, local timezones, and UTC instantly.',
+      tags: ['epoch', 'timestamp', 'date', 'time', 'unix', 'converter', 'timezone', 'utc', 'seconds', 'milliseconds'],
     },
   },
   {
@@ -47,8 +47,8 @@ export const toolRegistry: Tool[] = [
     icon: Code2,
     component: () => import('../../modules/tools/json-type-converter'),
     metadata: {
-      description: 'Convert JSON payloads into TypeScript, Go, Rust, or JSON Schema.',
-      tags: ['json', 'types', 'typescript', 'go', 'rust', 'convert'],
+      description: 'Automatically generate TypeScript interfaces, Go structs, Rust structs, and JSON Schema from JSON payloads.',
+      tags: ['json', 'types', 'typescript', 'go', 'rust', 'convert', 'interfaces', 'structs', 'schema', 'generator', 'types definition'],
     },
   },
   {
@@ -59,21 +59,21 @@ export const toolRegistry: Tool[] = [
     icon: Layers,
     component: () => import('../../modules/tools/pdf-merger'),
     metadata: {
-      description: 'Combine multiple PDFs and images into a single PDF file.',
-      tags: ['pdf', 'merge', 'combine', 'join'],
+      description: 'Quickly merge and combine multiple PDF documents and images into a single organized PDF file directly in your browser.',
+      tags: ['pdf', 'merge', 'combine', 'join', 'document', 'images to pdf', 'append', 'organize pdf', 'pdf tools'],
     },
   },
   {
-    id: 'json-formatter',
-    name: 'JSON Formatter',
+    id: 'json-toolkit',
+    name: 'JSON Toolkit',
     category: 'Data',
-    route: '/json-formatter',
+    route: '/json-toolkit',
     icon: FileJson,
-    component: () => import('../../modules/tools/json-formatter'),
-    worker: () => new Worker(new URL('../../modules/tools/json-formatter/json.worker.ts', import.meta.url), { type: 'module' }),
+    component: () => import('../../modules/tools/json-toolkit'),
+    worker: () => new Worker(new URL('../../modules/tools/json-toolkit/json.worker.ts', import.meta.url), { type: 'module' }),
     metadata: {
-      description: 'Format, minify, and validate JSON payloads.',
-      tags: ['json', 'format', 'minify', 'validate'],
+      description: 'Comprehensive JSON studio to format, minify, validate schemas, repair broken JSON, and convert between JSON and CSV data.',
+      tags: ['json', 'format', 'minify', 'validate', 'schema', 'tree view', 'editor', 'csv to json', 'repair json', 'beautify', 'viewer'],
     },
   },
   {
@@ -84,8 +84,8 @@ export const toolRegistry: Tool[] = [
     icon: Fingerprint,
     component: () => import('../../modules/tools/uuid-generator'),
     metadata: {
-      description: 'Generate UUID v4 and v7 identifiers instantly.',
-      tags: ['uuid', 'guid', 'generator', 'unique'],
+      description: 'Generate secure, random UUID v4 and time-sorted UUID v7 identifiers instantly for databases and APIs.',
+      tags: ['uuid', 'guid', 'generator', 'unique', 'identifier', 'v4', 'v7', 'random', 'keys', 'database'],
     },
   },
   {
@@ -96,8 +96,8 @@ export const toolRegistry: Tool[] = [
     icon: Binary,
     component: () => import('../../modules/tools/base64-codec'),
     metadata: {
-      description: 'Encode and decode Base64 strings and files.',
-      tags: ['base64', 'encode', 'decode', 'binary'],
+      description: 'Securely encode and decode Base64 strings, text, and files entirely locally in your browser.',
+      tags: ['base64', 'encode', 'decode', 'binary', 'text', 'files', 'converter', 'string manipulation', 'codec'],
     },
   },
   {
@@ -108,8 +108,8 @@ export const toolRegistry: Tool[] = [
     icon: KeyRound,
     component: () => import('../../modules/tools/jwt-decoder'),
     metadata: {
-      description: 'Decode and inspect JWT tokens with claim validation.',
-      tags: ['jwt', 'token', 'decode', 'security', 'auth'],
+      description: 'Decode, inspect, and verify JWT tokens securely. View headers, payloads, and claims without sending tokens to a server.',
+      tags: ['jwt', 'token', 'decode', 'security', 'auth', 'json web token', 'claims', 'verify', 'authentication', 'payload'],
     },
   },
   {
@@ -120,8 +120,8 @@ export const toolRegistry: Tool[] = [
     icon: Hash,
     component: () => import('../../modules/tools/hash-generator'),
     metadata: {
-      description: 'Generate secure cryptographic hashes instantly.',
-      tags: ['hash', 'md5', 'sha', 'security', 'crypto'],
+      description: 'Generate secure cryptographic hashes instantly including MD5, SHA-1, SHA-256, and SHA-512 from any text input.',
+      tags: ['hash', 'md5', 'sha', 'security', 'crypto', 'sha256', 'sha512', 'checksum', 'generator', 'encryption'],
     },
   },
   {
@@ -132,8 +132,8 @@ export const toolRegistry: Tool[] = [
     icon: Palette,
     component: () => import('../../modules/tools/color-converter'),
     metadata: {
-      description: 'Convert between HEX, RGB, and HSL color formats.',
-      tags: ['color', 'hex', 'rgb', 'hsl', 'converter', 'design'],
+      description: 'Convert colors between HEX, RGB, RGBA, and HSL formats with a visual color picker for UI/UX design.',
+      tags: ['color', 'hex', 'rgb', 'hsl', 'converter', 'design', 'palette', 'rgba', 'color picker', 'css colors'],
     },
   },
   {
@@ -144,8 +144,8 @@ export const toolRegistry: Tool[] = [
     icon: Link2,
     component: () => import('../../modules/tools/url-encoder'),
     metadata: {
-      description: 'Safely encode and decode URL components and query strings.',
-      tags: ['url', 'uri', 'encode', 'decode', 'link'],
+      description: 'Safely encode and decode URL components, query strings, and complete URIs to ensure valid web links.',
+      tags: ['url', 'uri', 'encode', 'decode', 'link', 'query string', 'web', 'percent encoding', 'format'],
     },
   },
   {
@@ -156,8 +156,8 @@ export const toolRegistry: Tool[] = [
     icon: Calculator,
     component: () => import('../../modules/tools/downpayment-calculator'),
     metadata: {
-      description: 'Calculate down payment portions, installments, interest charges, and payment timelines.',
-      tags: ['downpayment', 'installment', 'finance', 'calculator', 'interest'],
+      description: 'Calculate down payment portions, monthly installments, total interest charges, and detailed payment timelines for loans.',
+      tags: ['downpayment', 'installment', 'finance', 'calculator', 'interest', 'loan', 'mortgage', 'monthly payment', 'amortization'],
     },
   }
 ];

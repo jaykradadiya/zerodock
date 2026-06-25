@@ -62,8 +62,8 @@ export function CommandPalette() {
       },
     }))
     .sort((a, b) => {
-      if (a.id === 'json-formatter') return -1;
-      if (b.id === 'json-formatter') return 1;
+      if (a.id === 'json-toolkit') return -1;
+      if (b.id === 'json-toolkit') return 1;
       return 0;
     });
 

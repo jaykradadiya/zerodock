@@ -1,0 +1,9 @@
+# ZeroDock
+
+Welcome to the ZeroDock documentation for large language models. ZeroDock is a web application providing various developer tools.
+
+## Resources
+
+- [Home](/) - Main entry point to the application.
+- [Sitemap](/sitemap.xml) - The site map for ZeroDock.
+- [Robots](/robots.txt) - Rules for web crawlers.

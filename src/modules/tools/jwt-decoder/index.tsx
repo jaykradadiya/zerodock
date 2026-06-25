@@ -1,31 +1,130 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { KeyRound, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
 
+const JWT_COLORS = {
+  header: '#fb015b',
+  payload: '#d63aff',
+  signature: '#00b9f1',
+  text: 'var(--zd-text-primary)'
+};
+
+type Section = 'header' | 'payload' | 'signature' | null;
+
+const highlightJSON = (obj: any) => {
+  let json = JSON.stringify(obj, null, 2);
+  json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+    let cls = 'text-blue-500 dark:text-blue-400'; // number
+    if (/^"/.test(match)) {
+      if (/:$/.test(match)) {
+        cls = 'text-slate-900 dark:text-slate-100 font-semibold'; // key
+      } else {
+        cls = 'text-emerald-600 dark:text-emerald-400'; // string
+      }
+    } else if (/true|false/.test(match)) {
+      cls = 'text-orange-500 dark:text-orange-400'; // boolean
+    } else if (/null/.test(match)) {
+      cls = 'text-slate-400 dark:text-slate-500'; // null
+    }
+    return `<span class="${cls}">${match}</span>`;
+  });
+};
+
 export default function JWTDecoder() {
   const [token, setToken] = useState('');
+  const [hoveredSection, setHoveredSection] = useState<Section>(null);
+  
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
+
+  const handleScroll = () => {
+    if (textareaRef.current && overlayRef.current) {
+      overlayRef.current.scrollTop = textareaRef.current.scrollTop;
+      overlayRef.current.scrollLeft = textareaRef.current.scrollLeft;
+    }
+  };
 
   const decoded = useMemo(() => {
     if (!token.trim()) return null;
 
     const parts = token.split('.');
     if (parts.length !== 3) {
-      return { error: 'Invalid JWT format. Must contain 3 parts separated by dots.' };
+      return { error: 'Invalid JWT format. Must contain 3 parts separated by dots.', parts };
     }
 
     try {
-      const header = JSON.parse(atob(parts[0].replace(/-/g, '+').replace(/_/g, '/')));
-      const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+      const headerStr = atob(parts[0].replace(/-/g, '+').replace(/_/g, '/'));
+      const payloadStr = atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'));
+      
+      const header = JSON.parse(headerStr);
+      const payload = JSON.parse(payloadStr);
       const signature = parts[2];
       
-      // Basic expiration check
       const isExpired = payload.exp ? payload.exp * 1000 < Date.now() : false;
 
-      return { header, payload, signature, isExpired };
+      return { parts, header, payload, signature, isExpired };
     } catch (e) {
-      return { error: 'Failed to decode token. Invalid Base64 or JSON.' };
+      return { error: 'Failed to decode token. Invalid Base64 or JSON.', parts };
     }
   }, [token]);
+
+  const renderOverlay = () => {
+    if (!token) {
+      return (
+        <div className="absolute inset-0 p-6 font-mono text-sm leading-relaxed whitespace-pre-wrap break-all pointer-events-none text-slate-400 dark:text-slate-600">
+          Paste a JWT here (ey...)
+        </div>
+      );
+    }
+    
+    const parts = token.split('.');
+    
+    return (
+      <div 
+        ref={overlayRef}
+        className="absolute inset-0 p-6 font-mono text-sm leading-relaxed whitespace-pre-wrap break-all pointer-events-none overflow-hidden" 
+        aria-hidden="true"
+      >
+        {parts.map((part, index) => {
+          let color = JWT_COLORS.text;
+          let section: Section = null;
+          
+          if (index === 0) { color = JWT_COLORS.header; section = 'header'; }
+          else if (index === 1) { color = JWT_COLORS.payload; section = 'payload'; }
+          else if (index === 2) { color = JWT_COLORS.signature; section = 'signature'; }
+          
+          const isHovered = hoveredSection === section;
+          const isOtherHovered = hoveredSection !== null && !isHovered;
+          
+          return (
+            <span key={index}>
+              <span 
+                style={{ 
+                  color,
+                  opacity: isOtherHovered ? 0.3 : 1,
+                  transition: 'opacity 0.2s ease',
+                  backgroundColor: isHovered ? `${color}1A` : 'transparent',
+                  borderRadius: '2px',
+                }}
+              >
+                {part}
+              </span>
+              {index < parts.length - 1 && (
+                <span style={{ 
+                  color: JWT_COLORS.text,
+                  opacity: hoveredSection ? 0.3 : 1,
+                  transition: 'opacity 0.2s ease'
+                }}>
+                  .
+                </span>
+              )}
+            </span>
+          );
+        })}
+      </div>
+    );
+  };
 
   return (
     <div className="flex-1 flex flex-col items-center p-6 md:p-12 w-full max-w-6xl mx-auto h-full min-h-0">
@@ -48,13 +147,19 @@ export default function JWTDecoder() {
               <button onClick={() => setToken('')} className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">Clear</button>
             )}
           </div>
-          <textarea
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            placeholder="Paste a JWT here (ey...)"
-            className="flex-1 w-full p-6 bg-transparent border-none resize-none focus:outline-none focus:ring-0 text-sm font-mono text-slate-800 dark:text-slate-200 leading-relaxed break-all"
-            spellCheck={false}
-          />
+          
+          <div className="relative flex-1 w-full bg-transparent">
+            {renderOverlay()}
+            <textarea
+              ref={textareaRef}
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              onScroll={handleScroll}
+              className="absolute inset-0 w-full h-full p-6 bg-transparent border-none resize-none focus:outline-none focus:ring-0 text-sm font-mono leading-relaxed break-all custom-scrollbar"
+              style={{ color: 'transparent', caretColor: 'var(--zd-text-primary)' }}
+              spellCheck={false}
+            />
+          </div>
         </div>
 
         {/* Right: Output */}
@@ -68,7 +173,7 @@ export default function JWTDecoder() {
             )}
           </div>
           
-          <div className="flex-1 overflow-auto p-6">
+          <div className="flex-1 overflow-auto p-6 custom-scrollbar">
             {!token ? (
               <div className="h-full flex items-center justify-center text-slate-400 dark:text-slate-600 text-sm">
                 Awaiting token...
@@ -82,19 +187,32 @@ export default function JWTDecoder() {
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
                 
                 {/* Header */}
-                <div>
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-red-500 dark:text-red-400 mb-2">Header <span className="font-normal lowercase text-slate-400 ml-1">Algorithm & Token Type</span></h3>
+                <div 
+                  onMouseEnter={() => setHoveredSection('header')}
+                  onMouseLeave={() => setHoveredSection(null)}
+                  className={`transition-opacity duration-200 ${hoveredSection && hoveredSection !== 'header' ? 'opacity-40' : 'opacity-100'}`}
+                >
+                  <h3 className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: JWT_COLORS.header }}>
+                    Header <span className="font-normal lowercase text-slate-400 dark:text-slate-500 ml-1">Algorithm & Token Type</span>
+                  </h3>
                   <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-lg border border-slate-200 dark:border-slate-800">
-                    <pre className="text-sm font-mono text-slate-800 dark:text-slate-200 whitespace-pre-wrap break-all">
-                      {JSON.stringify(decoded.header, null, 2)}
-                    </pre>
+                    <pre 
+                      className="text-sm font-mono whitespace-pre-wrap break-all text-slate-800 dark:text-slate-200"
+                      dangerouslySetInnerHTML={{ __html: highlightJSON(decoded.header) }}
+                    />
                   </div>
                 </div>
 
                 {/* Payload */}
-                <div>
+                <div
+                  onMouseEnter={() => setHoveredSection('payload')}
+                  onMouseLeave={() => setHoveredSection(null)}
+                  className={`transition-opacity duration-200 ${hoveredSection && hoveredSection !== 'payload' ? 'opacity-40' : 'opacity-100'}`}
+                >
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400">Payload <span className="font-normal lowercase text-slate-400 ml-1">Data</span></h3>
+                    <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: JWT_COLORS.payload }}>
+                      Payload <span className="font-normal lowercase text-slate-400 dark:text-slate-500 ml-1">Data</span>
+                    </h3>
                     {decoded.isExpired !== undefined && (
                       <span className={`text-xs font-medium px-2 py-0.5 rounded ${decoded.isExpired ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'}`}>
                         {decoded.isExpired ? 'Expired' : 'Active'}
@@ -102,17 +220,27 @@ export default function JWTDecoder() {
                     )}
                   </div>
                   <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-lg border border-slate-200 dark:border-slate-800">
-                    <pre className="text-sm font-mono text-slate-800 dark:text-slate-200 whitespace-pre-wrap break-all">
-                      {JSON.stringify(decoded.payload, null, 2)}
-                    </pre>
+                    <pre 
+                      className="text-sm font-mono whitespace-pre-wrap break-all text-slate-800 dark:text-slate-200"
+                      dangerouslySetInnerHTML={{ __html: highlightJSON(decoded.payload) }}
+                    />
                   </div>
                 </div>
 
                 {/* Signature */}
-                <div>
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-blue-500 dark:text-blue-400 mb-2">Signature</h3>
+                <div
+                  onMouseEnter={() => setHoveredSection('signature')}
+                  onMouseLeave={() => setHoveredSection(null)}
+                  className={`transition-opacity duration-200 ${hoveredSection && hoveredSection !== 'signature' ? 'opacity-40' : 'opacity-100'}`}
+                >
+                  <h3 className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: JWT_COLORS.signature }}>
+                    Signature
+                  </h3>
                   <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-lg border border-slate-200 dark:border-slate-800">
-                    <p className="text-sm font-mono text-slate-500 dark:text-slate-500 break-all">
+                    <p 
+                      className="text-sm font-mono break-all"
+                      style={{ color: JWT_COLORS.signature }}
+                    >
                       {decoded.signature}
                     </p>
                     <p className="text-xs text-slate-400 mt-2">

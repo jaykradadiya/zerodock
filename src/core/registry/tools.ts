@@ -15,10 +15,35 @@ import {
   CalendarClock,
   SearchCode,
   TerminalSquare,
-  Database
+  Database,
+  ShieldCheck
 } from 'lucide-react';
 
 export const toolRegistry: Tool[] = [
+  {
+    id: 'password-generator',
+    name: 'Password Generator',
+    category: 'Security',
+    route: '/password-generator',
+    icon: ShieldCheck,
+    component: () => import('../../modules/tools/password-generator'),
+    metadata: {
+      description: 'Generate secure, random passwords and passphrases locally in your browser.',
+      tags: ['password', 'generator', 'security', 'random', 'passphrase', 'keys'],
+    },
+  },
+  {
+    id: 'yaml-json-converter',
+    name: 'YAML ↔ JSON Converter',
+    category: 'Data',
+    route: '/yaml-json-converter',
+    icon: FileJson,
+    component: () => import('../../modules/tools/yaml-json-converter'),
+    metadata: {
+      description: 'Instantly convert between YAML and JSON formats with real-time validation and formatting.',
+      tags: ['yaml', 'json', 'convert', 'data', 'format', 'parser', 'bidirectional'],
+    },
+  },
   {
     id: 'diff-checker',
     name: 'Text Diff Checker',

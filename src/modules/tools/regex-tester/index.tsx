@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { SearchCode, AlertCircle } from 'lucide-react';
 import { createToolStore } from '../../../core/store/useToolState';
 

@@ -156,7 +156,7 @@ export default function Base64Codec() {
           <div className="hidden md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
             <button
               onClick={() => {
-                setMode(m => m === 'encode' ? 'decode' : 'encode');
+                setMode(mode === 'encode' ? 'decode' : 'encode');
                 setInput(output);
               }}
               className="p-2 bg-[var(--zd-surface)] border border-[var(--zd-border)] rounded-full shadow-sm text-slate-500 hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)] transition-colors"

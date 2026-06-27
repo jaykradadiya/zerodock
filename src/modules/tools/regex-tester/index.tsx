@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { SearchCode, AlertCircle, Check } from 'lucide-react';
+import React from 'react';
+import { SearchCode, AlertCircle } from 'lucide-react';
 import { createToolStore } from '../../../core/store/useToolState';
 
 const useRegexStore = createToolStore('regex-tester', {

@@ -169,7 +169,23 @@ export default function JsonFormatter() {
         clearPipelineData();
       }).catch(console.error);
     }
-  }, [pipelinePayload, sourceToolId]);
+  }, [pipelinePayload, sourceToolId, addTab, clearPipelineData, tabs.length]);
+
+  const applyEditToEditor = useCallback((newText: string) => {
+    if (editorRef.current) {
+      const model = editorRef.current.getModel();
+      if (model) {
+        editorRef.current.pushUndoStop();
+        editorRef.current.executeEdits("formatter", [{
+          range: model.getFullModelRange(),
+          text: newText
+        }]);
+        editorRef.current.pushUndoStop();
+      }
+    } else if (activeTabIdRef.current) {
+      updateTabContent(activeTabIdRef.current, newText);
+    }
+  }, [updateTabContent]);
 
   useEffect(() => {
     workerRef.current = new JsonWorker();
@@ -210,7 +226,7 @@ export default function JsonFormatter() {
       repairWorkerRef.current?.terminate();
       validateWorkerRef.current?.terminate();
     };
-  }, []);
+  }, [applyEditToEditor]);
 
   // Schema validation trigger
   useEffect(() => {
@@ -231,23 +247,7 @@ export default function JsonFormatter() {
       setValidationErrors([]);
       setIsValidating(false);
     }
-  }, [schema, showSchema, activeTabId, activeTabContent]);
-
-  const applyEditToEditor = (newText: string) => {
-    if (editorRef.current) {
-      const model = editorRef.current.getModel();
-      if (model) {
-        editorRef.current.pushUndoStop();
-        editorRef.current.executeEdits("formatter", [{
-          range: model.getFullModelRange(),
-          text: newText
-        }]);
-        editorRef.current.pushUndoStop();
-      }
-    } else if (activeTabIdRef.current) {
-      updateTabContent(activeTabIdRef.current, newText);
-    }
-  };
+  }, [schema, showSchema, activeTabId, activeTabContent, getFileContent]);
 
   const processJson = useCallback(async (action: 'format' | 'minify') => {
     if (!activeTabId) return;
@@ -261,7 +261,7 @@ export default function JsonFormatter() {
       type: 'PROCESS',
       payload: { code: content, action, indent, sortKeys, smartFormat }
     });
-  }, [activeTabId, indent, sortKeys, smartFormat]);
+  }, [activeTabId, indent, sortKeys, smartFormat, getFileContent]);
 
   const repairJson = useCallback(async () => {
     if (!activeTabId) return;
@@ -275,7 +275,7 @@ export default function JsonFormatter() {
       type: 'PROCESS',
       payload: { code: content }
     });
-  }, [activeTabId]);
+  }, [activeTabId, getFileContent]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);

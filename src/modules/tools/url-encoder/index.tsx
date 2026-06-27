@@ -109,7 +109,7 @@ export default function URLEncoder() {
           <div className="hidden md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
             <button
               onClick={() => {
-                setMode(m => m === 'encode' ? 'decode' : 'encode');
+                setMode(mode === 'encode' ? 'decode' : 'encode');
                 setInput(output);
               }}
               className="p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full shadow-sm text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"

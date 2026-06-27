@@ -39,6 +39,20 @@ export class ErrorBoundary extends Component<Props, State> {
             <strong>Component Stack:</strong>
             <pre className="whitespace-pre-wrap mt-2">{this.state.errorInfo?.componentStack}</pre>
           </div>
+          <div className="mt-6 flex items-center gap-4">
+            <button
+              onClick={() => this.setState({ hasError: false, error: null, errorInfo: null })}
+              className="px-4 py-2 bg-red-100 dark:bg-red-800 text-red-900 dark:text-red-100 rounded-md font-medium hover:bg-red-200 dark:hover:bg-red-700 transition-colors"
+            >
+              Try Again
+            </button>
+            <button
+              onClick={() => window.location.href = '/'}
+              className="px-4 py-2 bg-[var(--zd-surface)] text-[var(--zd-text-primary)] border border-[var(--zd-border)] rounded-md font-medium hover:bg-[var(--zd-surface-raised)] transition-colors"
+            >
+              Go to Homepage
+            </button>
+          </div>
         </div>
       );
     }

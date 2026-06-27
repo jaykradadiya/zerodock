@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { Link } from '@tanstack/react-router';
 import { ArrowRight, Shield } from 'lucide-react';
+import { toolRegistry } from '../../core/registry/tools';
 
 export function HeroSection() {
   return (
@@ -79,21 +80,34 @@ export function HeroSection() {
           transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
           style={{
             display: 'inline-flex',
+            flexDirection: 'column',
             alignItems: 'center',
-            gap: '8px',
-            padding: '6px 16px',
-            borderRadius: '100px',
-            border: '1px solid var(--zd-border)',
-            backgroundColor: 'var(--zd-surface)',
-            fontSize: '13px',
-            fontWeight: 500,
-            color: 'var(--zd-text-secondary)',
-            marginBottom: '32px',
-            boxShadow: 'var(--zd-shadow-sm)',
+            gap: '12px',
           }}
         >
-          <Shield size={14} style={{ color: 'var(--zd-accent)' }} />
-          100% client-side · Zero data sent to servers
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 12px 6px 6px', backgroundColor: 'var(--zd-surface)', border: '1px solid var(--zd-border)', borderRadius: '999px', fontSize: '12px', fontWeight: 600, color: 'var(--zd-text-secondary)', marginBottom: '8px' }}>
+            <span style={{ backgroundColor: 'var(--zd-primary)', color: 'white', padding: '2px 8px', borderRadius: '999px', fontSize: '11px', letterSpacing: '0.02em' }}>NEW</span>
+            <span>{toolRegistry.length} developer tools now available locally</span>
+          </div>
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '6px 16px',
+              borderRadius: '100px',
+              border: '1px solid var(--zd-border)',
+              backgroundColor: 'var(--zd-surface)',
+              fontSize: '13px',
+              fontWeight: 500,
+              color: 'var(--zd-text-secondary)',
+              marginBottom: '32px',
+              boxShadow: 'var(--zd-shadow-sm)',
+            }}
+          >
+            <Shield size={14} style={{ color: 'var(--zd-accent)' }} />
+            100% client-side · Zero data sent to servers
+          </div>
         </motion.div>
 
         {/* Headline */}

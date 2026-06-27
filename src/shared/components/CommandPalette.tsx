@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { Search, Terminal, Sun, Moon, Sparkles, CornerDownLeft } from 'lucide-react';
 import { toolRegistry } from '../../core/registry/tools';
-import { useGlobalStore } from '../../core/store/useGlobalStore';
+import { usePreferenceStore } from '../../core/store/usePreferenceStore';
+import { useUIStore } from '../../core/store/useUIStore';
 
 const GithubIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24" {...props}>
@@ -11,10 +12,11 @@ const GithubIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 export function CommandPalette() {
-  const { theme, toggleTheme, commandPaletteOpen, setCommandPaletteOpen } = useGlobalStore();
+  const { theme, toggleTheme, recentTools } = usePreferenceStore();
+  const { commandPaletteOpen, setCommandPaletteOpen } = useUIStore();
   const [search, setSearch] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [activeCategory, setActiveCategory] = useState<'All' | 'Tools' | 'Preferences' | 'External'>('All');
+  const [activeCategory, setActiveCategory] = useState<'All' | 'Recent' | 'Tools' | 'Preferences' | 'External'>('All');
   
   const navigate = useNavigate();
   const paletteRef = useRef<HTMLDivElement | null>(null);
@@ -61,6 +63,22 @@ export function CommandPalette() {
       return 0;
     });
 
+  const recentItems = recentTools.map((id) => {
+    const tool = toolRegistry.find(t => t.id === id);
+    if (!tool) return null;
+    return {
+      id: `recent-${tool.id}`,
+      name: tool.name,
+      description: tool.metadata.description,
+      icon: tool.icon,
+      category: 'Recent',
+      action: () => {
+        navigate({ to: tool.route as any });
+        setCommandPaletteOpen(false);
+      },
+    };
+  }).filter(Boolean) as typeof toolItems;
+
   const actionItems = [
     {
       id: 'toggle-theme',
@@ -86,7 +104,7 @@ export function CommandPalette() {
     },
   ];
 
-  const allItems = [...toolItems, ...actionItems];
+  const allItems = [...recentItems, ...toolItems, ...actionItems];
 
 
   // Derive active items first
@@ -151,7 +169,7 @@ export function CommandPalette() {
 
         {/* Category Filter Tabs */}
         <div className="flex items-center gap-1.5 px-4 py-2 border-b border-[var(--zd-border)] bg-[var(--zd-surface-raised)]/30 overflow-x-auto shrink-0 select-none">
-          {(['All', 'Tools', 'Preferences', 'External'] as const).map(cat => (
+          {(['All', 'Recent', 'Tools', 'Preferences', 'External'] as const).map(cat => (
             <button
               key={cat}
               onClick={() => setActiveCategory(cat)}
@@ -184,7 +202,7 @@ export function CommandPalette() {
                 <div key={item.id}>
                   {isFirstOfCategory && (
                     <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mt-3 first:mt-1 select-none border-b border-[var(--zd-border)]/20 pb-1 mb-1">
-                      {item.category === 'Tools' ? 'Developer Tools' : item.category === 'Preferences' ? 'Preferences' : 'External Links'}
+                      {item.category === 'Recent' ? 'Recently Used' : item.category === 'Tools' ? 'Developer Tools' : item.category === 'Preferences' ? 'Preferences' : 'External Links'}
                     </div>
                   )}
                   <div

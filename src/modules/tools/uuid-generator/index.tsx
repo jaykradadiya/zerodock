@@ -1,8 +1,14 @@
 import { useState, useCallback } from 'react';
 import { Fingerprint, Copy, RefreshCw, Check } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { createToolStore } from '../../../core/store/useToolState';
 
 type UUIDVersion = 'v4' | 'v7';
+
+const useUuidStore = createToolStore('uuid-generator', {
+  version: 'v4' as UUIDVersion,
+  count: 5,
+});
 
 // Basic UUIDv7 Implementation
 function generateUUIDv7(): string {
@@ -20,8 +26,10 @@ function generateUUIDv7(): string {
 }
 
 export default function UUIDGenerator() {
-  const [version, setVersion] = useState<UUIDVersion>('v4');
-  const [count, setCount] = useState<number>(5);
+  const { version, count, setValues } = useUuidStore();
+  const setVersion = (v: UUIDVersion) => setValues({ version: v });
+  const setCount = (c: number) => setValues({ count: c });
+  
   const [uuids, setUuids] = useState<string[]>([]);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 

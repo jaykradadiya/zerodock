@@ -7,13 +7,34 @@ import {
 } from '@tanstack/react-router';
 import { toolRegistry } from '../registry/tools';
 import { Suspense, lazy, useEffect } from 'react';
-import { useGlobalStore } from '../store/useGlobalStore';
+import { useUIStore } from '../store/useUIStore';
+import { usePreferenceStore } from '../store/usePreferenceStore';
 import { Navbar } from '../../landing/components/Navbar';
 import { ErrorBoundary } from '../../shared/components/ErrorBoundary';
 
 import { LandingPage } from '../../landing/LandingPage';
-const LazyCommandPalette = lazy(() => import('../../shared/components/CommandPalette').then(m => ({ default: m.CommandPalette })));
-const LazyStorageWarningModal = lazy(() => import('../../shared/components/StorageWarningModal').then(m => ({ default: m.StorageWarningModal })));
+
+const lazyRetry = (componentImport: () => Promise<any>) =>
+  lazy(async () => {
+    const pageHasAlreadyBeenForceRefreshed = JSON.parse(
+      window.sessionStorage.getItem('page-has-been-force-refreshed') || 'false'
+    );
+
+    try {
+      const component = await componentImport();
+      window.sessionStorage.setItem('page-has-been-force-refreshed', 'false');
+      return component;
+    } catch (error) {
+      if (!pageHasAlreadyBeenForceRefreshed) {
+        window.sessionStorage.setItem('page-has-been-force-refreshed', 'true');
+        return window.location.reload();
+      }
+      throw error;
+    }
+  });
+
+const LazyCommandPalette = lazyRetry(() => import('../../shared/components/CommandPalette').then(m => ({ default: m.CommandPalette })));
+const LazyStorageWarningModal = lazyRetry(() => import('../../shared/components/StorageWarningModal').then(m => ({ default: m.StorageWarningModal })));
 
 /*
  * RootLayout — site-wide shell.
@@ -21,7 +42,8 @@ const LazyStorageWarningModal = lazy(() => import('../../shared/components/Stora
  * Tool pages get a self-contained layout; the landing page renders its own footer.
  */
 function RootLayout() {
-  const { theme, commandPaletteOpen, setCommandPaletteOpen, storageWarning } = useGlobalStore();
+  const { theme } = usePreferenceStore();
+  const { commandPaletteOpen, setCommandPaletteOpen, storageWarning } = useUIStore();
 
   // Toggle Command Palette globally
   useEffect(() => {
@@ -104,10 +126,19 @@ function ToolLoadingFallback({ toolName }: { toolName: string }) {
 interface SEOWrapperProps {
   title: string;
   description: string;
+  toolId?: string;
   children: React.ReactNode;
 }
 
-function SEOWrapper({ title, description, children }: SEOWrapperProps) {
+function SEOWrapper({ title, description, toolId, children }: SEOWrapperProps) {
+  const { addRecentTool } = usePreferenceStore();
+
+  useEffect(() => {
+    if (toolId) {
+      addRecentTool(toolId);
+    }
+  }, [toolId, addRecentTool]);
+
   useEffect(() => {
     const originalTitle = document.title;
     
@@ -159,7 +190,7 @@ const indexRoute = createRoute({
 
 /* Dynamic routes for each registered tool */
 const toolRoutes = toolRegistry.map((tool) => {
-  const LazyComponent = lazy(tool.component);
+  const LazyComponent = lazyRetry(tool.component);
   return createRoute({
     getParentRoute: () => rootRoute,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -168,6 +199,7 @@ const toolRoutes = toolRegistry.map((tool) => {
       <SEOWrapper
         title={tool.name}
         description={tool.metadata.description}
+        toolId={tool.id}
       >
         <Suspense fallback={<ToolLoadingFallback toolName={tool.name} />}>
           <ErrorBoundary>

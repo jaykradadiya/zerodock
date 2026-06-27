@@ -1,7 +1,7 @@
 import { useRef, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
 import type { EditorProps } from '@monaco-editor/react';
-import { useGlobalStore } from '../../../core/store/useGlobalStore';
+import { usePreferenceStore } from '../../../core/store/usePreferenceStore';
 import { useWorkspaceStore } from '../../../modules/tools/json-toolkit/store/workspaceStore';
 
 interface CodeEditorProps extends Omit<EditorProps, 'theme' | 'onChange'> {
@@ -14,7 +14,7 @@ interface CodeEditorProps extends Omit<EditorProps, 'theme' | 'onChange'> {
 }
 
 export function CodeEditor({ modelId, value, language = 'json', readOnly = false, onChange, editorRef: externalEditorRef, ...props }: CodeEditorProps) {
-  const { theme } = useGlobalStore();
+  const { theme } = usePreferenceStore();
   const getFileContent = useWorkspaceStore(s => s.getFileContent);
   const updateTabContent = useWorkspaceStore(s => s.updateTabContent);
   const tabs = useWorkspaceStore(s => s.tabs);
@@ -167,7 +167,7 @@ export function CodeEditor({ modelId, value, language = 'json', readOnly = false
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
         timeoutRef.current = setTimeout(() => {
           updateTabContent(currentModelId, val);
-        }, 1500); // Debounce save to IndexedDB
+        }, val.length > 1024 * 1024 ? 3000 : 1500); // Debounce longer for >1MB files
       }
     });
 

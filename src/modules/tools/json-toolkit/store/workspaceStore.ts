@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { get, set, del } from 'idb-keyval';
-import { useGlobalStore } from '../../../../core/store/useGlobalStore';
+import { useUIStore } from '../../../../core/store/useUIStore';
 
 const CLI_SUGGESTIONS = [
   "Use command-line utilities like 'jq' for querying and formatting (e.g., `jq . file.json`).",
@@ -61,7 +61,7 @@ export const useWorkspaceStore = create<WorkspaceState>((setStore, getStore) => 
     const newSize = content.length;
     
     if (currentTotalSize + newSize > 15 * 1024 * 1024) {
-      useGlobalStore.getState().showStorageWarning(
+      useUIStore.getState().showStorageWarning(
         "Workspace Storage Limit Exceeded",
         "Adding this tab would exceed the 15MB total workspace storage cap. ZeroDock workspaces run directly inside your browser memory and are optimized for configuration data rather than massive database logs.",
         CLI_SUGGESTIONS
@@ -114,7 +114,7 @@ export const useWorkspaceStore = create<WorkspaceState>((setStore, getStore) => 
     const newSize = content.length;
 
     if (currentTotalSize - oldTabSize + newSize > 15 * 1024 * 1024) {
-      useGlobalStore.getState().showStorageWarning(
+      useUIStore.getState().showStorageWarning(
         "Workspace Storage Limit Exceeded",
         "Updating this file would exceed the 15MB total workspace storage cap. Your latest changes have not been saved to persistent storage.",
         CLI_SUGGESTIONS

@@ -1,8 +1,10 @@
-import { motion } from 'framer-motion';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from '@tanstack/react-router';
 import { toolRegistry } from '../../core/registry/tools';
-import { ChevronRight, type LucideIcon } from 'lucide-react';
+import { ChevronRight, Clock, type LucideIcon } from 'lucide-react';
 import type { Tool } from '../../types/tool';
+import { usePreferenceStore } from '../../core/store/usePreferenceStore';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -22,6 +24,19 @@ const itemVariants = {
 };
 
 export function ToolsGrid() {
+  const { recentTools } = usePreferenceStore();
+  const [activeCategory, setActiveCategory] = useState<string>('All');
+  
+  const categories = ['All', ...Array.from(new Set(toolRegistry.map(t => t.category)))];
+  
+  const recentToolObjects = recentTools
+    .map(id => toolRegistry.find(t => t.id === id))
+    .filter(Boolean) as Tool[];
+
+  const filteredTools = activeCategory === 'All'
+    ? toolRegistry
+    : toolRegistry.filter(t => t.category === activeCategory);
+
   return (
     <section
       id="tools"
@@ -83,22 +98,84 @@ export function ToolsGrid() {
         </motion.p>
       </div>
 
-      {/* Grid */}
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        whileInView="show"
-        viewport={{ once: true, margin: '-60px' }}
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-          gap: '20px',
-        }}
-      >
-        {toolRegistry.map((tool) => (
-          <ToolCard key={tool.id} tool={tool} />
+      {/* Categories Filter */}
+      <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '40px', flexWrap: 'wrap' }}>
+        {categories.map(cat => (
+          <button
+            key={cat}
+            onClick={() => setActiveCategory(cat)}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '999px',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              border: activeCategory === cat ? '1px solid var(--zd-primary)' : '1px solid var(--zd-border)',
+              backgroundColor: activeCategory === cat ? 'var(--zd-primary-soft)' : 'var(--zd-surface)',
+              color: activeCategory === cat ? 'var(--zd-primary)' : 'var(--zd-text-secondary)',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            {cat}
+          </button>
         ))}
-      </motion.div>
+      </div>
+
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeCategory}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          transition={{ duration: 0.3 }}
+        >
+          {/* Recently Used Section */}
+          {activeCategory === 'All' && recentToolObjects.length > 0 && (
+            <div style={{ marginBottom: '64px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
+                <Clock size={18} style={{ color: 'var(--zd-primary)' }} />
+                <h3 style={{ fontSize: '18px', fontWeight: 600, margin: 0, color: 'var(--zd-text-primary)' }}>Recently Used</h3>
+              </div>
+              <motion.div
+                variants={containerVariants}
+                initial="hidden"
+                animate="show"
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                  gap: '20px',
+                }}
+              >
+                {recentToolObjects.map((tool) => (
+                  <ToolCard key={`recent-${tool.id}`} tool={tool} />
+                ))}
+              </motion.div>
+              <div style={{ height: '1px', backgroundColor: 'var(--zd-border)', margin: '48px 0 0' }} />
+            </div>
+          )}
+
+          {/* Grid */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: 600, margin: 0, color: 'var(--zd-text-primary)' }}>
+              {activeCategory === 'All' ? 'All Tools' : activeCategory}
+            </h3>
+          </div>
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="show"
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+              gap: '20px',
+            }}
+          >
+            {filteredTools.map((tool) => (
+              <ToolCard key={tool.id} tool={tool} />
+            ))}
+          </motion.div>
+        </motion.div>
+      </AnimatePresence>
     </section>
   );
 }

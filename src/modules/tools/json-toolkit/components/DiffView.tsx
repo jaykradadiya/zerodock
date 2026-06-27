@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { DiffEditor } from '@monaco-editor/react';
-import { useGlobalStore } from '../../../../core/store/useGlobalStore';
+import { usePreferenceStore } from '../../../../core/store/usePreferenceStore';
 import { useWorkspaceStore } from '../../../../modules/tools/json-toolkit/store/workspaceStore';
 
 interface DiffViewProps {
@@ -11,7 +11,7 @@ interface DiffViewProps {
 }
 
 export function DiffView({ original, modified, originalModelId, modifiedModelId }: DiffViewProps) {
-  const { theme } = useGlobalStore();
+  const { theme } = usePreferenceStore();
   const getFileContent = useWorkspaceStore(s => s.getFileContent);
   const editorRef = useRef<any>(null);
   const monacoRef = useRef<any>(null);

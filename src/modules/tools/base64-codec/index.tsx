@@ -2,11 +2,19 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { Binary, ArrowRightLeft, Copy, Check, Upload, Sparkles } from 'lucide-react';
 import { usePipelineStore } from '../../../core/store/usePipelineStore';
+import { createToolStore } from '../../../core/store/useToolState';
+
+const useBase64Store = createToolStore('base64-codec', {
+  input: '',
+  mode: 'encode' as 'encode' | 'decode',
+});
 
 export default function Base64Codec() {
-  const [input, setInput] = useState('');
+  const { input, mode, setValues } = useBase64Store();
+  const setInput = (val: string) => setValues({ input: val });
+  const setMode = (val: 'encode' | 'decode') => setValues({ mode: val });
+  
   const [output, setOutput] = useState('');
-  const [mode, setMode] = useState<'encode' | 'decode'>('encode');
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 

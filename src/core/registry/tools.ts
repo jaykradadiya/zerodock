@@ -11,7 +11,11 @@ import {
   GitCompare,
   Clock,
   Code2,
-  Calculator
+  Calculator,
+  CalendarClock,
+  SearchCode,
+  TerminalSquare,
+  Database
 } from 'lucide-react';
 
 export const toolRegistry: Tool[] = [
@@ -158,6 +162,54 @@ export const toolRegistry: Tool[] = [
     metadata: {
       description: 'Calculate down payment portions, monthly installments, total interest charges, and detailed payment timelines for loans.',
       tags: ['downpayment', 'installment', 'finance', 'calculator', 'interest', 'loan', 'mortgage', 'monthly payment', 'amortization'],
+    },
+  },
+  {
+    id: 'crontab-guru',
+    name: 'Crontab Guru',
+    category: 'Text',
+    route: '/crontab-guru',
+    icon: CalendarClock,
+    component: () => import('../../modules/tools/crontab-guru'),
+    metadata: {
+      description: 'Quickly parse and format cron expressions into human-readable text.',
+      tags: ['cron', 'crontab', 'schedule', 'time', 'parser'],
+    },
+  },
+  {
+    id: 'regex-tester',
+    name: 'Regex Tester',
+    category: 'Text',
+    route: '/regex-tester',
+    icon: SearchCode,
+    component: () => import('../../modules/tools/regex-tester'),
+    metadata: {
+      description: 'Test and debug regular expressions instantly with live match highlighting and group extraction.',
+      tags: ['regex', 'regular expression', 'test', 'match', 'debug'],
+    },
+  },
+  {
+    id: 'curl-converter',
+    name: 'cURL Converter',
+    category: 'Text',
+    route: '/curl-converter',
+    icon: TerminalSquare,
+    component: () => import('../../modules/tools/curl-converter'),
+    metadata: {
+      description: 'Convert cURL commands to modern code snippets for JavaScript, Python, Go, and more.',
+      tags: ['curl', 'fetch', 'requests', 'http', 'converter', 'code', 'snippet'],
+    },
+  },
+  {
+    id: 'sql-formatter',
+    name: 'SQL Formatter',
+    category: 'Text',
+    route: '/sql-formatter',
+    icon: Database,
+    component: () => import('../../modules/tools/sql-formatter'),
+    metadata: {
+      description: 'Beautify and format raw SQL queries into readable, indented statements.',
+      tags: ['sql', 'format', 'database', 'query', 'beautify', 'indent'],
     },
   }
 ];

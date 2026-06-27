@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { DiffEditor } from '@monaco-editor/react';
-import { useGlobalStore } from '../../../core/store/useGlobalStore';
+import { usePreferenceStore } from '../../../core/store/usePreferenceStore';
 import { GitCompare, Trash2, Sparkles, Columns, Split } from 'lucide-react';
 
 const SAMPLE_LEFT = `// ZeroDock Configuration
@@ -41,7 +41,7 @@ const SAMPLE_RIGHT = `// ZeroDock Configuration
 }`;
 
 export default function DiffChecker() {
-  const { theme } = useGlobalStore();
+  const { theme } = usePreferenceStore();
   const [language, setLanguage] = useState('json');
   const [sideBySide, setSideBySide] = useState(true);
   

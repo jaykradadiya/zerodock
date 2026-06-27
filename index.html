@@ -21,8 +21,9 @@
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://zerodock.jayradadiya.workers.dev" />
 
-  <!-- Favicon -->
+  <!-- Favicon and PWA -->
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="manifest" href="/manifest.json" />
 
   <!-- Fonts: Roboto & Roboto Mono via Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -37,6 +38,17 @@
 <body>
   <div id="root"></div>
   <script type="module" src="/src/main.tsx"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').then((registration) => {
+          console.log('ServiceWorker registration successful with scope: ', registration.scope);
+        }, (err) => {
+          console.log('ServiceWorker registration failed: ', err);
+        });
+      });
+    }
+  </script>
 </body>
 
 </html>

@@ -1,10 +1,18 @@
 import { useState, useEffect } from 'react';
 import { Link2, ArrowRightLeft, Copy, Check } from 'lucide-react';
+import { createToolStore } from '../../../core/store/useToolState';
+
+const useUrlStore = createToolStore('url-encoder', {
+  input: '',
+  mode: 'encode' as 'encode' | 'decode',
+});
 
 export default function URLEncoder() {
-  const [input, setInput] = useState('');
+  const { input, mode, setValues } = useUrlStore();
+  const setInput = (val: string) => setValues({ input: val });
+  const setMode = (val: 'encode' | 'decode') => setValues({ mode: val });
+  
   const [output, setOutput] = useState('');
-  const [mode, setMode] = useState<'encode' | 'decode'>('encode');
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 

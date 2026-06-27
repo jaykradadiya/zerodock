@@ -103,6 +103,11 @@ export default function JsonFormatter() {
   const validateWorkerRef = useRef<Worker | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const editorRef = useRef<any>(null); // To execute edits in Monaco directly
+  const activeTabIdRef = useRef(activeTabId);
+
+  useEffect(() => {
+    activeTabIdRef.current = activeTabId;
+  }, [activeTabId]);
 
   const handleOutputModeChange = async (mode: 'hidden' | 'tree' | 'table') => {
     try {
@@ -205,7 +210,7 @@ export default function JsonFormatter() {
       repairWorkerRef.current?.terminate();
       validateWorkerRef.current?.terminate();
     };
-  }, [activeTabId]);
+  }, []);
 
   // Schema validation trigger
   useEffect(() => {
@@ -239,8 +244,8 @@ export default function JsonFormatter() {
         }]);
         editorRef.current.pushUndoStop();
       }
-    } else if (activeTabId) {
-      updateTabContent(activeTabId, newText);
+    } else if (activeTabIdRef.current) {
+      updateTabContent(activeTabIdRef.current, newText);
     }
   };
 

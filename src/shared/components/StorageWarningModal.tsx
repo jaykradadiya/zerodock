@@ -1,8 +1,8 @@
-import { useGlobalStore } from '../../core/store/useGlobalStore';
+import { useUIStore } from '../../core/store/useUIStore';
 import { AlertTriangle, X } from 'lucide-react';
 
 export function StorageWarningModal() {
-  const { storageWarning, closeStorageWarning } = useGlobalStore();
+  const { storageWarning, closeStorageWarning } = useUIStore();
 
   if (!storageWarning || !storageWarning.isOpen) return null;
 

@@ -106,7 +106,7 @@ export function DiffView({ original, modified, originalModelId, modifiedModelId 
             }
           }}
           loading={
-            <div className="flex-1 h-full flex items-center justify-center text-slate-400 text-sm">
+            <div className="flex-1 h-full flex items-center justify-center text-[var(--zd-text-muted)] text-sm">
               Loading diff editor...
             </div>
           }

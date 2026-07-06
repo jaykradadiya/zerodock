@@ -1,9 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from '@tanstack/react-router';
 import { Search, Terminal, Sun, Moon, Volume2, VolumeX, CornerDownLeft, Sparkles } from 'lucide-react';
 import { toolRegistry } from '../../core/registry/tools';
 import { usePreferenceStore } from '../../core/store/usePreferenceStore';
 import { useUIStore } from '../../core/store/useUIStore';
+import { fuzzyFilter } from '../utils/fuzzySearch';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 const GithubIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24" {...props}>
@@ -20,9 +23,23 @@ export function CommandPalette() {
   
   const navigate = useNavigate();
   const paletteRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  useFocusTrap(commandPaletteOpen, paletteRef);
+
+  // Reset search when opening
+  useEffect(() => {
+    if (commandPaletteOpen) {
+      setSearch('');
+      setSelectedIndex(0);
+      setActiveCategory('All');
+      setTimeout(() => inputRef.current?.focus(), 0);
+    }
+  }, [commandPaletteOpen]);
 
   // Handle Escape key to close
   useEffect(() => {
+    if (!commandPaletteOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setCommandPaletteOpen(false);
@@ -30,7 +47,7 @@ export function CommandPalette() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [setCommandPaletteOpen]);
+  }, [commandPaletteOpen, setCommandPaletteOpen]);
 
   // Dismiss on click outside
   useEffect(() => {
@@ -146,21 +163,32 @@ export function CommandPalette() {
 
 
   // Derive active items first
-  const activeItems = activeCategory === 'All' 
-    ? allItems 
-    : allItems.filter(item => item.category === activeCategory);
+  const activeItems = activeCategory === 'All'
+    ? allItems
+    : allItems.filter((item) => item.category === activeCategory);
 
-  const filteredItems = search === '' 
-    ? activeItems.filter(item => item.category === 'Context' || item.category === 'Favorites' || item.category === 'Recent' || item.category === 'Preferences')
-    : activeItems.filter(item => 
-        item.name.toLowerCase().includes(search.toLowerCase()) || 
-        (item.description && item.description.toLowerCase().includes(search.toLowerCase()))
-      );
+  const topToolItems = toolItems.slice(0, 8);
+
+  const defaultVisibleItems = [
+    ...contextItems,
+    ...favoriteItems,
+    ...recentItems,
+    ...topToolItems,
+    ...actionItems.filter((i) => i.category === 'Preferences'),
+  ];
+
+  const filteredItems = search.trim()
+    ? fuzzyFilter(activeItems, search, (item) => `${item.name} ${item.description ?? ''}`)
+    : activeCategory === 'All'
+      ? defaultVisibleItems
+      : activeItems;
 
   // Force reset index if bounds are exceeded due to search/filter changes
-  if (selectedIndex >= filteredItems.length && filteredItems.length > 0) {
-    setSelectedIndex(0);
-  }
+  useEffect(() => {
+    if (selectedIndex >= filteredItems.length && filteredItems.length > 0) {
+      setSelectedIndex(0);
+    }
+  }, [filteredItems.length, selectedIndex]);
 
   // Keyboard navigation inside options list
   useEffect(() => {
@@ -175,34 +203,53 @@ export function CommandPalette() {
         setSelectedIndex((prev) => (prev - 1 + filteredItems.length) % filteredItems.length);
       } else if (e.key === 'Enter') {
         e.preventDefault();
-        filteredItems[selectedIndex].action();
+        filteredItems[selectedIndex]?.action();
+      } else if (e.key === 'Tab') {
+        e.preventDefault();
+        const cats = ['All', 'Favorites', 'Recent', 'Tools', 'Preferences', 'External'] as const;
+        const idx = cats.indexOf(activeCategory);
+        setActiveCategory(cats[(idx + 1) % cats.length]);
+        setSelectedIndex(0);
       }
     };
     window.addEventListener('keydown', handleListKeyDown);
     return () => window.removeEventListener('keydown', handleListKeyDown);
-  }, [commandPaletteOpen, filteredItems, selectedIndex]);
+  }, [commandPaletteOpen, filteredItems, selectedIndex, activeCategory]);
+
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [search, activeCategory]);
 
   // Remove useEffect causing synchronous state updates and rely on derive state directly when rendering
   if (!commandPaletteOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-100 flex items-start justify-center pt-[15vh] p-4 bg-slate-950/40 backdrop-blur-xs">
-      <div 
+  const palette = (
+    <div
+      className="fixed inset-0 z-[200] flex items-start justify-center pt-[12vh] sm:pt-[15vh] p-4 bg-black/50 dark:bg-black/70 backdrop-blur-md"
+      role="presentation"
+      onClick={() => setCommandPaletteOpen(false)}
+    >
+      <div
         ref={paletteRef}
-        className="w-full max-w-xl bg-[var(--zd-surface)] border border-[var(--zd-border)] rounded-2xl shadow-[var(--zd-shadow-lg)] overflow-hidden flex flex-col max-h-[70vh] focus:outline-none animate-in fade-in zoom-in-95 duration-150"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Search tools and commands"
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-xl bg-[var(--zd-surface)] border border-[var(--zd-border)] rounded-2xl shadow-[var(--zd-shadow-lg)] max-h-[min(70vh,640px)] flex flex-col focus:outline-none overflow-hidden"
       >
         {/* Search Input */}
         <div className="flex items-center gap-3 px-4 border-b border-[var(--zd-border)]">
-          <Search className="w-5 h-5 text-slate-400 shrink-0" />
+          <Search className="w-5 h-5 text-[var(--zd-text-muted)] shrink-0" />
           <input
+            ref={inputRef}
             type="text"
             placeholder="Type a command or search tools..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="flex-1 py-4 text-sm bg-transparent outline-none border-0 text-slate-900 dark:text-slate-100 placeholder-slate-400"
+            className="flex-1 py-4 text-sm bg-transparent outline-none border-0 text-[var(--zd-text-primary)] placeholder:text-[var(--zd-text-muted)]"
             autoFocus
           />
-          <div className="flex items-center gap-1 px-1.5 py-0.5 rounded border border-[var(--zd-border)] bg-[var(--zd-surface-raised)] text-[10px] font-semibold text-slate-400 shrink-0 select-none">
+          <div className="flex items-center gap-1 px-1.5 py-0.5 rounded border border-[var(--zd-border)] bg-[var(--zd-surface-raised)] text-[10px] font-mono font-semibold text-[var(--zd-text-muted)] shrink-0 select-none">
             ESC
           </div>
         </div>
@@ -216,7 +263,7 @@ export function CommandPalette() {
               className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
                 activeCategory === cat 
                   ? 'bg-[var(--zd-primary)] text-white shadow-sm' 
-                  : 'text-slate-500 hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)] bg-transparent'
+                  : 'text-[var(--zd-text-secondary)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)] bg-transparent'
               }`}
             >
               {cat}
@@ -227,8 +274,8 @@ export function CommandPalette() {
         {/* Results List */}
         <div className="flex-1 overflow-y-auto p-2 custom-scrollbar">
           {filteredItems.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center text-slate-400">
-              <Sparkles className="w-8 h-8 mb-3 text-slate-300 dark:text-slate-600 animate-pulse" />
+            <div className="flex flex-col items-center justify-center py-12 text-center text-[var(--zd-text-muted)]">
+              <Sparkles className="w-8 h-8 mb-3 text-[var(--zd-text-muted)] animate-pulse" />
               <span className="text-sm">No results matches your search</span>
             </div>
           ) : (
@@ -241,7 +288,7 @@ export function CommandPalette() {
               return (
                 <div key={item.id}>
                   {isFirstOfCategory && (
-                    <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mt-3 first:mt-1 select-none border-b border-[var(--zd-border)]/20 pb-1 mb-1">
+                    <div className="px-3 py-2 zd-mono-label mt-3 first:mt-1 select-none border-b border-[var(--zd-border)]/20 pb-1 mb-1">
                       {item.category === 'Recent' ? 'Recently Used' : item.category === 'Tools' ? 'Developer Tools' : item.category === 'Preferences' ? 'Preferences' : 'External Links'}
                     </div>
                   )}
@@ -251,7 +298,7 @@ export function CommandPalette() {
                     className={`flex items-center justify-between px-3 py-2.5 rounded-xl cursor-pointer text-sm transition-all select-none ${
                       isSelected 
                         ? 'bg-[var(--zd-primary-soft)] text-[var(--zd-primary)]' 
-                        : 'text-slate-600 dark:text-slate-400 hover:bg-[var(--zd-primary-soft)]/40'
+                        : 'text-[var(--zd-text-secondary)] hover:bg-[var(--zd-primary-soft)]/40'
                     }`}
                   >
                     <div className="flex items-center gap-3 min-w-0">
@@ -259,12 +306,12 @@ export function CommandPalette() {
                         <Icon className="w-4 h-4" />
                       </div>
                       <div className="min-w-0">
-                        <div className="font-semibold truncate text-slate-900 dark:text-slate-100">{item.name}</div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">{item.description}</div>
+                        <div className="font-semibold truncate text-[var(--zd-text-primary)]">{item.name}</div>
+                        <div className="text-xs text-[var(--zd-text-muted)] truncate mt-0.5">{item.description}</div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0 ml-4">
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] px-1.5 py-0.5 rounded">
+                      <span className="zd-mono-label !text-[10px] bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] px-1.5 py-0.5 rounded">
                         {item.category}
                       </span>
                       {isSelected && (
@@ -279,10 +326,11 @@ export function CommandPalette() {
         </div>
 
         {/* Footer info bar */}
-        <div className="px-4 py-2.5 bg-[var(--zd-surface-raised)] border-t border-[var(--zd-border)] flex items-center justify-between text-[11px] text-slate-400 select-none shrink-0">
+        <div className="px-4 py-2.5 bg-[var(--zd-surface-raised)] border-t border-[var(--zd-border)] flex items-center justify-between text-[11px] font-mono text-[var(--zd-text-muted)] select-none shrink-0">
           <div className="flex items-center gap-3">
             <span>↑↓ Navigate</span>
-            <span>↵ Enter select</span>
+            <span>↵ Select</span>
+            <span>Tab Category</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span>Close command menu:</span>
@@ -292,4 +340,6 @@ export function CommandPalette() {
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(palette, document.body) : palette;
 }

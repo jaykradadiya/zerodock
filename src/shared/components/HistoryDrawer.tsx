@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from '@tanstack/react-router';
 import { X, Trash2, Copy, Check, Clock, Sparkles, History, Wrench, type LucideIcon } from 'lucide-react';
@@ -7,6 +7,8 @@ import { useHistoryStore } from '../../core/store/useHistoryStore';
 import { usePreferenceStore } from '../../core/store/usePreferenceStore';
 import { toolRegistry } from '../../core/registry/tools';
 import { playSound } from '../utils/sound';
+import { useFocusTrap } from '../hooks/useFocusTrap';
+import { Button, Badge, IconBox } from './ui';
 
 function formatTimestamp(ts: number): string {
   const diff = Date.now() - ts;
@@ -26,6 +28,9 @@ export function HistoryDrawer() {
   const { soundEnabled } = usePreferenceStore();
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const navigate = useNavigate();
+  const drawerRef = useRef<HTMLDivElement | null>(null);
+
+  useFocusTrap(historyDrawerOpen, drawerRef);
 
   const handleCopyPreview = async (e: React.MouseEvent, id: string, text?: string) => {
     e.preventDefault();
@@ -59,26 +64,24 @@ export function HistoryDrawer() {
 
           {/* Side Drawer Panel */}
           <motion.div
+            ref={drawerRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Operation history"
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-[var(--zd-surface)] border-l border-[var(--zd-border)] shadow-2xl flex flex-col"
+            className="fixed inset-y-0 right-0 z-50 w-full max-w-md zd-workspace border-l border-[var(--zd-border)] shadow-2xl flex flex-col rounded-l-2xl focus:outline-none"
           >
             {/* Drawer Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--zd-border)] bg-[var(--zd-surface-raised)]/50">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-[var(--zd-primary-soft)] border border-[var(--zd-primary)]/30 flex items-center justify-center text-[var(--zd-primary)]">
-                  <History className="w-4 h-4" />
-                </div>
+                <IconBox icon={History} size="sm" />
                 <div>
                   <h3 className="font-bold text-sm text-[var(--zd-text-primary)] leading-tight flex items-center gap-2">
                     Operation History
-                    {historyItems.length > 0 && (
-                      <span className="px-2 py-0.5 rounded-full bg-[var(--zd-primary-soft)] text-[var(--zd-primary)] text-xs font-mono">
-                        {historyItems.length}
-                      </span>
-                    )}
+                    {historyItems.length > 0 && <Badge>{historyItems.length}</Badge>}
                   </h3>
                   <p className="text-[11px] text-[var(--zd-text-secondary)]">Recent outputs and tool actions</p>
                 </div>
@@ -86,23 +89,19 @@ export function HistoryDrawer() {
 
               <div className="flex items-center gap-2">
                 {historyItems.length > 0 && (
-                  <button
-                    type="button"
+                  <Button
+                    variant="destructive"
+                    size="sm"
                     onClick={() => {
                       if (confirm('Clear all operation history?')) clearHistory();
                     }}
-                    className="px-2.5 py-1 rounded-lg text-xs font-medium text-red-500 hover:bg-red-500/10 transition-colors cursor-pointer"
                   >
                     Clear All
-                  </button>
+                  </Button>
                 )}
-                <button
-                  type="button"
-                  onClick={() => setHistoryDrawerOpen(false)}
-                  className="p-1.5 rounded-lg text-[var(--zd-text-secondary)] hover:bg-[var(--zd-bg)] hover:text-[var(--zd-text-primary)] transition-colors cursor-pointer"
-                >
+                <Button variant="icon" onClick={() => setHistoryDrawerOpen(false)} aria-label="Close">
                   <X className="w-5 h-5" />
-                </button>
+                </Button>
               </div>
             </div>
 

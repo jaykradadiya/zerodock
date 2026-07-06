@@ -1,13 +1,13 @@
 import { motion } from 'framer-motion';
 import { ShieldCheck, Zap, UserX } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { Card, IconBox, SectionLabel } from '../../shared/components/ui';
 
 interface Feature {
   icon: LucideIcon;
   title: string;
   description: string;
-  accent: string;
-  accentBg: string;
+  iconClassName: string;
 }
 
 const features: Feature[] = [
@@ -16,24 +16,21 @@ const features: Feature[] = [
     title: 'Privacy by architecture',
     description:
       'Every tool runs in your browser using Web Workers and local APIs. No data is transmitted, stored, or logged. Your files never touch a server.',
-    accent: 'var(--zd-accent)',
-    accentBg: 'var(--zd-accent-soft)',
+    iconClassName: 'bg-[var(--zd-accent-soft)] text-[var(--zd-accent)]',
   },
   {
     icon: Zap,
     title: 'Instant performance',
     description:
       'No round-trips, no loading spinners. Tools process data in-memory at native speed. Large files are handled with streaming and chunking.',
-    accent: 'var(--zd-primary)',
-    accentBg: 'var(--zd-primary-soft)',
+    iconClassName: 'bg-[var(--zd-primary-soft)] text-[var(--zd-primary)]',
   },
   {
     icon: UserX,
     title: 'No accounts, ever',
     description:
-      'No sign-up, no email, no tracking pixels. Open the page, use the tool, close the tab. It\'s that simple. Open-source and auditable.',
-    accent: '#E17055',
-    accentBg: 'rgba(225, 112, 85, 0.1)',
+      "No sign-up, no email, no tracking pixels. Open the page, use the tool, close the tab. It's that simple. Open-source and auditable.",
+    iconClassName: 'bg-[rgba(225,112,85,0.1)] text-[#E17055]',
   },
 ];
 
@@ -50,28 +47,25 @@ const itemVariants = {
   show: {
     opacity: 1,
     y: 0,
-    transition: { type: 'spring', stiffness: 260, damping: 24 } as any,
+    transition: { type: 'spring', stiffness: 260, damping: 24 } as const,
   },
 };
 
 export function FeaturesSection() {
   return (
     <section className="relative py-20 sm:py-28 2xl:py-36 px-4 sm:px-8 md:px-12 2xl:px-16 overflow-hidden max-w-7xl 2xl:max-w-[1600px] 3xl:max-w-[1900px] mx-auto">
-      {/* Subtle background gradient */}
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[var(--zd-primary-soft)] to-transparent opacity-30 pointer-events-none" />
 
       <div className="relative z-10">
-        {/* Section header */}
         <div className="text-center mb-16 2xl:mb-20">
-          <motion.p
+          <motion.div
             initial={{ opacity: 0, y: 12 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: '-80px' }}
             transition={{ duration: 0.5 }}
-            className="text-xs font-mono font-semibold uppercase tracking-widest text-[var(--zd-primary)] mb-3"
           >
-            Why ZeroDock
-          </motion.p>
+            <SectionLabel className="text-[var(--zd-primary)] mb-3 block">Why ZeroDock</SectionLabel>
+          </motion.div>
           <motion.h2
             initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -92,7 +86,6 @@ export function FeaturesSection() {
           </motion.p>
         </div>
 
-        {/* Feature cards */}
         <motion.div
           variants={containerVariants}
           initial="hidden"
@@ -110,31 +103,19 @@ export function FeaturesSection() {
 }
 
 function FeatureCard({ feature }: { feature: Feature }) {
-  const Icon = feature.icon;
-
   return (
-    <motion.div
-      variants={itemVariants}
-      whileHover={{ y: -4 }}
-      className="p-8 2xl:p-10 rounded-2xl bg-[var(--zd-surface)] border border-[var(--zd-border)] hover:border-[var(--zd-primary)]/50 hover:shadow-lg transition-[border-color,box-shadow] duration-200 flex flex-col"
-    >
-      {/* Icon */}
-      <div
-        className="w-12 h-12 rounded-xl flex items-center justify-center mb-6 shadow-sm"
-        style={{ backgroundColor: feature.accentBg }}
-      >
-        <Icon size={22} style={{ color: feature.accent }} />
-      </div>
+    <motion.div variants={itemVariants}>
+      <Card glow padding className="!p-8 2xl:!p-10 flex flex-col h-full transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 hover:shadow-[var(--zd-shadow-md)]">
+        <IconBox icon={feature.icon} size="md" className={`mb-6 ${feature.iconClassName}`} />
 
-      {/* Title */}
-      <h3 className="text-lg font-bold text-[var(--zd-text-primary)] mb-3 tracking-tight">
-        {feature.title}
-      </h3>
+        <h3 className="text-lg font-bold text-[var(--zd-text-primary)] mb-3 tracking-tight">
+          {feature.title}
+        </h3>
 
-      {/* Description */}
-      <p className="text-sm sm:text-base leading-relaxed text-[var(--zd-text-secondary)] m-0">
-        {feature.description}
-      </p>
+        <p className="text-sm sm:text-base leading-relaxed text-[var(--zd-text-secondary)] m-0">
+          {feature.description}
+        </p>
+      </Card>
     </motion.div>
   );
 }

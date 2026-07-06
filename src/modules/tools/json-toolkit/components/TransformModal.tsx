@@ -64,7 +64,7 @@ export function TransformModal({ input, isOpen, onClose, onApply }: TransformMod
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[var(--zd-bg)]/50 backdrop-blur-sm p-4">
       <div className="bg-[var(--zd-bg)] rounded-2xl border border-[var(--zd-border)] shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden">
         
         {/* Header */}
@@ -73,7 +73,7 @@ export function TransformModal({ input, isOpen, onClose, onApply }: TransformMod
             <h2 className="text-lg font-semibold text-[var(--zd-text-primary)]">Transform Data</h2>
             <p className="text-sm text-[var(--zd-text-secondary)]">Query and manipulate your JSON using JMESPath or JavaScript.</p>
           </div>
-          <button onClick={onClose} className="p-2 text-[var(--zd-text-muted)] hover:text-[var(--zd-text-primary)] rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+          <button onClick={onClose} className="p-2 text-[var(--zd-text-muted)] hover:text-[var(--zd-text-primary)] rounded-lg hover:bg-[var(--zd-surface-raised)] transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -86,14 +86,14 @@ export function TransformModal({ input, isOpen, onClose, onApply }: TransformMod
             <div className="p-4 bg-[var(--zd-surface)] border-b border-[var(--zd-border)] shrink-0 flex items-center gap-2">
               <button
                 onClick={() => { setType('jmespath'); setQuery(''); }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${type === 'jmespath' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' : 'text-[var(--zd-text-secondary)] hover:bg-slate-200 dark:hover:bg-slate-800'}`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${type === 'jmespath' ? 'bg-[var(--zd-primary-soft)] text-[var(--zd-primary)]' : 'text-[var(--zd-text-secondary)] hover:bg-[var(--zd-surface-raised)]'}`}
               >
                 <Database className="w-4 h-4" />
                 JMESPath
               </button>
               <button
                 onClick={() => { setType('javascript'); setQuery('return data;'); }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${type === 'javascript' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' : 'text-[var(--zd-text-secondary)] hover:bg-slate-200 dark:hover:bg-slate-800'}`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${type === 'javascript' ? 'bg-[var(--zd-primary-soft)] text-[var(--zd-primary)]' : 'text-[var(--zd-text-secondary)] hover:bg-[var(--zd-surface-raised)]'}`}
               >
                 <Code2 className="w-4 h-4" />
                 JavaScript
@@ -101,14 +101,14 @@ export function TransformModal({ input, isOpen, onClose, onApply }: TransformMod
             </div>
             
             <div className="p-4 flex-1 flex flex-col gap-2 shrink-0 min-h-[150px]">
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              <label className="text-sm font-medium text-[var(--zd-text-secondary)]">
                 {type === 'jmespath' ? 'JMESPath Query' : 'JavaScript Expression'}
               </label>
               <textarea
                 value={query}
                 onChange={e => setQuery(e.target.value)}
                 placeholder={type === 'jmespath' ? 'e.g. users[?age > `20`].name' : 'e.g. return data.filter(u => u.age > 20).map(u => u.name);'}
-                className="flex-1 w-full bg-[var(--zd-surface)] border border-[var(--zd-border)] rounded-lg p-3 font-mono text-sm text-[var(--zd-text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50 resize-none"
+                className="flex-1 w-full bg-[var(--zd-surface)] border border-[var(--zd-border)] rounded-lg p-3 font-mono text-sm text-[var(--zd-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--zd-primary-soft)] resize-none"
               />
             </div>
           </div>
@@ -116,15 +116,15 @@ export function TransformModal({ input, isOpen, onClose, onApply }: TransformMod
           {/* Right Column: Preview */}
           <div className="flex-1 flex flex-col bg-[var(--zd-surface)] min-w-[300px]">
             <div className="p-4 bg-[var(--zd-surface)] border-b border-[var(--zd-border)] shrink-0">
-              <span className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2">
+              <span className="text-sm font-medium text-[var(--zd-text-secondary)] flex items-center gap-2">
                 Preview
-                {isProcessing && <span className="text-xs text-blue-500 animate-pulse">(computing...)</span>}
+                {isProcessing && <span className="text-xs text-[var(--zd-primary)] animate-pulse">(computing...)</span>}
               </span>
             </div>
             <div className="flex-1 min-h-0 relative">
               {error ? (
                 <div className="absolute inset-0 p-4 overflow-auto">
-                  <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-200 dark:border-red-800/40">
+                  <div className="text-sm text-[var(--zd-accent)] bg-[var(--zd-surface-raised)] p-3 rounded-lg border border-[var(--zd-border)]">
                     <span className="font-semibold block mb-1">Error executing query:</span>
                     <span className="font-mono">{error}</span>
                   </div>
@@ -132,7 +132,7 @@ export function TransformModal({ input, isOpen, onClose, onApply }: TransformMod
               ) : preview ? (
                 <CodeEditor value={preview} readOnly language="json" />
               ) : (
-                <div className="absolute inset-0 flex items-center justify-center text-slate-400 text-sm p-8 text-center">
+                <div className="absolute inset-0 flex items-center justify-center text-[var(--zd-text-muted)] text-sm p-8 text-center">
                   Enter a query to preview the transformed data.
                 </div>
               )}
@@ -142,17 +142,17 @@ export function TransformModal({ input, isOpen, onClose, onApply }: TransformMod
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-[var(--zd-border)] flex justify-end gap-3 shrink-0 bg-slate-50 dark:bg-slate-900">
+        <div className="p-4 border-t border-[var(--zd-border)] flex justify-end gap-3 shrink-0 bg-[var(--zd-surface)]">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="px-4 py-2 rounded-lg text-sm font-medium text-[var(--zd-text-secondary)] hover:bg-[var(--zd-surface-raised)] transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={() => onApply(preview)}
             disabled={!preview || !!error || isProcessing}
-            className="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm shadow-blue-500/20"
+            className="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-medium bg-[var(--zd-primary)] text-white hover:bg-[var(--zd-primary-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-[var(--zd-shadow-sm)]"
           >
             <Play className="w-4 h-4" />
             Apply to Input

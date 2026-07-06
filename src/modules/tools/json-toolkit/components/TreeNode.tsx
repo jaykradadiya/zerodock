@@ -20,11 +20,11 @@ export function TreeNode({ name, value, isLast, depth = 0, initiallyExpanded = t
   const toggle = () => setIsExpanded(!isExpanded);
 
   const getValueColor = (val: any) => {
-    if (val === null) return 'text-slate-400 dark:text-[var(--zd-text-muted)]';
+    if (val === null) return 'text-[var(--zd-text-muted)]';
     switch (typeof val) {
-      case 'string': return 'text-green-600 dark:text-green-400';
-      case 'number': return 'text-blue-600 dark:text-blue-400';
-      case 'boolean': return 'text-orange-600 dark:text-orange-400';
+      case 'string': return 'text-[var(--zd-text-primary)] font-medium';
+      case 'number': return 'text-[var(--zd-primary)]';
+      case 'boolean': return 'text-[var(--zd-accent)]';
       default: return 'text-[var(--zd-text-primary)]';
     }
   };
@@ -50,7 +50,7 @@ export function TreeNode({ name, value, isLast, depth = 0, initiallyExpanded = t
           onClick={isEmpty ? undefined : toggle}
         >
           {!isEmpty ? (
-            <button className="text-slate-400 hover:text-[var(--zd-primary)] transition-colors">
+            <button className="text-[var(--zd-text-muted)] hover:text-[var(--zd-primary)] transition-colors">
               {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
             </button>
           ) : (
@@ -66,7 +66,7 @@ export function TreeNode({ name, value, isLast, depth = 0, initiallyExpanded = t
           
           {!isExpanded && !isEmpty && (
             <>
-              <span className="text-xs text-slate-400 bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] px-1.5 py-0.5 rounded-md mx-1">{typeLabel}</span>
+              <span className="text-xs text-[var(--zd-text-muted)] bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] px-1.5 py-0.5 rounded-md mx-1">{typeLabel}</span>
               <span className="text-[var(--zd-text-muted)]">{bracketClose}</span>
               {!isLast && <span className="text-[var(--zd-text-muted)]">,</span>}
             </>
@@ -79,30 +79,45 @@ export function TreeNode({ name, value, isLast, depth = 0, initiallyExpanded = t
           )}
         </div>
 
-        <AnimatePresence initial={false}>
-          {isExpanded && !isEmpty && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.15 }}
-              className="overflow-hidden"
-            >
-              <div className="border-l border-[var(--zd-border)] ml-1.5 pl-0.5">
-                {keys.map((k, i) => (
-                  <TreeNode 
-                    key={k} 
-                    name={isArray ? null : k} 
-                    value={value[k as keyof typeof value]} 
-                    isLast={i === keys.length - 1}
-                    depth={depth + 1} 
-                    initiallyExpanded={initiallyExpanded && depth < 2}
-                  />
-                ))}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {isExpanded && !isEmpty && (
+          keys.length > 30 ? (
+            <div className="border-l border-[var(--zd-border)] ml-1.5 pl-0.5">
+              {keys.map((k, i) => (
+                <TreeNode 
+                  key={k} 
+                  name={isArray ? null : k} 
+                  value={value[k as keyof typeof value]} 
+                  isLast={i === keys.length - 1}
+                  depth={depth + 1} 
+                  initiallyExpanded={initiallyExpanded && depth < 2}
+                />
+              ))}
+            </div>
+          ) : (
+            <AnimatePresence initial={false}>
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                className="overflow-hidden"
+              >
+                <div className="border-l border-[var(--zd-border)] ml-1.5 pl-0.5">
+                  {keys.map((k, i) => (
+                    <TreeNode 
+                      key={k} 
+                      name={isArray ? null : k} 
+                      value={value[k as keyof typeof value]} 
+                      isLast={i === keys.length - 1}
+                      depth={depth + 1} 
+                      initiallyExpanded={initiallyExpanded && depth < 2}
+                    />
+                  ))}
+                </div>
+              </motion.div>
+            </AnimatePresence>
+          )
+        )}
 
         {isExpanded && !isEmpty && (
           <div className="flex items-center group -ml-1 pl-1 rounded py-0.5" style={{ paddingLeft: '1.25rem' }}>

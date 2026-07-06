@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Send, ChevronDown } from 'lucide-react';
 import { usePipelineStore } from '../../core/store/usePipelineStore';
 import { useNavigate } from '@tanstack/react-router';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Button } from './ui';
 
 interface TargetTool {
   id: string;
@@ -42,45 +42,44 @@ export function SendToButton({ data, targets }: SendToButtonProps) {
 
   return (
     <>
-      <button
+      <Button
         ref={buttonRef}
+        variant="ghost"
+        size="sm"
         onClick={toggleDropdown}
-        className="text-xs flex items-center gap-1.5 text-orange-600 dark:text-orange-400 hover:underline transition-colors relative"
+        className="!px-0 !py-0 !border-0"
       >
         <Send className="w-3 h-3" />
         Send to
         <ChevronDown className="w-3 h-3" />
-      </button>
+      </Button>
 
       {typeof document !== 'undefined' && createPortal(
-        <AnimatePresence>
+        <>
           {isOpen && (
             <>
-              <div className="fixed inset-0 z-[100]" onClick={() => setIsOpen(false)} />
-              <motion.div
-                initial={{ opacity: 0, y: 5, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 5, scale: 0.95 }}
-                transition={{ duration: 0.1 }}
+              <div className="fixed inset-0 z-[100]" onClick={() => setIsOpen(false)} aria-hidden />
+              <div
                 style={{ top: coords.top, right: coords.right }}
                 className="fixed w-48 bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] rounded-md shadow-lg z-[101] py-1 overflow-hidden"
               >
                 {targets.map((target) => (
-                  <button
+                  <Button
                     key={target.id}
+                    variant="ghost"
                     onClick={() => {
                       handleSend(target.route);
                       setIsOpen(false);
                     }}
-                    className="w-full text-left px-3 py-2 text-sm text-[var(--zd-text-secondary)] hover:text-[var(--zd-text-primary)] hover:bg-[var(--zd-primary-soft)] transition-colors focus-ring"
+                    className="w-full !justify-start !rounded-none !border-0 px-3 py-2 text-sm"
                   >
                     {target.name}
-                  </button>
+                  </Button>
                 ))}
-              </motion.div>
+              </div>
             </>
           )}
-        </AnimatePresence>,
+        </>,
         document.body
       )}
     </>

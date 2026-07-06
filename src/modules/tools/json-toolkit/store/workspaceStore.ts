@@ -87,19 +87,22 @@ export const useWorkspaceStore = create<WorkspaceState>((setStore, getStore) => 
     await del(`zd_file_${id}`);
     
     setStore((state) => {
-      const newTabs = state.tabs.filter(t => t.id !== id);
-      set('zd_json_tabs', newTabs).catch(console.error);
-      
+      let newTabs = state.tabs.filter(t => t.id !== id);
       let newActiveId = state.activeTabId;
       if (state.activeTabId === id) {
         newActiveId = newTabs.length > 0 ? newTabs[newTabs.length - 1].id : null;
       }
       
-      // If no tabs left, create an empty one
+      // If no tabs left, create an empty one synchronously
       if (newTabs.length === 0) {
-        setTimeout(() => getStore().addTab('Untitled 1', ''), 0);
+        const newId = crypto.randomUUID();
+        const defaultTab: FileTab = { id: newId, name: 'Untitled 1', size: 0, isModified: false };
+        newTabs = [defaultTab];
+        newActiveId = newId;
+        set(`zd_file_${newId}`, '').catch(console.error);
       }
       
+      set('zd_json_tabs', newTabs).catch(console.error);
       return { tabs: newTabs, activeTabId: newActiveId };
     });
   },

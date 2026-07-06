@@ -3,9 +3,9 @@ import { Link } from '@tanstack/react-router';
 import { usePreferenceStore } from '../../core/store/usePreferenceStore';
 import { useUIStore } from '../../core/store/useUIStore';
 import { Moon, Sun, Star, Search, History } from 'lucide-react';
-import { motion } from 'framer-motion';
 import { useHistoryStore } from '../../core/store/useHistoryStore';
 import { HistoryDrawer } from '../../shared/components/HistoryDrawer';
+import { Badge, Button } from '../../shared/components/ui';
 
 const GithubIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24" {...props}>
@@ -40,14 +40,15 @@ export function Navbar() {
         const res = await fetch('https://api.github.com/repos/jayradadiya/ZeroDock');
         if (res.ok) {
           const data = await res.json();
-          const starCount = data.stargazers_count > 999
-            ? (data.stargazers_count / 1000).toFixed(1) + 'k'
-            : data.stargazers_count.toString();
+          const starCount =
+            data.stargazers_count > 999
+              ? (data.stargazers_count / 1000).toFixed(1) + 'k'
+              : data.stargazers_count.toString();
           setStars(starCount);
           localStorage.setItem('zerodock-github-stars', starCount);
           localStorage.setItem('zerodock-github-stars-time', Date.now().toString());
         }
-      } catch (e) {
+      } catch {
         // fail silently in restricted envs
       }
     };
@@ -63,92 +64,86 @@ export function Navbar() {
             : 'bg-transparent border-b border-transparent'
         }`}
       >
-      {/* Logo */}
-      <Link to="/" className="flex items-center gap-2.5 no-underline group">
-        <div className="w-8 h-8 rounded-lg bg-[var(--zd-primary-soft)] border border-[var(--zd-primary)]/30 flex items-center justify-center shadow-[0_0_15px_var(--zd-glow)] transition-transform group-hover:scale-105">
-          <img
-            src="/favicon.svg"
-            alt="ZeroDock Logo"
-            width="20"
-            height="20"
-            className="object-contain"
-          />
-        </div>
-        <span className="text-lg font-extrabold tracking-tight text-[var(--zd-text-primary)] flex items-center">
-          Zero
-          <span className="bg-gradient-to-r from-[var(--zd-primary)] to-[var(--zd-accent)] bg-clip-text text-transparent">
-            Dock
-          </span>
-        </span>
-      </Link>
-
-      {/* Right controls */}
-      <div className="flex items-center gap-3">
-        {/* History Trigger */}
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => setHistoryDrawerOpen(true)}
-          aria-label="View operation history"
-          className="flex items-center gap-2 h-9 px-3 rounded-xl border border-[var(--zd-border)] bg-[var(--zd-surface-raised)] hover:bg-[var(--zd-primary-soft)] hover:border-[var(--zd-primary)]/50 text-xs font-medium text-[var(--zd-text-secondary)] hover:text-[var(--zd-text-primary)] transition-all cursor-pointer shadow-sm group"
-        >
-          <History className="w-3.5 h-3.5 text-[var(--zd-primary)] transition-transform group-hover:rotate-45" />
-          <span className="hidden md:inline font-semibold">History</span>
-          {historyItems.length > 0 && (
-            <span className="px-1.5 py-0.2 rounded-full bg-[var(--zd-primary-soft)] text-[var(--zd-primary)] text-[10px] font-mono font-bold">
-              {historyItems.length}
+        <Link to="/" className="flex items-center gap-2.5 no-underline group">
+          <div className="zd-icon-ring w-8 h-8 flex items-center justify-center shadow-[0_0_15px_var(--zd-glow)] transition-transform group-hover:scale-105">
+            <img
+              src="/favicon.svg"
+              alt="ZeroDock Logo"
+              width="20"
+              height="20"
+              className="object-contain"
+            />
+          </div>
+          <span className="text-lg font-extrabold tracking-tight text-[var(--zd-text-primary)] flex items-center">
+            Zero
+            <span className="bg-gradient-to-r from-[var(--zd-primary)] to-[var(--zd-accent)] bg-clip-text text-transparent">
+              Dock
             </span>
-          )}
-        </motion.button>
+          </span>
+        </Link>
 
-        {/* Search trigger */}
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => setCommandPaletteOpen(true)}
-          aria-label="Search tools and commands"
-          className="flex items-center gap-2 h-9 px-3 rounded-xl border border-[var(--zd-border)] bg-[var(--zd-surface-raised)] hover:bg-[var(--zd-primary-soft)] hover:border-[var(--zd-primary)]/50 text-xs font-medium text-[var(--zd-text-secondary)] hover:text-[var(--zd-text-primary)] transition-all cursor-pointer shadow-sm group"
-        >
-          <Search className="w-3.5 h-3.5 text-[var(--zd-primary)] transition-transform group-hover:scale-110" />
-          <span className="hidden sm:inline">Search tools...</span>
-          <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--zd-surface)] border border-[var(--zd-border)] text-[var(--zd-text-muted)] group-hover:border-[var(--zd-primary)]/30">
-            ⌘K
-          </kbd>
-        </motion.button>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setHistoryDrawerOpen(true)}
+            aria-label="View operation history"
+            className="!h-9 group"
+          >
+              <History className="w-3.5 h-3.5 text-[var(--zd-primary)] transition-transform group-hover:rotate-45" />
+              <span className="hidden md:inline font-semibold">History</span>
+              {historyItems.length > 0 && (
+                <Badge variant="primary" className="!rounded-full !px-1.5">
+                  {historyItems.length}
+                </Badge>
+              )}
+            </Button>
 
-        {/* GitHub Star Pill */}
-        <a
-          href="https://github.com/jayradadiya/ZeroDock"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="hidden sm:flex items-center no-underline h-9 rounded-xl border border-[var(--zd-border)] hover:border-[var(--zd-border-hover)] bg-[var(--zd-surface-raised)] text-[var(--zd-text-primary)] text-xs font-semibold overflow-hidden transition-all shadow-sm group"
-        >
-          <div className="flex items-center gap-1.5 px-2.5 group-hover:text-[var(--zd-primary)] transition-colors">
-            <GithubIcon />
-            <span>GitHub</span>
-          </div>
-          <div className="flex items-center gap-1 px-2.5 border-l border-[var(--zd-border)] bg-[var(--zd-surface)] h-full text-[var(--zd-text-secondary)] font-mono">
-            <Star size={12} className="fill-current text-[#E17055]" />
-            <span>{stars}</span>
-          </div>
-        </a>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setCommandPaletteOpen(true)}
+            aria-label="Search tools and commands"
+            className="!h-9 group"
+          >
+              <Search className="w-3.5 h-3.5 text-[var(--zd-primary)] transition-transform group-hover:scale-110" />
+              <span className="hidden sm:inline">Search tools...</span>
+              <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--zd-surface)] border border-[var(--zd-border)] text-[var(--zd-text-muted)] group-hover:border-[var(--zd-primary)]/30">
+                ⌘K
+              </kbd>
+            </Button>
 
-        {/* Theme Toggle */}
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={toggleTheme}
-          aria-label="Toggle theme"
-          className="flex items-center justify-center w-9 h-9 rounded-xl border border-[var(--zd-border)] bg-[var(--zd-surface-raised)] hover:bg-[var(--zd-primary-soft)] hover:border-[var(--zd-primary)]/50 text-[var(--zd-text-secondary)] hover:text-[var(--zd-text-primary)] transition-all cursor-pointer shadow-sm"
-        >
-          {theme === 'dark' ? <Sun size={16} className="text-[#FDCB6E]" /> : <Moon size={16} className="text-[var(--zd-primary)]" />}
-        </motion.button>
-      </div>
-    </header>
-    <HistoryDrawer />
+          <a
+            href="https://github.com/jayradadiya/ZeroDock"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden sm:flex items-center no-underline h-9 rounded-xl border border-[var(--zd-border)] hover:border-[var(--zd-border-hover)] bg-[var(--zd-surface-raised)] text-[var(--zd-text-primary)] text-xs font-semibold overflow-hidden transition-all shadow-sm group"
+          >
+            <div className="flex items-center gap-1.5 px-2.5 group-hover:text-[var(--zd-primary)] transition-colors">
+              <GithubIcon />
+              <span>GitHub</span>
+            </div>
+            <div className="flex items-center gap-1 px-2.5 border-l border-[var(--zd-border)] bg-[var(--zd-surface)] h-full text-[var(--zd-text-secondary)] font-mono">
+              <Star size={12} className="fill-current text-[#E17055]" />
+              <span>{stars}</span>
+            </div>
+          </a>
+
+          <Button
+            variant="icon"
+            onClick={toggleTheme}
+            aria-label="Toggle theme"
+            className="!w-9 !h-9 !rounded-xl border border-[var(--zd-border)] bg-[var(--zd-surface-raised)] hover:bg-[var(--zd-primary-soft)] hover:border-[var(--zd-primary)]/50 shadow-sm"
+          >
+              {theme === 'dark' ? (
+                <Sun size={16} className="text-[#FDCB6E]" />
+              ) : (
+                <Moon size={16} className="text-[var(--zd-primary)]" />
+              )}
+            </Button>
+        </div>
+      </header>
+      <HistoryDrawer />
     </>
   );
 }
-
-
-

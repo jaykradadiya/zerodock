@@ -1,298 +1,224 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from '@tanstack/react-router';
+import { motion } from 'framer-motion';
+import { Search } from 'lucide-react';
 import { toolRegistry } from '../../core/registry/tools';
-import { ChevronRight, Clock, Star, LayoutGrid, List, Sparkles, type LucideIcon } from 'lucide-react';
+import { getFeaturedTools, getLandingTools } from '../../types/tool';
+import { Clock, Star, LayoutGrid, List, Sparkles, type LucideIcon } from 'lucide-react';
 import type { Tool } from '../../types/tool';
 import { usePreferenceStore } from '../../core/store/usePreferenceStore';
 import { playSound } from '../../shared/utils/sound';
+import { Badge, Button, SectionLabel, ToolCard } from '../../shared/components/ui';
+import { fuzzyFilter } from '../../shared/utils/fuzzySearch';
 
 const containerVariants = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
-    transition: { staggerChildren: 0.05, delayChildren: 0.05 },
+    transition: { staggerChildren: 0.02, delayChildren: 0 },
   },
 };
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: { type: 'spring', stiffness: 280, damping: 22 } as any,
-  },
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { duration: 0.15 } },
 };
+
+const landingTools = getLandingTools(toolRegistry);
+const featuredTools = getFeaturedTools(toolRegistry);
 
 export function ToolsGrid() {
   const { recentTools, favoriteTools, viewMode, setViewMode } = usePreferenceStore();
   const [activeCategory, setActiveCategory] = useState<string>('All');
-  
-  const categories = ['All', ...Array.from(new Set(toolRegistry.map(t => t.category)))];
-  
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const categories = ['All', ...Array.from(new Set(landingTools.map((t) => t.category)))];
+
   const recentToolObjects = recentTools
-    .map(id => toolRegistry.find(t => t.id === id))
-    .filter(Boolean) as Tool[];
+    .map((id) => toolRegistry.find((t) => t.id === id))
+    .filter((t): t is Tool => Boolean(t) && !t!.metadata.hiddenFromBrowse);
 
   const favoriteToolObjects = favoriteTools
-    .map(id => toolRegistry.find(t => t.id === id))
-    .filter(Boolean) as Tool[];
+    .map((id) => toolRegistry.find((t) => t.id === id))
+    .filter((t): t is Tool => Boolean(t) && !t!.metadata.hiddenFromBrowse);
 
-  const filteredTools = activeCategory === 'All'
-    ? toolRegistry.filter(t => !favoriteTools.includes(t.id))
-    : toolRegistry.filter(t => t.category === activeCategory && !favoriteTools.includes(t.id));
+  const standardTools = landingTools.filter((t) => t.metadata.tier !== 'featured');
+
+  const filteredTools =
+    activeCategory === 'All'
+      ? standardTools.filter((t) => !favoriteTools.includes(t.id))
+      : standardTools.filter((t) => t.category === activeCategory && !favoriteTools.includes(t.id));
+
+  const searchIn = (tools: Tool[]) =>
+    searchQuery.trim()
+      ? fuzzyFilter(tools, searchQuery, (t) =>
+          `${t.name} ${t.category} ${t.metadata.tags.join(' ')} ${t.metadata.description}`
+        )
+      : tools;
+
+  const displayedFeatured = searchIn(featuredTools);
+  const displayedFavorites = searchIn(favoriteToolObjects);
+  const displayedRecent = searchIn(recentToolObjects);
+  const displayedFiltered = searchIn(filteredTools);
+
+  const handleFavoriteToggle = (toolId: string) => (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const state = usePreferenceStore.getState();
+    state.toggleFavoriteTool(toolId);
+    if (state.soundEnabled) playSound('tick');
+  };
+
+  const gridClass =
+    viewMode === 'grid'
+      ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4'
+      : 'grid-cols-1';
+
+  const renderToolCard = (tool: Tool, keyPrefix = '') => (
+    <ToolCard
+      key={`${keyPrefix}${tool.id}`}
+      title={tool.name}
+      description={tool.metadata.description}
+      category={tool.category}
+      tags={tool.metadata.tags.slice(0, 2)}
+      route={tool.route}
+      icon={tool.icon as LucideIcon}
+      viewMode={viewMode}
+      isFavorite={favoriteTools.includes(tool.id)}
+      onFavoriteToggle={handleFavoriteToggle(tool.id)}
+      variants={itemVariants}
+    />
+  );
+
+  const renderGrid = (tools: Tool[], prefix = '') => (
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="show"
+      className={`grid gap-5 2xl:gap-6 ${gridClass}`}
+    >
+      {tools.map((tool) => renderToolCard(tool, prefix))}
+    </motion.div>
+  );
 
   return (
     <section
       id="tools"
       className="py-20 sm:py-28 2xl:py-36 px-4 sm:px-8 md:px-12 2xl:px-16 max-w-7xl 2xl:max-w-[1600px] 3xl:max-w-[1900px] mx-auto w-full"
     >
-      {/* Section header */}
       <div className="text-center mb-16">
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-80px' }}
-          className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--zd-primary-soft)] border border-[var(--zd-primary)]/30 text-xs font-mono font-semibold text-[var(--zd-primary)] uppercase tracking-widest mb-4"
+          className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--zd-primary-soft)] border border-[var(--zd-primary)]/30 mb-4"
         >
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>Utilitarian Suite</span>
+          <Sparkles className="w-3.5 h-3.5 text-[var(--zd-primary)]" />
+          <SectionLabel className="!text-[var(--zd-primary)]">Core toolkit</SectionLabel>
         </motion.div>
         <motion.h2
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-80px' }}
-          transition={{ duration: 0.5, delay: 0.05 }}
           className="text-3xl sm:text-5xl 2xl:text-6xl font-extrabold tracking-tight text-[var(--zd-text-primary)] mb-4"
         >
-          Everything you need, nothing you don't
+          Start with the essentials
         </motion.h2>
         <motion.p
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-80px' }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="text-base sm:text-lg 2xl:text-xl text-[var(--zd-text-secondary)] max-w-xl 2xl:max-w-2xl mx-auto leading-relaxed"
+          className="text-base sm:text-lg text-[var(--zd-text-secondary)] max-w-xl mx-auto leading-relaxed"
         >
-          A curated engineering toolkit. High density, instant responsiveness, and zero server communication.
+          JSON, HTTP, security, and encoding — the tools developers reach for daily. All local, all instant.
         </motion.p>
       </div>
 
-      {/* Filters & View Toggle Row */}
-      <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-10 pb-4 border-b border-[var(--zd-border)]">
-        {/* Categories Filter */}
-        <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0 no-scrollbar">
-          {categories.map(cat => (
-            <button
-              key={cat}
-              onClick={() => setActiveCategory(cat)}
-              className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                activeCategory === cat
-                  ? 'bg-[var(--zd-primary)] text-white shadow-[0_0_15px_var(--zd-glow)] font-bold'
-                  : 'bg-[var(--zd-surface)] text-[var(--zd-text-secondary)] hover:text-[var(--zd-text-primary)] hover:bg-[var(--zd-surface-raised)] border border-[var(--zd-border)]'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
-
-        {/* View Toggle */}
-        <div className="flex items-center gap-1 p-1 bg-[var(--zd-surface)] rounded-xl border border-[var(--zd-border)] self-end md:self-auto shrink-0">
-          <button
-            onClick={() => setViewMode('grid')}
-            aria-label="Grid view"
-            className={`p-2 rounded-lg cursor-pointer transition-colors ${
-              viewMode === 'grid'
-                ? 'bg-[var(--zd-surface-raised)] text-[var(--zd-primary)] shadow-sm'
-                : 'text-[var(--zd-text-muted)] hover:text-[var(--zd-text-secondary)]'
-            }`}
-          >
-            <LayoutGrid size={18} />
-          </button>
-          <button
-            onClick={() => setViewMode('list')}
-            aria-label="List view"
-            className={`p-2 rounded-lg cursor-pointer transition-colors ${
-              viewMode === 'list'
-                ? 'bg-[var(--zd-surface-raised)] text-[var(--zd-primary)] shadow-sm'
-                : 'text-[var(--zd-text-muted)] hover:text-[var(--zd-text-secondary)]'
-            }`}
-          >
-            <List size={18} />
-          </button>
+      <div className="sticky top-16 z-20 -mx-4 sm:-mx-8 md:-mx-12 px-4 sm:px-8 md:px-12 py-3 mb-6 bg-[var(--zd-bg)]/90 backdrop-blur-md border-b border-[var(--zd-border)]/60">
+        <div className="relative max-w-xl mx-auto">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--zd-text-muted)] pointer-events-none" />
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search tools..."
+            aria-label="Search tools"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[var(--zd-border)] bg-[var(--zd-surface)] text-sm text-[var(--zd-text-primary)] placeholder:text-[var(--zd-text-muted)] focus:outline-none focus:border-[var(--zd-primary)] focus:ring-2 focus:ring-[var(--zd-primary)]/20"
+          />
         </div>
       </div>
 
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={activeCategory}
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -15 }}
-          transition={{ duration: 0.25 }}
-        >
-          {/* Favorites Section */}
-          {activeCategory === 'All' && favoriteToolObjects.length > 0 && (
-            <div className="mb-14">
-              <div className="flex items-center gap-2 mb-6">
-                <div className="p-1.5 rounded-lg bg-[var(--zd-primary-soft)] text-[var(--zd-primary)]">
-                  <Star size={16} className="fill-current" />
-                </div>
-                <h3 className="text-lg font-bold text-[var(--zd-text-primary)] tracking-tight">Starred Favorites</h3>
-              </div>
-              <motion.div
-                variants={containerVariants}
-                initial="hidden"
-                animate="show"
-                className={`grid gap-5 2xl:gap-6 ${
-                  viewMode === 'grid'
-                    ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4'
-                    : 'grid-cols-1'
-                }`}
-              >
-                {favoriteToolObjects.map((tool) => (
-                  <ToolCard key={`fav-${tool.id}`} tool={tool} viewMode={viewMode} />
-                ))}
-              </motion.div>
-              <div className="h-px bg-[var(--zd-border)] mt-12" />
-            </div>
-          )}
+      {activeCategory === 'All' && !searchQuery && displayedFeatured.length > 0 && (
+        <div className="mb-14">
+          <h3 className="text-lg font-bold text-[var(--zd-text-primary)] tracking-tight mb-6">Popular tools</h3>
+          {renderGrid(displayedFeatured, 'feat-')}
+          <div className="h-px bg-[var(--zd-border)] mt-12" />
+        </div>
+      )}
 
-          {/* Recently Used Section */}
-          {activeCategory === 'All' && recentToolObjects.length > 0 && (
-            <div className="mb-14">
-              <div className="flex items-center gap-2 mb-6">
-                <div className="p-1.5 rounded-lg bg-[var(--zd-primary-soft)] text-[var(--zd-primary)]">
-                  <Clock size={16} />
-                </div>
-                <h3 className="text-lg font-bold text-[var(--zd-text-primary)] tracking-tight">Recently Used</h3>
-              </div>
-              <motion.div
-                variants={containerVariants}
-                initial="hidden"
-                animate="show"
-                className={`grid gap-5 2xl:gap-6 ${
-                  viewMode === 'grid'
-                    ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4'
-                    : 'grid-cols-1'
-                }`}
-              >
-                {recentToolObjects.map((tool) => (
-                  <ToolCard key={`recent-${tool.id}`} tool={tool} viewMode={viewMode} />
-                ))}
-              </motion.div>
-              <div className="h-px bg-[var(--zd-border)] mt-12" />
-            </div>
-          )}
+      <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-10 pb-4 border-b border-[var(--zd-border)]">
+        <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0 no-scrollbar">
+          {categories.map((cat) => (
+            <Button
+              key={cat}
+              variant={activeCategory === cat ? 'primary' : 'secondary'}
+              size="sm"
+              onClick={() => setActiveCategory(cat)}
+              className="whitespace-nowrap"
+            >
+              {cat}
+            </Button>
+          ))}
+        </div>
+        <div className="flex items-center gap-1 p-1 bg-[var(--zd-surface)] rounded-xl border border-[var(--zd-border)] shrink-0">
+          <Button variant="icon" size="sm" onClick={() => setViewMode('grid')} aria-label="Grid view"
+            className={viewMode === 'grid' ? '!bg-[var(--zd-surface-raised)] !text-[var(--zd-primary)] shadow-sm' : ''}>
+            <LayoutGrid size={18} />
+          </Button>
+          <Button variant="icon" size="sm" onClick={() => setViewMode('list')} aria-label="List view"
+            className={viewMode === 'list' ? '!bg-[var(--zd-surface-raised)] !text-[var(--zd-primary)] shadow-sm' : ''}>
+            <List size={18} />
+          </Button>
+        </div>
+      </div>
 
-          {/* Grid Section */}
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-bold text-[var(--zd-text-primary)] tracking-tight">
-              {activeCategory === 'All' ? 'All Tools' : `${activeCategory} Tools`}
-            </h3>
-            <span className="text-xs font-mono text-[var(--zd-text-muted)] bg-[var(--zd-surface)] px-2.5 py-1 rounded-md border border-[var(--zd-border)]">
-              {filteredTools.length} {filteredTools.length === 1 ? 'tool' : 'tools'}
-            </span>
+      <div key={activeCategory}>
+        {activeCategory === 'All' && displayedFavorites.length > 0 && (
+          <div className="mb-14">
+            <div className="flex items-center gap-2 mb-6">
+              <Star size={16} className="text-[var(--zd-primary)] fill-current" />
+              <h3 className="text-lg font-bold text-[var(--zd-text-primary)]">Starred</h3>
+            </div>
+            {renderGrid(displayedFavorites, 'fav-')}
+            <div className="h-px bg-[var(--zd-border)] mt-12" />
           </div>
+        )}
 
-          <motion.div
-            key={activeCategory}
-            variants={containerVariants}
-            initial="hidden"
-            animate="show"
-            className={`grid gap-5 2xl:gap-6 ${
-              viewMode === 'grid'
-                ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4'
-                : 'grid-cols-1'
-            }`}
-          >
-            {filteredTools.map((tool) => (
-              <ToolCard key={tool.id} tool={tool} viewMode={viewMode} />
-            ))}
-          </motion.div>
-        </motion.div>
-      </AnimatePresence>
+        {activeCategory === 'All' && displayedRecent.length > 0 && (
+          <div className="mb-14">
+            <div className="flex items-center gap-2 mb-6">
+              <Clock size={16} className="text-[var(--zd-primary)]" />
+              <h3 className="text-lg font-bold text-[var(--zd-text-primary)]">Recently used</h3>
+            </div>
+            {renderGrid(displayedRecent, 'recent-')}
+            <div className="h-px bg-[var(--zd-border)] mt-12" />
+          </div>
+        )}
+
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-lg font-bold text-[var(--zd-text-primary)]">
+            {activeCategory === 'All' ? 'More tools' : `${activeCategory}`}
+          </h3>
+          <Badge variant="outline" className="!text-xs !font-mono !normal-case">
+            {displayedFiltered.length} tools
+          </Badge>
+        </div>
+
+        {displayedFiltered.length === 0 ? (
+          <p className="text-center py-12 text-[var(--zd-text-muted)] text-sm">No tools match your search.</p>
+        ) : (
+          renderGrid(displayedFiltered)
+        )}
+      </div>
     </section>
-  );
-}
-
-function ToolCard({ tool, viewMode = 'grid' }: { tool: Tool, viewMode?: 'grid' | 'list' }) {
-  const Icon = tool.icon as LucideIcon;
-  const isFavorite = usePreferenceStore((s) => s.favoriteTools.includes(tool.id));
-
-  return (
-    <Link to={tool.route} className="no-underline block h-full group">
-      <motion.div
-        variants={itemVariants}
-        whileHover={{ y: -6, boxShadow: '0 16px 40px rgba(0,0,0,0.18), 0 0 24px var(--zd-glow)' }}
-        whileTap={{ scale: 0.98 }}
-        transition={{ type: 'spring', stiffness: 380, damping: 28 }}
-        className={`relative p-6 rounded-2xl bg-[var(--zd-surface)] border border-[var(--zd-border)] h-full flex transition-[border-color,background-color] duration-200 group-hover:border-[var(--zd-primary)]/60 ${
-          viewMode === 'grid' ? 'flex-col justify-between' : 'flex-row items-center gap-6'
-        }`}
-      >
-        <div className={`flex flex-col flex-1 ${viewMode === 'grid' ? 'gap-4' : 'gap-2'}`}>
-          {/* Top row: Icon & Star button */}
-          <div className="flex items-start justify-between">
-            <motion.div
-              className="w-11 h-11 rounded-xl bg-[var(--zd-primary-soft)] border border-[var(--zd-primary)]/30 flex items-center justify-center text-[var(--zd-primary)] shadow-sm transition-[background-color,color,border-color] duration-200 group-hover:bg-[var(--zd-primary)] group-hover:text-[var(--zd-bg)]"
-              whileHover={{ scale: 1.12 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-            >
-              <Icon size={20} />
-            </motion.div>
-
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const state = usePreferenceStore.getState();
-                state.toggleFavoriteTool(tool.id);
-                if (state.soundEnabled) playSound('tick');
-              }}
-              aria-label="Toggle favorite"
-              className={`p-2 rounded-lg transition-[color,background-color,opacity] duration-150 cursor-pointer ${
-                isFavorite
-                  ? 'text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]'
-                  : 'text-[var(--zd-text-muted)] opacity-0 group-hover:opacity-100 hover:text-[var(--zd-text-secondary)] hover:bg-[var(--zd-surface-raised)]'
-              }`}
-            >
-              <Star size={16} className={isFavorite ? 'fill-current' : ''} />
-            </button>
-          </div>
-
-          {/* Title & Description */}
-          <div>
-            <div className="flex items-center gap-2 mb-1.5">
-              <h3 className="text-base font-bold text-[var(--zd-text-primary)] group-hover:text-[var(--zd-primary)] transition-colors duration-150 tracking-tight m-0">
-                {tool.name}
-              </h3>
-            </div>
-            <p className="text-xs sm:text-sm text-[var(--zd-text-muted)] leading-relaxed line-clamp-2 m-0">
-              {tool.metadata.description}
-            </p>
-          </div>
-        </div>
-
-        {/* Bottom row: Monospace tags & arrow */}
-        <div className={`flex items-center justify-between pt-4 mt-4 border-t border-[var(--zd-border)]/60 ${viewMode === 'list' ? 'pt-0 mt-0 border-t-0 shrink-0 min-w-[200px]' : ''}`}>
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] text-[var(--zd-text-secondary)]">
-              {tool.category}
-            </span>
-            {tool.metadata.tags.slice(0, 2).map((tag) => (
-              <span
-                key={tag}
-                className="text-[10px] font-mono px-2 py-0.5 rounded bg-[var(--zd-surface-raised)]/40 text-[var(--zd-text-muted)]"
-              >
-                #{tag}
-              </span>
-            ))}
-          </div>
-          <ChevronRight className="w-4 h-4 text-[var(--zd-text-muted)] group-hover:text-[var(--zd-primary)] group-hover:translate-x-1 transition-[color,transform] duration-200 shrink-0" />
-        </div>
-      </motion.div>
-    </Link>
   );
 }

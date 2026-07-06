@@ -1,6 +1,16 @@
 import { useState, useMemo, useRef } from 'react';
 import { KeyRound, ShieldAlert, ShieldCheck } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { CodePanel } from '../../../shared/components/CodePanel';
+import { ToolPage, ToolHeader, ToolWorkspace, SplitPanels, ToolEmbedFrame } from '../../../shared/components/ToolLayout';
+import { useToolEmbed } from '../../../shared/context/ToolEmbedContext';
+import { Badge } from '../../../shared/components/ui';
+import { createToolStore } from '../../../core/store/useToolState';
+import { useConverterShortcuts } from '../../../shared/hooks/useConverterShortcuts';
+import { useSyncToolUrl } from '../../../shared/hooks/useSyncToolUrl';
+
+const useJwtStore = createToolStore('jwt-decoder', {
+  token: '',
+});
 
 const JWT_COLORS = {
   header: '#fb015b',
@@ -15,26 +25,29 @@ const highlightJSON = (obj: any) => {
   let json = JSON.stringify(obj, null, 2);
   json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
-    let cls = 'text-blue-500 dark:text-blue-400'; // number
+    let cls = 'text-[var(--zd-primary)]';
     if (/^"/.test(match)) {
       if (/:$/.test(match)) {
-        cls = 'text-[var(--zd-text-primary)] font-semibold'; // key
+        cls = 'text-[var(--zd-text-primary)] font-semibold';
       } else {
-        cls = 'text-emerald-600 dark:text-emerald-400'; // string
+        cls = 'text-[var(--zd-accent)]';
       }
     } else if (/true|false/.test(match)) {
-      cls = 'text-orange-500 dark:text-orange-400'; // boolean
+      cls = 'text-orange-500';
     } else if (/null/.test(match)) {
-      cls = 'text-slate-400 dark:text-[var(--zd-text-muted)]'; // null
+      cls = 'text-[var(--zd-text-muted)]';
     }
     return `<span class="${cls}">${match}</span>`;
   });
 };
 
 export default function JWTDecoder() {
-  const [token, setToken] = useState('');
+  const { token, setValues } = useJwtStore();
+  const setToken = (val: string) => setValues({ token: val });
   const [hoveredSection, setHoveredSection] = useState<Section>(null);
-  
+
+  useSyncToolUrl(() => useJwtStore.getState(), setValues, [token]);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
 
@@ -56,51 +69,60 @@ export default function JWTDecoder() {
     try {
       const headerStr = atob(parts[0].replace(/-/g, '+').replace(/_/g, '/'));
       const payloadStr = atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'));
-      
+
       const header = JSON.parse(headerStr);
       const payload = JSON.parse(payloadStr);
       const signature = parts[2];
-      
+
       const isExpired = payload.exp ? payload.exp * 1000 < Date.now() : false;
 
       return { parts, header, payload, signature, isExpired };
-    } catch (e) {
+    } catch {
       return { error: 'Failed to decode token. Invalid Base64 or JSON.', parts };
     }
   }, [token]);
 
+  const decodedOutput = decoded && !decoded.error
+    ? JSON.stringify({ header: decoded.header, payload: decoded.payload, signature: decoded.signature }, null, 2)
+    : '';
+
+  useConverterShortcuts({
+    onClear: () => setToken(''),
+    output: decodedOutput,
+  });
+
   const renderOverlay = () => {
     if (!token) {
       return (
-        <div className="absolute inset-0 p-6 font-mono text-sm leading-relaxed whitespace-pre-wrap break-all pointer-events-none text-slate-400 dark:text-slate-600">
+        <div className="absolute inset-0 p-6 font-mono text-sm leading-relaxed whitespace-pre-wrap break-all pointer-events-none text-[var(--zd-text-muted)]">
           Paste a JWT here (ey...)
         </div>
       );
     }
-    
+
     const parts = token.split('.');
-    
+
     return (
-      <div 
+      <div
         ref={overlayRef}
-        className="absolute inset-0 p-6 font-mono text-sm leading-relaxed whitespace-pre-wrap break-all pointer-events-none overflow-hidden" 
+        className="absolute inset-0 p-6 font-mono text-sm leading-relaxed whitespace-pre-wrap break-all pointer-events-none overflow-hidden"
         aria-hidden="true"
       >
         {parts.map((part, index) => {
           let color = JWT_COLORS.text;
           let section: Section = null;
-          
+
           if (index === 0) { color = JWT_COLORS.header; section = 'header'; }
           else if (index === 1) { color = JWT_COLORS.payload; section = 'payload'; }
           else if (index === 2) { color = JWT_COLORS.signature; section = 'signature'; }
-          
+
           const isHovered = hoveredSection === section;
           const isOtherHovered = hoveredSection !== null && !isHovered;
-          
+
           return (
             <span key={index}>
-              <span 
-                style={{ 
+              <span
+                style={{
                   color,
                   opacity: isOtherHovered ? 0.3 : 1,
                   transition: 'opacity 0.2s ease',
@@ -111,7 +133,7 @@ export default function JWTDecoder() {
                 {part}
               </span>
               {index < parts.length - 1 && (
-                <span style={{ 
+                <span style={{
                   color: JWT_COLORS.text,
                   opacity: hoveredSection ? 0.3 : 1,
                   transition: 'opacity 0.2s ease'
@@ -126,84 +148,69 @@ export default function JWTDecoder() {
     );
   };
 
-  return (
-    <div className="flex-1 flex flex-col items-center p-4 sm:p-6 md:p-8 xl:p-10 2xl:p-12 3xl:p-16 w-full max-w-6xl 2xl:max-w-7xl 3xl:max-w-[1440px] mx-auto h-full min-h-0">
-      <div className="w-full flex items-center gap-4 mb-8 shrink-0">
-        <div className="w-12 h-12 rounded-xl bg-[var(--zd-primary-soft)] flex items-center justify-center text-[var(--zd-primary)]">
-          <KeyRound className="w-6 h-6" />
-        </div>
-        <div>
-          <h1 className="text-2xl 2xl:text-3xl font-bold text-[var(--zd-text-primary)]">JWT Decoder</h1>
-          <p className="text-[var(--zd-text-secondary)]">Decode JSON Web Tokens instantly</p>
-        </div>
-      </div>
+  const embedded = useToolEmbed();
 
-      <div className="w-full flex flex-col md:flex-row flex-1 min-h-0 gap-6">
-        {/* Left: Input */}
-        <div className="flex-1 flex flex-col bg-[var(--zd-bg)] rounded-2xl border border-[var(--zd-border)] shadow-sm overflow-hidden min-h-[200px]">
-          <div className="px-4 py-3 bg-[var(--zd-surface)] border-b border-[var(--zd-border)] flex justify-between items-center shrink-0">
-            <span className="text-xs font-semibold text-[var(--zd-text-muted)] uppercase tracking-wider">Encoded Token</span>
-            {token && (
-              <button onClick={() => setToken('')} className="text-xs text-[var(--zd-text-muted)] hover:text-[var(--zd-text-primary)]">Clear</button>
-            )}
-          </div>
-          
-          <div className="relative flex-1 w-full bg-transparent">
-            {renderOverlay()}
-            <textarea
-              ref={textareaRef}
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-              onScroll={handleScroll}
-              className="absolute inset-0 w-full h-full p-6 bg-transparent border-none resize-none focus:outline-none focus:ring-0 text-sm font-mono leading-relaxed break-all custom-scrollbar"
-              style={{ color: 'transparent', caretColor: 'var(--zd-text-primary)' }}
-              spellCheck={false}
-            />
-          </div>
-        </div>
+  const panels = (
+        <SplitPanels>
+          <CodePanel
+            title="Encoded Token"
+            onClear={token ? () => setToken('') : undefined}
+            borderRight
+            contentClassName="flex flex-col"
+          >
+            <div className="relative flex-1 w-full min-h-0 bg-transparent">
+              {renderOverlay()}
+              <textarea
+                ref={textareaRef}
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+                onScroll={handleScroll}
+                className="absolute inset-0 w-full h-full p-6 bg-transparent border-none resize-none focus:outline-none focus:ring-0 text-sm font-mono leading-relaxed break-all custom-scrollbar"
+                style={{ color: 'transparent', caretColor: 'var(--zd-text-primary)' }}
+                spellCheck={false}
+              />
+            </div>
+          </CodePanel>
 
-        {/* Right: Output */}
-        <div className="flex-1 flex flex-col bg-[var(--zd-bg)] rounded-2xl border border-[var(--zd-border)] shadow-sm overflow-hidden min-h-[300px] md:min-h-0">
-          <div className="px-4 py-3 bg-[var(--zd-surface)] border-b border-[var(--zd-border)] flex justify-between items-center shrink-0">
-            <span className="text-xs font-semibold text-[var(--zd-text-muted)] uppercase tracking-wider">Decoded Data</span>
-            {decoded && !decoded.error && (
-              <div className="flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400">
-                <ShieldCheck className="w-3.5 h-3.5" /> Valid Syntax
-              </div>
-            )}
-          </div>
-          
-          <div className="flex-1 overflow-auto p-6 custom-scrollbar">
+          <CodePanel
+            title="Decoded Data"
+            readOnly
+            headerLeft={
+              decoded && !decoded.error ? (
+                <div className="flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full bg-[var(--zd-accent-soft)] text-[var(--zd-accent)]">
+                  <ShieldCheck className="w-3.5 h-3.5" /> Valid Syntax
+                </div>
+              ) : undefined
+            }
+            contentClassName="overflow-auto custom-scrollbar"
+          >
             {!token ? (
-              <div className="h-full flex items-center justify-center text-slate-400 dark:text-slate-600 text-sm">
+              <div className="h-full flex items-center justify-center text-[var(--zd-text-muted)] text-sm p-6">
                 Awaiting token...
               </div>
             ) : decoded?.error ? (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-start gap-3 p-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg border border-red-100 dark:border-red-900/30">
+              <div className="flex items-start gap-3 p-6 m-4 bg-red-500/10 text-red-600 rounded-lg border border-red-500/20">
                 <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5" />
                 <p className="text-sm font-medium">{decoded.error}</p>
-              </motion.div>
+              </div>
             ) : decoded && !decoded.error && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-                
-                {/* Header */}
-                <div 
+              <div className="space-y-6 p-6">
+                <div
                   onMouseEnter={() => setHoveredSection('header')}
                   onMouseLeave={() => setHoveredSection(null)}
                   className={`transition-opacity duration-200 ${hoveredSection && hoveredSection !== 'header' ? 'opacity-40' : 'opacity-100'}`}
                 >
                   <h3 className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: JWT_COLORS.header }}>
-                    Header <span className="font-normal lowercase text-slate-400 dark:text-[var(--zd-text-muted)] ml-1">Algorithm & Token Type</span>
+                    Header <span className="font-normal lowercase text-[var(--zd-text-muted)] ml-1">Algorithm & Token Type</span>
                   </h3>
-                  <div className="bg-[var(--zd-surface)] p-4 rounded-lg border border-[var(--zd-border)]">
-                    <pre 
+                  <div className="bg-[var(--zd-surface-raised)] p-4 rounded-lg border border-[var(--zd-border)]">
+                    <pre
                       className="text-sm font-mono whitespace-pre-wrap break-all text-[var(--zd-text-primary)]"
                       dangerouslySetInnerHTML={{ __html: highlightJSON(decoded.header) }}
                     />
                   </div>
                 </div>
 
-                {/* Payload */}
                 <div
                   onMouseEnter={() => setHoveredSection('payload')}
                   onMouseLeave={() => setHoveredSection(null)}
@@ -211,23 +218,22 @@ export default function JWTDecoder() {
                 >
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: JWT_COLORS.payload }}>
-                      Payload <span className="font-normal lowercase text-slate-400 dark:text-[var(--zd-text-muted)] ml-1">Data</span>
+                      Payload <span className="font-normal lowercase text-[var(--zd-text-muted)] ml-1">Data</span>
                     </h3>
                     {decoded.isExpired !== undefined && (
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded ${decoded.isExpired ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'}`}>
+                      <Badge className={decoded.isExpired ? 'bg-red-500/15 text-red-600' : 'bg-[var(--zd-accent-soft)] text-[var(--zd-accent)]'}>
                         {decoded.isExpired ? 'Expired' : 'Active'}
-                      </span>
+                      </Badge>
                     )}
                   </div>
-                  <div className="bg-[var(--zd-surface)] p-4 rounded-lg border border-[var(--zd-border)]">
-                    <pre 
+                  <div className="bg-[var(--zd-surface-raised)] p-4 rounded-lg border border-[var(--zd-border)]">
+                    <pre
                       className="text-sm font-mono whitespace-pre-wrap break-all text-[var(--zd-text-primary)]"
                       dangerouslySetInnerHTML={{ __html: highlightJSON(decoded.payload) }}
                     />
                   </div>
                 </div>
 
-                {/* Signature */}
                 <div
                   onMouseEnter={() => setHoveredSection('signature')}
                   onMouseLeave={() => setHoveredSection(null)}
@@ -236,24 +242,34 @@ export default function JWTDecoder() {
                   <h3 className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: JWT_COLORS.signature }}>
                     Signature
                   </h3>
-                  <div className="bg-[var(--zd-surface)] p-4 rounded-lg border border-[var(--zd-border)]">
-                    <p 
+                  <div className="bg-[var(--zd-surface-raised)] p-4 rounded-lg border border-[var(--zd-border)]">
+                    <p
                       className="text-sm font-mono break-all"
                       style={{ color: JWT_COLORS.signature }}
                     >
                       {decoded.signature}
                     </p>
-                    <p className="text-xs text-slate-400 mt-2">
+                    <p className="text-xs text-[var(--zd-text-muted)] mt-2">
                       * Signature validation requires the secret key and must be done securely on a server.
                     </p>
                   </div>
                 </div>
-
-              </motion.div>
+              </div>
             )}
-          </div>
-        </div>
-      </div>
-    </div>
+          </CodePanel>
+        </SplitPanels>
+  );
+
+  if (embedded) return <ToolEmbedFrame>{panels}</ToolEmbedFrame>;
+
+  return (
+    <ToolPage>
+      <ToolHeader
+        icon={KeyRound}
+        title="JWT Decoder"
+        description="Decode JSON Web Tokens instantly"
+      />
+      <ToolWorkspace>{panels}</ToolWorkspace>
+    </ToolPage>
   );
 }

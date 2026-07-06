@@ -9,7 +9,7 @@ function sortObjectKeys(obj: any): any {
     return obj.map(sortObjectKeys);
   }
   // LosslessJSON parses large numbers as LosslessNumber objects
-  if (obj && obj.isLosslessNumber) {
+  if (obj && typeof obj === 'object' && obj.isLosslessNumber === true && 'value' in obj) {
     return obj;
   }
   const sorted: Record<string, any> = {};
@@ -49,14 +49,46 @@ self.onmessage = (event: MessageEvent<WorkerMessage<{
       result = stringifyLossless(parsed, undefined, space) || '';
       
       if (payload.smartFormat) {
-        // Collapse simple arrays (containing only primitives) into a single line
-        result = result.replace(/\[[\s\S]*?\]/g, (match) => {
-          if (!match.includes('{') && !match.match(/\[.*\[/s)) {
-            const collapsed = match.replace(/\s+/g, ' ').replace(/\[\s/, '[').replace(/\s\]/, ']');
-            if (collapsed.length < 80) return collapsed;
+        // Collapse simple arrays (containing only primitives) into a single line safely without regex catastrophic backtracking
+        const lines = result.split('\n');
+        const formattedLines: string[] = [];
+        let inSimpleArray = false;
+        let currentArrayBuffer: string[] = [];
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!inSimpleArray && trimmed === '[') {
+            inSimpleArray = true;
+            currentArrayBuffer = [line];
+          } else if (inSimpleArray) {
+            currentArrayBuffer.push(line);
+            if (trimmed.startsWith(']')) {
+              inSimpleArray = false;
+              const isOnlyPrimitives = currentArrayBuffer.slice(1, -1).every(l => {
+                const t = l.trim();
+                return !t.startsWith('{') && !t.startsWith('[') && !t.endsWith('{') && !t.endsWith('[');
+              });
+              const collapsed = currentArrayBuffer.map(l => l.trim()).join(' ').replace(/\[\s+/, '[').replace(/\s+\]$/, ']').replace(/,\s+/g, ', ');
+              if (isOnlyPrimitives && collapsed.length < 80) {
+                const indentStr = currentArrayBuffer[0].slice(0, currentArrayBuffer[0].indexOf('['));
+                formattedLines.push(indentStr + collapsed);
+              } else {
+                formattedLines.push(...currentArrayBuffer);
+              }
+              currentArrayBuffer = [];
+            } else if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+              inSimpleArray = false;
+              formattedLines.push(...currentArrayBuffer);
+              currentArrayBuffer = [];
+            }
+          } else {
+            formattedLines.push(line);
           }
-          return match;
-        });
+        }
+        if (currentArrayBuffer.length > 0) {
+          formattedLines.push(...currentArrayBuffer);
+        }
+        result = formattedLines.join('\n');
       }
     }
       

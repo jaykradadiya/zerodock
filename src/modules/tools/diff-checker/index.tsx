@@ -1,7 +1,17 @@
 import { useState, useRef, useEffect } from 'react';
 import { DiffEditor } from '@monaco-editor/react';
 import { usePreferenceStore } from '../../../core/store/usePreferenceStore';
-import { GitCompare, Trash2, Sparkles, Columns, Split } from 'lucide-react';
+import { GitCompare, Columns, Split } from 'lucide-react';
+import { ToolPage, ToolHeader, ToolWorkspace, ToolSelect } from '../../../shared/components/ToolLayout';
+import { createToolStore } from '../../../core/store/useToolState';
+import { useConverterShortcuts } from '../../../shared/hooks/useConverterShortcuts';
+import { useSyncToolUrl } from '../../../shared/hooks/useSyncToolUrl';
+import { useMeasuredHeight } from '../../../shared/hooks/useMeasuredHeight';
+
+const useDiffStore = createToolStore('diff-checker', {
+  originalText: '',
+  modifiedText: '',
+});
 
 const SAMPLE_LEFT = `// ZeroDock Configuration
 {
@@ -44,12 +54,16 @@ export default function DiffChecker() {
   const { theme } = usePreferenceStore();
   const [language, setLanguage] = useState('json');
   const [sideBySide, setSideBySide] = useState(true);
-  
-  const [originalText, setOriginalText] = useState('');
-  const [modifiedText, setModifiedText] = useState('');
+
+  const { originalText, modifiedText, setValues } = useDiffStore();
+  const setOriginalText = (val: string) => setValues({ originalText: val });
+  const setModifiedText = (val: string) => setValues({ modifiedText: val });
+
+  useSyncToolUrl(() => useDiffStore.getState(), setValues, [originalText, modifiedText]);
 
   const editorRef = useRef<any>(null);
   const monacoRef = useRef<any>(null);
+  const { ref: editorContainerRef, height: editorHeight } = useMeasuredHeight(1);
 
   const handleEditorWillMount = (monaco: any) => {
     monaco.editor.defineTheme('zerodock-dark', {
@@ -57,10 +71,10 @@ export default function DiffChecker() {
       inherit: true,
       rules: [],
       colors: {
-        'editor.background': '#16161A', // var(--zd-surface) dark
-        'editor.foreground': '#EAEAF0', // var(--zd-text-primary) dark
-        'editor.lineHighlightBackground': '#1C1C21', // var(--zd-surface-raised) dark
-        'editorLineNumber.foreground': '#5E5E72', // var(--zd-text-muted) dark
+        'editor.background': '#16161A',
+        'editor.foreground': '#EAEAF0',
+        'editorLineHighlightBackground': '#1C1C21',
+        'editorLineNumber.foreground': '#5E5E72',
       }
     });
     monaco.editor.defineTheme('zerodock-light', {
@@ -68,9 +82,9 @@ export default function DiffChecker() {
       inherit: true,
       rules: [],
       colors: {
-        'editor.background': '#FFFFFF', // var(--zd-surface) light
-        'editor.foreground': '#1A1A2E', // var(--zd-text-primary) light
-        'editorLineNumber.foreground': '#8E8EA0', // var(--zd-text-muted) light
+        'editor.background': '#FFFFFF',
+        'editor.foreground': '#1A1A2E',
+        'editorLineNumber.foreground': '#8E8EA0',
       }
     });
   };
@@ -92,8 +106,7 @@ export default function DiffChecker() {
   };
 
   const loadSample = () => {
-    setOriginalText(SAMPLE_LEFT);
-    setModifiedText(SAMPLE_RIGHT);
+    setValues({ originalText: SAMPLE_LEFT, modifiedText: SAMPLE_RIGHT });
     setLanguage('json');
     if (editorRef.current) {
       editorRef.current.getOriginalEditor().setValue(SAMPLE_LEFT);
@@ -102,15 +115,13 @@ export default function DiffChecker() {
   };
 
   const clearAll = () => {
-    setOriginalText('');
-    setModifiedText('');
+    setValues({ originalText: '', modifiedText: '' });
     if (editorRef.current) {
       editorRef.current.getOriginalEditor().setValue('');
       editorRef.current.getModifiedEditor().setValue('');
     }
   };
 
-  // Cleanup Monaco models on unmount to prevent leaks
   useEffect(() => {
     return () => {
       if (monacoRef.current) {
@@ -120,131 +131,125 @@ export default function DiffChecker() {
     };
   }, []);
 
-  // Synchronize originalText and modifiedText changes (e.g. sample load or clear) to DiffEditor models
-  // without resetting cursor position on user typing
   useEffect(() => {
-    if (editorRef.current) {
-      const originalEditor = editorRef.current.getOriginalEditor();
-      if (originalText !== originalEditor.getValue()) {
-        originalEditor.setValue(originalText);
-      }
+    if (!editorRef.current) return;
+    const originalEditor = editorRef.current.getOriginalEditor();
+    if (originalText !== originalEditor.getValue()) {
+      originalEditor.setValue(originalText);
     }
   }, [originalText]);
 
   useEffect(() => {
-    if (editorRef.current) {
-      const modifiedEditor = editorRef.current.getModifiedEditor();
-      if (modifiedText !== modifiedEditor.getValue()) {
-        modifiedEditor.setValue(modifiedText);
-      }
+    if (!editorRef.current) return;
+    const modifiedEditor = editorRef.current.getModifiedEditor();
+    if (modifiedText !== modifiedEditor.getValue()) {
+      modifiedEditor.setValue(modifiedText);
     }
   }, [modifiedText]);
 
+  useEffect(() => {
+    editorRef.current?.updateOptions({ renderSideBySide: sideBySide });
+  }, [sideBySide]);
+
+  useConverterShortcuts({
+    onClear: clearAll,
+    output: modifiedText,
+  });
+
   return (
-    <div className="flex-1 flex flex-col items-center p-3 sm:p-4 xl:p-8 2xl:p-10 3xl:p-12 w-full min-h-0 relative">
-      
-      {/* Header */}
-      <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 shrink-0">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-[var(--zd-primary-soft)] flex items-center justify-center text-[var(--zd-primary)] shrink-0">
-            <GitCompare className="w-6 h-6" />
-          </div>
-          <div>
-            <h1 className="text-2xl 2xl:text-3xl font-bold text-[var(--zd-text-primary)]">Text Diff Checker</h1>
-            <p className="text-[var(--zd-text-secondary)] mt-1 text-sm">Compare two text files side-by-side or inline in real-time.</p>
-          </div>
-        </div>
-        
-        {/* Controls */}
-        <div className="flex items-center gap-2.5 flex-wrap">
-          {/* Language Selection */}
-          <select 
-            value={language}
-            onChange={(e) => setLanguage(e.target.value)}
-            className="text-sm border border-[var(--zd-border)] rounded-xl bg-[var(--zd-surface)] text-[var(--zd-text-primary)] px-3 py-2 outline-none focus:border-[var(--zd-primary)] focus:ring-2 focus:ring-[var(--zd-primary-soft)] transition-all"
-          >
-            <option value="plaintext">Plain Text</option>
-            <option value="json">JSON</option>
-            <option value="javascript">JavaScript</option>
-            <option value="typescript">TypeScript</option>
-            <option value="html">HTML</option>
-            <option value="css">CSS</option>
-            <option value="yaml">YAML</option>
-            <option value="xml">XML</option>
-          </select>
+    <ToolPage fullWidth>
+      <ToolHeader
+        icon={GitCompare}
+        title="Text Diff Checker"
+        description="Compare two text files side-by-side or inline in real-time."
+        actions={
+          <>
+            <ToolSelect
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
+            >
+              <option value="plaintext">Plain Text</option>
+              <option value="json">JSON</option>
+              <option value="javascript">JavaScript</option>
+              <option value="typescript">TypeScript</option>
+              <option value="html">HTML</option>
+              <option value="css">CSS</option>
+              <option value="yaml">YAML</option>
+              <option value="xml">XML</option>
+            </ToolSelect>
 
-          {/* Render Mode Toggle */}
-          <button
-            onClick={() => setSideBySide(!sideBySide)}
-            className={`flex items-center gap-1.5 px-3 py-2 border border-[var(--zd-border)] rounded-xl text-sm font-semibold transition-all ${
-              sideBySide 
-                ? 'bg-[var(--zd-primary-soft)] text-[var(--zd-primary)] border-[var(--zd-primary)]/30' 
-                : 'bg-[var(--zd-surface)] text-[var(--zd-text-secondary)] hover:bg-[var(--zd-primary-soft)] hover:text-[var(--zd-primary)]'
-            }`}
-            title={sideBySide ? "Switch to Inline View" : "Switch to Side-by-Side View"}
-          >
-            {sideBySide ? <Columns className="w-4 h-4" /> : <Split className="w-4 h-4" />}
-            <span className="hidden md:inline">{sideBySide ? "Split" : "Inline"}</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => setSideBySide(!sideBySide)}
+              className={`flex items-center gap-1.5 px-3 py-2 border border-[var(--zd-border)] rounded-xl text-sm font-semibold transition-all ${
+                sideBySide
+                  ? 'bg-[var(--zd-primary-soft)] text-[var(--zd-primary)] border-[var(--zd-primary)]/30'
+                  : 'bg-[var(--zd-surface)] text-[var(--zd-text-secondary)] hover:bg-[var(--zd-primary-soft)] hover:text-[var(--zd-primary)]'
+              }`}
+              title={sideBySide ? 'Switch to Inline View' : 'Switch to Side-by-Side View'}
+            >
+              {sideBySide ? <Columns className="w-4 h-4" /> : <Split className="w-4 h-4" />}
+              <span className="hidden md:inline">{sideBySide ? 'Split' : 'Inline'}</span>
+            </button>
 
-          {/* Sample Button */}
-          <button
-            onClick={loadSample}
-            className="flex items-center gap-1.5 px-3 py-2 bg-[var(--zd-surface)] border border-[var(--zd-border)] rounded-xl text-sm font-semibold text-[var(--zd-text-secondary)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)] transition-all"
-          >
-            <Sparkles className="w-4 h-4" />
-            <span className="hidden sm:inline">Sample</span>
-          </button>
+            <button
+              type="button"
+              onClick={loadSample}
+              className="flex items-center gap-1.5 px-3 py-2 bg-[var(--zd-surface)] border border-[var(--zd-border)] rounded-xl text-sm font-semibold text-[var(--zd-text-secondary)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)] transition-all"
+            >
+              Sample
+            </button>
 
-          {/* Clear Button */}
-          <button
-            onClick={clearAll}
-            className="flex items-center gap-1.5 px-3 py-2 bg-[var(--zd-surface)] border border-[var(--zd-border)] rounded-xl text-sm font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 hover:border-red-200 transition-all"
-            title="Clear original and modified inputs"
-          >
-            <Trash2 className="w-4 h-4" />
-            <span className="hidden sm:inline">Clear</span>
-          </button>
-        </div>
-      </div>
+            <button
+              type="button"
+              onClick={clearAll}
+              className="flex items-center gap-1.5 px-3 py-2 bg-[var(--zd-surface)] border border-[var(--zd-border)] rounded-xl text-sm font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 hover:border-red-200 transition-all"
+              title="Clear original and modified inputs"
+            >
+              Clear
+            </button>
+          </>
+        }
+      />
 
-      {/* Editor Panel */}
-      <div className="w-full flex-1 min-h-0 bg-[var(--zd-surface)] rounded-2xl border border-[var(--zd-border)] shadow-[var(--zd-shadow-md)] overflow-hidden flex flex-col relative">
-        <div className="absolute inset-0">
-          <DiffEditor
-            height="100%"
-            width="100%"
-            language={language}
-            original=""
-            modified=""
-            theme={theme === 'dark' ? 'zerodock-dark' : 'zerodock-light'}
-            beforeMount={handleEditorWillMount}
-            onMount={handleEditorDidMount}
-            options={{
-              minimap: { enabled: false },
-              scrollBeyondLastLine: false,
-              fontSize: 14,
-              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-              wordWrap: 'on',
-              lineNumbersMinChars: 3,
-              padding: { top: 16, bottom: 16 },
-              automaticLayout: true,
-              originalEditable: true,
-              readOnly: false,
-              renderSideBySide: sideBySide,
-              ignoreTrimWhitespace: true,
-              scrollbar: {
-                alwaysConsumeMouseWheel: false
+      <ToolWorkspace>
+        <div ref={editorContainerRef} className="zd-tool-fill w-full overflow-hidden">
+          {editorHeight > 0 && (
+            <DiffEditor
+              height={editorHeight}
+              width="100%"
+              language={language}
+              original={originalText}
+              modified={modifiedText}
+              theme={theme === 'dark' ? 'zerodock-dark' : 'zerodock-light'}
+              beforeMount={handleEditorWillMount}
+              onMount={handleEditorDidMount}
+              options={{
+                minimap: { enabled: false },
+                scrollBeyondLastLine: false,
+                fontSize: 14,
+                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+                wordWrap: 'on',
+                lineNumbersMinChars: 3,
+                padding: { top: 16, bottom: 16 },
+                automaticLayout: true,
+                originalEditable: true,
+                readOnly: false,
+                renderSideBySide: sideBySide,
+                ignoreTrimWhitespace: true,
+                scrollbar: {
+                  alwaysConsumeMouseWheel: false
+                }
+              }}
+              loading={
+                <div className="h-full flex items-center justify-center text-[var(--zd-text-muted)] text-sm">
+                  Loading Diff Editor...
+                </div>
               }
-            }}
-            loading={
-              <div className="flex-1 h-full flex items-center justify-center text-slate-400 text-sm bg-[var(--zd-surface-raised)]/20 animate-pulse">
-                Loading Diff Editor...
-              </div>
-            }
-          />
+            />
+          )}
         </div>
-      </div>
-    </div>
+      </ToolWorkspace>
+    </ToolPage>
   );
 }

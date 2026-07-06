@@ -1,5 +1,27 @@
 import { useState, useEffect, useRef } from 'react';
 import { Clock, Copy, Play, Pause, RefreshCw, Calendar, ArrowRightLeft, Globe } from 'lucide-react';
+import { ToolPage, ToolHeader, ToolWorkspace } from '../../../shared/components/ToolLayout';
+import { StatCard, Card } from '../../../shared/components/ui';
+import { createToolStore } from '../../../core/store/useToolState';
+import { useSyncToolUrl } from '../../../shared/hooks/useSyncToolUrl';
+
+function defaultDateTimeInput(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
+const useEpochStore = createToolStore('epoch-converter', {
+  inputEpoch: Math.floor(Date.now() / 1000).toString(),
+  dateTimeInput: defaultDateTimeInput(),
+  timezoneToggle: 'local' as 'local' | 'utc' | 'target',
+  targetTimezone: 'America/New_York',
+});
 
 function getRelativeTime(timestampMs: number): string {
   const diff = timestampMs - Date.now();
@@ -148,32 +170,28 @@ function parseDateString(
 
 
 export default function EpochConverter() {
+  const { inputEpoch, dateTimeInput, timezoneToggle, targetTimezone, setValues } = useEpochStore();
+  const setInputEpoch = (val: string) => setValues({ inputEpoch: val });
+  const setDateTimeInput = (val: string) => setValues({ dateTimeInput: val });
+  const setTimezoneToggle = (val: 'local' | 'utc' | 'target') => setValues({ timezoneToggle: val });
+  const setTargetTimezone = (val: string) => setValues({ targetTimezone: val });
+
+  useSyncToolUrl(
+    () => useEpochStore.getState(),
+    setValues,
+    [inputEpoch, dateTimeInput, timezoneToggle, targetTimezone]
+  );
+
   // Live Clock States
   const [liveTime, setLiveTime] = useState<number>(Date.now());
   const [isPaused, setIsPaused] = useState(false);
   const intervalRef = useRef<any>(null);
   const pickerRef = useRef<HTMLInputElement>(null);
 
-  // Epoch to Date States
-  const [inputEpoch, setInputEpoch] = useState<string>(Math.floor(Date.now() / 1000).toString());
   const [epochError, setEpochError] = useState<string | null>(null);
-  
-  // Date to Epoch States
-  const [dateTimeInput, setDateTimeInput] = useState<string>(() => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const seconds = String(now.getSeconds()).padStart(2, '0');
-    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-  });
-  const [timezoneToggle, setTimezoneToggle] = useState<'local' | 'utc' | 'target'>('local');
-  const [targetTimezone, setTargetTimezone] = useState<string>('America/New_York');
 
   // Copy State Indicator
-  const [copiedText, setCopiedText] = useState<'seconds' | 'ms' | 'parsed' | 'epoch' | null>(null);
+  const [copiedText, setCopiedText] = useState<'seconds' | 'ms' | null>(null);
 
   // Live ticking effect
   useEffect(() => {
@@ -188,7 +206,7 @@ export default function EpochConverter() {
   }, [isPaused]);
 
   // Copy helper
-  const triggerCopy = (text: string, key: 'seconds' | 'ms' | 'parsed' | 'epoch') => {
+  const triggerCopy = (text: string, key: 'seconds' | 'ms') => {
     navigator.clipboard.writeText(text);
     setCopiedText(key);
     setTimeout(() => setCopiedText(null), 1500);
@@ -260,30 +278,23 @@ export default function EpochConverter() {
 
 
   return (
-    <div className="flex-1 flex flex-col items-center p-4 sm:p-6 xl:p-8 2xl:p-10 w-full max-w-4xl 2xl:max-w-5xl mx-auto h-full overflow-y-auto custom-scrollbar">
-      
-      {/* Header */}
-      <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 shrink-0">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-[var(--zd-primary-soft)] flex items-center justify-center text-[var(--zd-primary)] shrink-0">
-            <Clock className="w-6 h-6" />
-          </div>
-          <div>
-            <h1 className="text-2xl 2xl:text-3xl font-bold text-[var(--zd-text-primary)]">Epoch Timestamp Converter</h1>
-            <p className="text-[var(--zd-text-secondary)] mt-1 text-sm">Parse Unix timestamps to human times and construct epochs in local or UTC.</p>
-          </div>
-        </div>
-      </div>
+    <ToolPage className="max-w-4xl 2xl:max-w-5xl">
+      <ToolHeader
+        icon={Clock}
+        title="Epoch Timestamp Converter"
+        description="Parse Unix timestamps to human times and construct epochs in local or UTC."
+      />
 
-      {/* Global Config / Timezone Selector */}
-      <div className="w-full bg-[var(--zd-surface)] border border-[var(--zd-border)] rounded-2xl p-4 shadow-[var(--zd-shadow-md)] flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2 shrink-0">
+      <ToolWorkspace className="overflow-y-auto custom-scrollbar">
+        {/* Global Config / Timezone Selector */}
+        <div className="w-full bg-[var(--zd-surface-raised)] border-b border-[var(--zd-border)] p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-[var(--zd-accent-soft)] flex items-center justify-center text-[var(--zd-accent)] shrink-0">
             <Globe className="w-4.5 h-4.5" />
           </div>
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-[var(--zd-text-muted)]">Target Timezone</span>
-            <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--zd-text-muted)]">Target Timezone</span>
+            <div className="text-sm font-semibold text-[var(--zd-text-secondary)]">
               Convert and view timestamps in your selected region.
             </div>
           </div>
@@ -305,20 +316,20 @@ export default function EpochConverter() {
 
 
       {/* Grid Panels */}
-      <div className="w-full flex flex-col gap-6">
+      <div className="w-full flex flex-col gap-6 p-4 sm:p-6">
         
         {/* Ticking Live Epoch Display Card */}
-        <div className="w-full bg-[var(--zd-surface)] border border-[var(--zd-border)] rounded-2xl p-6 shadow-[var(--zd-shadow-md)] flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <Card className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-6" glow>
           <div className="space-y-1">
             <span className="text-xs font-bold uppercase tracking-wider text-[var(--zd-primary)]">
               Current Unix Timestamp
             </span>
             <div className="text-3xl font-extrabold font-mono text-[var(--zd-text-primary)] tracking-tight flex flex-wrap items-baseline gap-2">
               <span>{Math.floor(liveTime / 1000)}</span>
-              <span className="text-slate-400 dark:text-[var(--zd-text-muted)] text-lg">seconds</span>
-              <span className="text-slate-300 dark:text-slate-700 mx-2">|</span>
+              <span className="text-[var(--zd-text-muted)] text-lg">seconds</span>
+              <span className="text-[var(--zd-text-muted)] mx-2">|</span>
               <span className="text-[var(--zd-accent)]">{liveTime}</span>
-              <span className="text-slate-400 dark:text-[var(--zd-text-muted)] text-lg">milliseconds</span>
+              <span className="text-[var(--zd-text-muted)] text-lg">milliseconds</span>
             </div>
             <p className="text-xs text-[var(--zd-text-muted)]">Ticking in real-time. Freeze or copy values using the buttons on the right.</p>
           </div>
@@ -327,8 +338,8 @@ export default function EpochConverter() {
             <button
               onClick={() => setIsPaused(!isPaused)}
               className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-                isPaused 
-                  ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200/30' 
+                isPaused
+                  ? 'bg-[var(--zd-accent-soft)] text-[var(--zd-accent)] border border-[var(--zd-accent)]/30'
                   : 'bg-[var(--zd-primary-soft)] text-[var(--zd-primary)] border border-transparent'
               }`}
             >
@@ -337,20 +348,20 @@ export default function EpochConverter() {
             </button>
             <button
               onClick={() => triggerCopy(Math.floor(liveTime / 1000).toString(), 'seconds')}
-              className="flex items-center gap-1.5 px-4 py-2.5 bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-300 hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)] transition-all"
+              className="flex items-center gap-1.5 px-4 py-2.5 bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] rounded-xl text-sm font-semibold text-[var(--zd-text-secondary)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)] transition-all"
             >
               <Copy className="w-4 h-4" />
               <span>{copiedText === 'seconds' ? "Copied Sec!" : "Copy Sec"}</span>
             </button>
             <button
               onClick={() => triggerCopy(liveTime.toString(), 'ms')}
-              className="flex items-center gap-1.5 px-4 py-2.5 bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-300 hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)] transition-all"
+              className="flex items-center gap-1.5 px-4 py-2.5 bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] rounded-xl text-sm font-semibold text-[var(--zd-text-secondary)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)] transition-all"
             >
               <Copy className="w-4 h-4" />
               <span>{copiedText === 'ms' ? "Copied Ms!" : "Copy Ms"}</span>
             </button>
           </div>
-        </div>
+        </Card>
 
         {/* Bi-directional conversion panels */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
@@ -385,81 +396,23 @@ export default function EpochConverter() {
             </div>
 
             {epochError ? (
-              <div className="text-xs text-red-500 dark:text-red-400 font-medium">
+              <div className="text-xs text-red-500 font-medium">
                 {epochError}
               </div>
             ) : (
               <div className="flex flex-col gap-3 mt-2">
-                {/* UTC String */}
-                <div className="bg-[var(--zd-surface-raised)]/50 p-3 rounded-xl border border-[var(--zd-border)]/50 flex flex-col gap-1 relative group">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-[var(--zd-text-muted)]">UTC / GMT Time</span>
-                  <span className="text-sm font-semibold text-[var(--zd-text-primary)] break-all">{utcString || '—'}</span>
-                  {utcString && (
-                    <button 
-                      onClick={() => triggerCopy(utcString, 'parsed')}
-                      className="absolute right-2.5 top-2.5 p-1 rounded bg-[var(--zd-surface)] border border-[var(--zd-border)] opacity-0 group-hover:opacity-100 text-slate-400 hover:text-[var(--zd-primary)] transition-all"
-                      title="Copy string"
-                    >
-                      <Copy className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-
-                {/* Local String */}
-                <div className="bg-[var(--zd-surface-raised)]/50 p-3 rounded-xl border border-[var(--zd-border)]/50 flex flex-col gap-1 relative group">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-[var(--zd-text-muted)]">Local Timezone</span>
-                  <span className="text-sm font-semibold text-[var(--zd-text-primary)] break-all">{localString || '—'}</span>
-                  {localString && (
-                    <button 
-                      onClick={() => triggerCopy(localString, 'parsed')}
-                      className="absolute right-2.5 top-2.5 p-1 rounded bg-[var(--zd-surface)] border border-[var(--zd-border)] opacity-0 group-hover:opacity-100 text-slate-400 hover:text-[var(--zd-primary)] transition-all"
-                      title="Copy string"
-                    >
-                      <Copy className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-
-                {/* Target Timezone String */}
+                <StatCard label="UTC / GMT Time" value={utcString} copyable />
+                <StatCard label="Local Timezone" value={localString} copyable />
                 {targetTimezone && (
-                  <div className="bg-[var(--zd-surface-raised)]/50 p-3 rounded-xl border border-[var(--zd-border)]/50 flex flex-col gap-1 relative group border-l-2 border-l-[var(--zd-accent)]">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--zd-accent)]">
-                      Target Timezone ({SUPPORTED_TIMEZONES.find((tz) => tz.value === targetTimezone)?.label || targetTimezone})
-                    </span>
-                    <span className="text-sm font-semibold text-[var(--zd-text-primary)] break-all">{targetString || '—'}</span>
-                    {targetString && (
-                      <button 
-                        onClick={() => triggerCopy(targetString, 'parsed')}
-                        className="absolute right-2.5 top-2.5 p-1 rounded bg-[var(--zd-surface)] border border-[var(--zd-border)] opacity-0 group-hover:opacity-100 text-slate-400 hover:text-[var(--zd-primary)] transition-all"
-                        title="Copy string"
-                      >
-                        <Copy className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
+                  <StatCard
+                    label={`Target Timezone (${SUPPORTED_TIMEZONES.find((tz) => tz.value === targetTimezone)?.label || targetTimezone})`}
+                    value={targetString}
+                    copyable
+                    className="border-l-2 border-l-[var(--zd-accent)]"
+                  />
                 )}
-
-
-                {/* ISO 8601 */}
-                <div className="bg-[var(--zd-surface-raised)]/50 p-3 rounded-xl border border-[var(--zd-border)]/50 flex flex-col gap-1 relative group">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-[var(--zd-text-muted)]">ISO 8601 String</span>
-                  <span className="text-sm font-semibold font-mono text-[var(--zd-text-primary)] break-all">{isoString || '—'}</span>
-                  {isoString && (
-                    <button 
-                      onClick={() => triggerCopy(isoString, 'parsed')}
-                      className="absolute right-2.5 top-2.5 p-1 rounded bg-[var(--zd-surface)] border border-[var(--zd-border)] opacity-0 group-hover:opacity-100 text-slate-400 hover:text-[var(--zd-primary)] transition-all"
-                      title="Copy string"
-                    >
-                      <Copy className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-
-                {/* Relative age */}
-                <div className="bg-[var(--zd-surface-raised)]/50 p-3 rounded-xl border border-[var(--zd-border)]/50 flex flex-col gap-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-[var(--zd-text-muted)]">Relative Time</span>
-                  <span className="text-sm font-semibold text-[var(--zd-primary)]">{relativeAge || '—'}</span>
-                </div>
+                <StatCard label="ISO 8601 String" value={isoString} copyable />
+                <StatCard label="Relative Time" value={relativeAge} className="[&_p]:text-[var(--zd-primary)]" />
               </div>
             )}
           </div>
@@ -542,45 +495,27 @@ export default function EpochConverter() {
             </div>
 
             {parseError ? (
-              <div className="text-xs text-red-500 dark:text-red-400 font-medium p-3 bg-red-500/10 rounded-xl border border-red-500/20 mt-2">
+              <div className="text-xs text-red-500 font-medium p-3 bg-red-500/10 rounded-xl border border-red-500/20 mt-2">
                 {parseError}
               </div>
             ) : dateTimeInput.trim() ? (
               <div className="flex flex-col gap-3 mt-2.5">
                 {/* Parser status badge */}
                 {isCustomParsed && (
-                  <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold px-2.5 py-1 bg-emerald-500/10 rounded-lg border border-emerald-500/20 w-fit self-end uppercase tracking-wider">
+                  <div className="text-[10px] text-[var(--zd-accent)] font-bold px-2.5 py-1 bg-[var(--zd-accent-soft)] rounded-lg border border-[var(--zd-accent)]/20 w-fit self-end uppercase tracking-wider">
                     Custom Regex Parsed
                   </div>
                 )}
-                {/* Result Seconds Epoch */}
-                <div className="bg-[var(--zd-surface-raised)]/50 p-4 rounded-xl border border-[var(--zd-border)]/50 flex flex-col gap-1 relative group">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-[var(--zd-text-muted)]">Epoch Seconds (Unix)</span>
-                  <span className="text-xl font-extrabold font-mono text-[var(--zd-text-primary)]">{outputEpochSec}</span>
-                  <button 
-                    onClick={() => triggerCopy(outputEpochSec.toString(), 'epoch')}
-                    className="absolute right-2.5 top-2.5 p-1.5 rounded bg-[var(--zd-surface)] border border-[var(--zd-border)] opacity-0 group-hover:opacity-100 text-slate-400 hover:text-[var(--zd-primary)] transition-all"
-                    title="Copy seconds epoch"
-                  >
-                    <Copy className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
-                {/* Result Milliseconds Epoch */}
-                <div className="bg-[var(--zd-surface-raised)]/50 p-4 rounded-xl border border-[var(--zd-border)]/50 flex flex-col gap-1 relative group">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-[var(--zd-text-muted)]">Epoch Milliseconds</span>
-                  <span className="text-xl font-extrabold font-mono text-[var(--zd-accent)]">{outputEpochMs}</span>
-                  <button 
-                    onClick={() => triggerCopy(outputEpochMs.toString(), 'epoch')}
-                    className="absolute right-2.5 top-2.5 p-1.5 rounded bg-[var(--zd-surface)] border border-[var(--zd-border)] opacity-0 group-hover:opacity-100 text-slate-400 hover:text-[var(--zd-primary)] transition-all"
-                    title="Copy milliseconds epoch"
-                  >
-                    <Copy className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+                <StatCard label="Epoch Seconds (Unix)" value={outputEpochSec.toString()} copyable />
+                <StatCard
+                  label="Epoch Milliseconds"
+                  value={outputEpochMs.toString()}
+                  copyable
+                  className="[&_p]:text-[var(--zd-accent)]"
+                />
               </div>
             ) : (
-              <div className="text-center text-xs text-slate-400 py-8 bg-[var(--zd-surface-raised)]/30 rounded-xl border border-dashed border-[var(--zd-border)] mt-2">
+              <div className="text-center text-xs text-[var(--zd-text-muted)] py-8 bg-[var(--zd-surface-raised)]/30 rounded-xl border border-dashed border-[var(--zd-border)] mt-2">
                 Enter or paste a valid date/time above.
               </div>
             )}
@@ -589,7 +524,8 @@ export default function EpochConverter() {
         </div>
 
       </div>
-    </div>
+      </ToolWorkspace>
+    </ToolPage>
   );
 }
 

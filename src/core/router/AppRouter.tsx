@@ -4,9 +4,7 @@ import {
   createRootRoute,
   RouterProvider,
   Outlet,
-  useRouterState,
 } from '@tanstack/react-router';
-import { motion, AnimatePresence } from 'framer-motion';
 import { toolRegistry } from '../registry/tools';
 import { Suspense, lazy, useEffect } from 'react';
 import { useUIStore } from '../store/useUIStore';
@@ -15,6 +13,9 @@ import { Navbar } from '../../landing/components/Navbar';
 import { ErrorBoundary } from '../../shared/components/ErrorBoundary';
 import { ToastContainer } from '../../shared/components/ToastContainer';
 import { SkeletonLoader } from '../../shared/components/SkeletonLoader';
+import { SkipLink } from '../../shared/components/SkipLink';
+import { ToolRouteShell } from '../../shared/components/ToolRouteShell';
+import { KeyboardShortcutsHelp } from '../../shared/components/KeyboardShortcutsHelp';
 
 
 import { LandingPage } from '../../landing/LandingPage';
@@ -49,7 +50,6 @@ const LazyStorageWarningModal = lazyRetry(() => import('../../shared/components/
 function RootLayout() {
   const { theme } = usePreferenceStore();
   const { commandPaletteOpen, setCommandPaletteOpen, storageWarning, zenMode } = useUIStore();
-  const routerState = useRouterState();
 
   // Toggle Command Palette globally
   useEffect(() => {
@@ -76,20 +76,12 @@ function RootLayout() {
       }}
       className={theme === 'dark' ? 'dark' : ''}
     >
+      <SkipLink />
       {!zenMode && <Navbar />}
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', paddingTop: zenMode ? 0 : '4rem', minHeight: zenMode ? '100vh' : 'calc(100vh - 4rem)' }} className={!zenMode ? '2xl:pt-[4.5rem] 2xl:[min-height:calc(100vh-4.5rem)]' : ''}>
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={routerState.location.pathname}
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -15 }}
-            transition={{ duration: 0.25, ease: 'easeOut' }}
-            style={{ flex: 1, display: 'flex', flexDirection: 'column' }}
-          >
-            <Outlet />
-          </motion.div>
-        </AnimatePresence>
+        <div className="flex flex-1 min-h-0 flex-col">
+          <Outlet />
+        </div>
       </main>
       {commandPaletteOpen && (
         <Suspense fallback={null}>
@@ -102,6 +94,7 @@ function RootLayout() {
         </Suspense>
       )}
       <ToastContainer />
+      <KeyboardShortcutsHelp />
     </div>
   );
 }
@@ -140,18 +133,21 @@ function SEOWrapper({ title, description, toolId, children }: SEOWrapperProps) {
     const ogDesc = document.querySelector('meta[property="og:description"]');
     const originalOgDesc = ogDesc ? ogDesc.getAttribute('content') : '';
 
-    // Set dynamic SEO tags
+    const ogUrl = document.querySelector('meta[property="og:url"]');
+    const originalOgUrl = ogUrl ? ogUrl.getAttribute('content') : '';
+
     document.title = `${title} | ZeroDock`;
     if (metaDesc) metaDesc.setAttribute('content', description);
     if (ogTitle) ogTitle.setAttribute('content', `${title} | ZeroDock`);
     if (ogDesc) ogDesc.setAttribute('content', description);
+    if (ogUrl) ogUrl.setAttribute('content', window.location.href);
 
     return () => {
-      // Restore on unmount
       document.title = originalTitle;
       if (metaDesc && originalDesc) metaDesc.setAttribute('content', originalDesc);
       if (ogTitle && originalOgTitle) ogTitle.setAttribute('content', originalOgTitle);
       if (ogDesc && originalOgDesc) ogDesc.setAttribute('content', originalOgDesc);
+      if (ogUrl && originalOgUrl) ogUrl.setAttribute('content', originalOgUrl);
     };
   }, [title, description]);
 
@@ -170,7 +166,7 @@ const indexRoute = createRoute({
   component: () => (
     <SEOWrapper
       title="Privacy-First Web Utility & Developer Toolbox"
-      description="Format JSON, convert epochs, merge PDFs, generate UUIDs, encode URLs, check diffs, and inspect JWT tokens — all processed 100% locally in your browser."
+      description="Format JSON, test APIs, convert epochs, encode URLs, check diffs, and inspect JWT tokens — all processed 100% locally in your browser."
     >
       <LandingPage />
     </SEOWrapper>
@@ -192,7 +188,9 @@ const toolRoutes = toolRegistry.map((tool) => {
       >
         <Suspense fallback={<SkeletonLoader toolName={tool.name} />}>
           <ErrorBoundary>
-            <LazyComponent />
+            <ToolRouteShell toolId={tool.id}>
+              <LazyComponent />
+            </ToolRouteShell>
           </ErrorBoundary>
         </Suspense>
       </SEOWrapper>

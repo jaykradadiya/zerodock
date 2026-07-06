@@ -44,6 +44,12 @@ export default defineConfig({
           if (id.includes('node_modules/@monaco-editor/react/')) {
             return 'monaco-vendor';
           }
+          if (id.includes('node_modules/gpt-tokenizer')) {
+            return 'gpt-tokenizer';
+          }
+          if (id.includes('node_modules/@faker-js/faker')) {
+            return 'faker-vendor';
+          }
         }
       }
     }

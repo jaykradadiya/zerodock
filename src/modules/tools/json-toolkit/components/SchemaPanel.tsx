@@ -18,7 +18,7 @@ export function SchemaPanel({ schema, onChange, errors, isValidating, onClose }:
           <ShieldCheck className="w-3.5 h-3.5" />
           JSON Schema
         </span>
-        <button onClick={onClose} className="text-slate-400 hover:text-[var(--zd-primary)] transition-colors">
+        <button onClick={onClose} className="text-[var(--zd-text-muted)] hover:text-[var(--zd-primary)] transition-colors">
           <X className="w-4 h-4" />
         </button>
       </div>
@@ -40,19 +40,19 @@ export function SchemaPanel({ schema, onChange, errors, isValidating, onClose }:
           {isValidating ? (
             <div className="text-sm text-[var(--zd-text-secondary)] animate-pulse">Validating...</div>
           ) : errors.length === 0 ? (
-            <div className="flex items-center gap-2 text-green-600 dark:text-green-500">
+            <div className="flex items-center gap-2 text-[var(--zd-accent)]">
               <CheckCircle2 className="w-4 h-4" />
               <span className="text-sm font-medium">Valid against schema</span>
             </div>
           ) : (
             <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2 text-red-600 dark:text-red-400 mb-2">
+              <div className="flex items-center gap-2 text-[var(--zd-accent)] mb-2">
                 <XCircle className="w-4 h-4" />
                 <span className="text-sm font-medium">Found {errors.length} errors</span>
               </div>
               {errors.map((err, i) => (
-                <div key={i} className="text-sm bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 p-2 rounded border border-red-100 dark:border-red-900/40">
-                  <span className="font-mono text-xs bg-red-100 dark:bg-red-900/60 px-1 py-0.5 rounded mr-2">
+                <div key={i} className="text-sm bg-[var(--zd-surface-raised)] text-[var(--zd-text-primary)] p-2 rounded border border-[var(--zd-border)]">
+                  <span className="font-mono text-xs bg-[var(--zd-surface)] text-[var(--zd-accent)] px-1 py-0.5 rounded mr-2">
                     {err.path || '/'}
                   </span>
                   {err.message}

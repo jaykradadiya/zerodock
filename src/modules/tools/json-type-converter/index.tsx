@@ -1,7 +1,12 @@
 import { useState, useEffect } from 'react';
-import { CodeEditor } from '../../../shared/components/CodeEditor';
+import { Code2 } from 'lucide-react';
+import { CodePanel } from '../../../shared/components/CodePanel';
+import { ToolPage, ToolHeader, ToolWorkspace, SplitPanels, ToolSelect, ToolToolbar, ToolEmbedFrame } from '../../../shared/components/ToolLayout';
+import { useToolEmbed } from '../../../shared/context/ToolEmbedContext';
 import { usePipelineStore } from '../../../core/store/usePipelineStore';
-import { Code2, Copy, Sparkles, Trash2, ArrowRight } from 'lucide-react';
+import { useConverterShortcuts } from '../../../shared/hooks/useConverterShortcuts';
+import { createToolStore } from '../../../core/store/useToolState';
+import { useSyncToolUrl } from '../../../shared/hooks/useSyncToolUrl';
 
 const SAMPLE_JSON = `{
   "id": 1,
@@ -251,22 +256,36 @@ function jsonToSchema(obj: any): string {
   return JSON.stringify(schemaObj, null, 2);
 }
 
+const LANG_LABELS: Record<string, string> = {
+  typescript: 'TypeScript',
+  go: 'Go',
+  rust: 'Rust',
+  schema: 'JSON Schema',
+};
+
+const useJsonTypeStore = createToolStore('json-type-converter', {
+  inputText: '',
+  targetLang: 'typescript' as 'typescript' | 'go' | 'rust' | 'schema',
+});
+
 export default function JsonTypeConverter() {
-  const [inputText, setInputText] = useState('');
-  const [targetLang, setTargetLang] = useState<'typescript' | 'go' | 'rust' | 'schema'>('typescript');
+  const { inputText, targetLang, setValues } = useJsonTypeStore();
+  const setInputText = (val: string) => setValues({ inputText: val });
+  const setTargetLang = (val: 'typescript' | 'go' | 'rust' | 'schema') => setValues({ targetLang: val });
+
+  useSyncToolUrl(() => useJsonTypeStore.getState(), setValues, [inputText, targetLang]);
+
   const [outputText, setOutputText] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
 
-  // Consume transit pipelines
   useEffect(() => {
     const pipedData = usePipelineStore.getState().consumePipelineData();
     if (pipedData !== null) {
-      setInputText(pipedData);
+      setValues({ inputText: pipedData });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Handle conversion trigger
   useEffect(() => {
     const cleanInput = inputText.trim();
     if (!cleanInput) {
@@ -296,122 +315,71 @@ export default function JsonTypeConverter() {
     }
   }, [inputText, targetLang]);
 
-  const loadSample = () => {
-    setInputText(SAMPLE_JSON);
-  };
+  const editorLang = targetLang === 'go' ? 'go' : targetLang === 'rust' ? 'rust' : targetLang === 'schema' ? 'json' : 'typescript';
 
-  const clearAll = () => {
-    setInputText('');
-    setOutputText('');
-    setError(null);
-  };
+  useConverterShortcuts({
+    onClear: () => { setInputText(''); setOutputText(''); setError(null); },
+    output: outputText,
+  });
 
-  const triggerCopy = () => {
-    if (!outputText) return;
-    navigator.clipboard.writeText(outputText);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
+  const embedded = useToolEmbed();
+
+  const langSelect = (
+    <ToolSelect
+      value={targetLang}
+      onChange={(e) => setTargetLang(e.target.value as 'typescript' | 'go' | 'rust' | 'schema')}
+    >
+      <option value="typescript">TypeScript Interfaces</option>
+      <option value="go">Go Structs</option>
+      <option value="rust">Rust Structs</option>
+      <option value="schema">JSON Schema</option>
+    </ToolSelect>
+  );
+
+  const toolToolbar = embedded ? (
+    <ToolToolbar>{langSelect}</ToolToolbar>
+  ) : null;
+
+  const panels = (
+    <SplitPanels>
+      <CodePanel
+        title="JSON Input"
+        language="json"
+        value={inputText}
+        onChange={(val) => setInputText(val || '')}
+        onSample={() => setInputText(SAMPLE_JSON)}
+        onClear={() => { setInputText(''); setOutputText(''); setError(null); }}
+        error={error}
+        borderRight
+      />
+      <CodePanel
+        title="Generated Code"
+        badge={LANG_LABELS[targetLang]}
+        language={editorLang}
+        value={outputText}
+        readOnly
+        downloadFileName={`types.${targetLang === 'schema' ? 'json' : targetLang}`}
+      />
+    </SplitPanels>
+  );
+
+  if (embedded) {
+    return (
+      <ToolEmbedFrame toolbar={toolToolbar}>
+        {panels}
+      </ToolEmbedFrame>
+    );
+  }
 
   return (
-    <div className="flex-1 flex flex-col items-center p-3 sm:p-4 xl:p-8 2xl:p-10 3xl:p-12 w-full min-h-0 relative">
-      
-      {/* Header */}
-      <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 shrink-0">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-[var(--zd-primary-soft)] flex items-center justify-center text-[var(--zd-primary)] shrink-0">
-            <Code2 className="w-6 h-6" />
-          </div>
-          <div>
-            <h1 className="text-2xl 2xl:text-3xl font-bold text-[var(--zd-text-primary)]">JSON to Types Converter</h1>
-            <p className="text-[var(--zd-text-secondary)] mt-1 text-sm">Convert JSON structures into TypeScript Interfaces, Go Structs, Rust Structs, or JSON Schema.</p>
-          </div>
-        </div>
-        
-        {/* Controls */}
-        <div className="flex items-center gap-2.5">
-          {/* Target Language Dropdown */}
-          <select 
-            value={targetLang}
-            onChange={(e) => setTargetLang(e.target.value as any)}
-            className="text-sm border border-[var(--zd-border)] rounded-xl bg-[var(--zd-surface)] text-[var(--zd-text-primary)] px-3 py-2 outline-none focus:border-[var(--zd-primary)] focus:ring-2 focus:ring-[var(--zd-primary-soft)] transition-all font-semibold"
-          >
-            <option value="typescript">TypeScript Interfaces</option>
-            <option value="go">Go Structs</option>
-            <option value="rust">Rust Structs</option>
-            <option value="schema">JSON Schema</option>
-          </select>
-
-          {/* Copy Result */}
-          <button
-            onClick={triggerCopy}
-            disabled={!outputText}
-            className="flex items-center gap-1.5 px-4 py-2 bg-[var(--zd-primary)] hover:bg-[var(--zd-primary)]/90 text-white rounded-xl text-sm font-semibold transition-all disabled:opacity-50"
-          >
-            <Copy className="w-4 h-4" />
-            <span>{copied ? "Copied!" : "Copy"}</span>
-          </button>
-
-          {/* Sample */}
-          <button
-            onClick={loadSample}
-            className="flex items-center gap-1.5 px-3 py-2 bg-[var(--zd-surface)] border border-[var(--zd-border)] rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-300 hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)] transition-all"
-          >
-            <Sparkles className="w-4 h-4" />
-            <span className="hidden sm:inline">Sample</span>
-          </button>
-
-          {/* Clear */}
-          <button
-            onClick={clearAll}
-            className="flex items-center gap-1.5 px-3 py-2 bg-[var(--zd-surface)] border border-[var(--zd-border)] rounded-xl text-sm font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 hover:border-red-200 transition-all"
-          >
-            <Trash2 className="w-4 h-4" />
-            <span className="hidden sm:inline">Clear</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Main Workspace split */}
-      <div className="w-full flex-1 min-h-0 bg-[var(--zd-surface)] rounded-2xl border border-[var(--zd-border)] shadow-[var(--zd-shadow-md)] overflow-hidden flex flex-col md:flex-row relative">
-        
-        {/* Left Side: Input JSON */}
-        <div className="flex-1 flex flex-col min-w-0 border-b md:border-b-0 md:border-r border-[var(--zd-border)]">
-          <div className="px-4 py-2 bg-[var(--zd-surface-raised)] border-b border-[var(--zd-border)] shrink-0 flex items-center justify-between text-xs font-semibold text-[var(--zd-text-muted)] uppercase tracking-wider">
-            <span>JSON Input</span>
-            {error && <span className="text-red-500 font-medium normal-case">{error}</span>}
-          </div>
-          <div className="flex-1 min-h-0 relative">
-            <div className="absolute inset-0">
-              <CodeEditor
-                value={inputText}
-                onChange={(val) => setInputText(val || '')}
-                language="json"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Right Side: Converted Output */}
-        <div className="flex-1 flex flex-col min-w-0">
-          <div className="px-4 py-2 bg-[var(--zd-surface-raised)] border-b border-[var(--zd-border)] shrink-0 flex items-center gap-2 text-xs font-semibold text-[var(--zd-text-muted)] uppercase tracking-wider">
-            <span>Generated Code</span>
-            <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-[var(--zd-primary)]">{targetLang === 'schema' ? 'json' : targetLang}</span>
-          </div>
-          <div className="flex-1 min-h-0 relative">
-            <div className="absolute inset-0">
-              <CodeEditor
-                value={outputText}
-                readOnly
-                language={targetLang === 'go' ? 'go' : targetLang === 'rust' ? 'rust' : 'typescript'}
-              />
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-    </div>
+    <ToolPage fullWidth>
+      <ToolHeader
+        icon={Code2}
+        title="JSON to Types Converter"
+        description="Convert JSON structures into TypeScript Interfaces, Go Structs, Rust Structs, or JSON Schema."
+        actions={langSelect}
+      />
+      <ToolWorkspace>{panels}</ToolWorkspace>
+    </ToolPage>
   );
 }

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useToastStore } from '../../core/store/useToastStore';
 import { usePreferenceStore } from '../../core/store/usePreferenceStore';
 import { playSound } from '../utils/sound';
+import { Button, cn } from './ui';
 
 interface CopyButtonProps {
   value: string;
@@ -28,11 +29,15 @@ export function CopyButton({ value, className = '' }: CopyButtonProps) {
   };
 
   return (
-    <button
+    <Button
+      variant="ghost"
+      size="sm"
       onClick={handleCopy}
-      className={`text-xs flex items-center gap-1.5 transition-colors relative ${
-        copied ? 'text-green-600 dark:text-green-400' : 'text-orange-600 dark:text-orange-400 hover:underline'
-      } ${className}`}
+      className={cn(
+        '!px-0 !py-0 !border-0 relative',
+        copied ? '!text-[var(--zd-accent)]' : '!text-[var(--zd-text-secondary)] hover:!text-[var(--zd-primary)]',
+        className
+      )}
     >
       <div className="relative w-3 h-3 flex items-center justify-center">
         <AnimatePresence mode="wait">
@@ -62,6 +67,6 @@ export function CopyButton({ value, className = '' }: CopyButtonProps) {
         </AnimatePresence>
       </div>
       {copied ? 'Copied' : 'Copy'}
-    </button>
+    </Button>
   );
 }

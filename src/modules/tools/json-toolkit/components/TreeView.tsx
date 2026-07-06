@@ -9,26 +9,26 @@ interface TreeViewProps {
 export function TreeView({ jsonString, tabId }: TreeViewProps) {
   const [expandAllKey, setExpandAllKey] = useState(0); // changing this forces re-mount of tree with new initial state
 
-  const parsedData = useMemo(() => {
-    if (typeof jsonString !== 'string' || !jsonString.trim()) return null;
+  const { parsedData, error } = useMemo(() => {
+    if (typeof jsonString !== 'string' || !jsonString.trim()) return { parsedData: undefined, error: false };
     try {
-      return JSON.parse(jsonString);
+      return { parsedData: JSON.parse(jsonString), error: false };
     } catch {
-      return null;
+      return { parsedData: undefined, error: true };
     }
   }, [jsonString]);
 
   if (typeof jsonString !== 'string' || !jsonString.trim()) {
     return (
-      <div className="flex-1 flex items-center justify-center text-slate-400 text-sm">
+      <div className="flex-1 flex items-center justify-center text-[var(--zd-text-muted)] text-sm">
         No JSON to display
       </div>
     );
   }
 
-  if (parsedData === null) {
+  if (error) {
     return (
-      <div className="flex-1 flex items-center justify-center text-red-400 text-sm">
+      <div className="flex-1 flex items-center justify-center text-[var(--zd-accent)] text-sm font-medium">
         Invalid JSON format
       </div>
     );

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Network, Play, Download, Copy, Check, Clock, ShieldAlert, Sparkles, Layers, Code, Terminal } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { ToolPage, ToolHeader, ToolWorkspace, ToolEmbedFrame } from '../../../shared/components/ToolLayout';
+import { CorsNotice } from '../../../shared/components/CorsNotice';
+import { useToolEmbed } from '../../../shared/context/ToolEmbedContext';
 import { createToolStore } from '../../../core/store/useToolState';
 import { updateURLWithState, getStateFromURL } from '../../../shared/utils/state-share';
 import { exportToFile } from '../../../shared/utils/export';
@@ -117,37 +119,12 @@ export default function ApiTester() {
     return 'text-[#FF7675] bg-[#FF7675]/10 border border-[#FF7675]/30';
   };
 
-  return (
-    <motion.div 
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className="flex-1 flex flex-col items-center p-4 sm:p-6 md:p-8 xl:p-10 2xl:p-12 3xl:p-16 w-full max-w-6xl 2xl:max-w-7xl 3xl:max-w-[1440px] mx-auto h-full min-h-0 gap-6"
-    >
-      {/* Header Banner */}
-      <div className="w-full flex items-center justify-between gap-4 shrink-0 bg-[var(--zd-surface)] p-4 rounded-xl border border-[var(--zd-border)] shadow-sm">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-[var(--zd-primary-soft)] flex items-center justify-center text-[var(--zd-primary)] border border-[var(--zd-primary)]/20 shadow-[0_0_20px_var(--zd-glow)]">
-            <Network className="w-6 h-6" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold text-[var(--zd-text-primary)] tracking-tight">API Tester Pro</h1>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold uppercase bg-[var(--zd-accent-soft)] text-[var(--zd-accent)] border border-[var(--zd-accent)]/30">
-                Stitch UI
-              </span>
-            </div>
-            <p className="text-xs text-[var(--zd-text-secondary)]">Zero-latency client-side HTTP & REST testing studio</p>
-          </div>
-        </div>
-        <div className="hidden sm:flex items-center gap-2 text-xs text-[var(--zd-text-muted)] bg-[var(--zd-surface-raised)] px-3 py-1.5 rounded-lg border border-[var(--zd-border)]">
-          <Sparkles className="w-3.5 h-3.5 text-[var(--zd-accent)]" />
-          <span>100% In-Browser & Privacy Safe</span>
-        </div>
-      </div>
+  const embedded = useToolEmbed();
 
-      {/* Main Workspace Frame */}
-      <div className="w-full flex flex-col flex-1 min-h-0 bg-[var(--zd-surface)] rounded-2xl border border-[var(--zd-border)] shadow-md overflow-hidden">
+  const testerBody = (
+    <>
+      <CorsNotice />
+      <div className="zd-tool-fill overflow-hidden">
         
         {/* Request Bar */}
         <div className="p-4 border-b border-[var(--zd-border)] flex flex-col sm:flex-row gap-3 bg-[var(--zd-surface-raised)] shrink-0">
@@ -176,12 +153,11 @@ export default function ApiTester() {
             </div>
           </div>
           
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+          <button
+            type="button"
             onClick={handleSend}
             disabled={loading || !url}
-            className="px-6 py-2 bg-[var(--zd-primary)] hover:bg-[var(--zd-primary-hover)] text-white rounded-xl text-xs font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-[0_0_20px_var(--zd-glow)] cursor-pointer border border-white/10"
+            className="px-6 py-2 bg-[var(--zd-primary)] hover:bg-[var(--zd-primary-hover)] text-white rounded-xl text-xs font-bold transition-[background-color,opacity,transform] duration-150 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2 shadow-[var(--zd-shadow-sm)] cursor-pointer border border-white/10"
           >
             {loading ? (
               <>
@@ -194,7 +170,7 @@ export default function ApiTester() {
                 <span>Send Request</span>
               </>
             )}
-          </motion.button>
+          </button>
         </div>
 
         {/* Configuration Tabs & Editors */}
@@ -230,53 +206,37 @@ export default function ApiTester() {
           </div>
 
           <div className="h-36 relative bg-[var(--zd-surface)]">
-            <AnimatePresence mode="wait">
-              {activeTab === 'headers' ? (
-                <motion.div
-                  key="headers"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.15 }}
-                  className="absolute inset-0 p-3 flex flex-col"
-                >
-                  <textarea
-                    value={headersString}
-                    onChange={(e) => updateState({ headersString: e.target.value })}
-                    placeholder="{\n  &quot;Authorization&quot;: &quot;Bearer token&quot;,\n  &quot;Content-Type&quot;: &quot;application/json&quot;\n}"
-                    className="flex-1 w-full p-2 bg-transparent border-none resize-none focus:outline-none focus:ring-0 text-xs font-mono text-[var(--zd-text-primary)] placeholder-[var(--zd-text-muted)]/50 custom-scrollbar leading-relaxed"
-                    spellCheck={false}
-                  />
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="body"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.15 }}
-                  className="absolute inset-0 p-3 flex flex-col"
-                >
-                  <textarea
-                    value={body}
-                    onChange={(e) => updateState({ body: e.target.value })}
-                    disabled={method === 'GET' || method === 'HEAD'}
-                    placeholder={
-                      method === 'GET' || method === 'HEAD'
-                        ? 'Body payload is disabled for GET/HEAD requests.'
-                        : '{\n  "key": "value",\n  "items": [1, 2, 3]\n}'
-                    }
-                    className="flex-1 w-full p-2 bg-transparent border-none resize-none focus:outline-none focus:ring-0 text-xs font-mono text-[var(--zd-text-primary)] placeholder-[var(--zd-text-muted)]/50 custom-scrollbar leading-relaxed disabled:opacity-40"
-                    spellCheck={false}
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {activeTab === 'headers' ? (
+              <div className="absolute inset-0 p-3 flex flex-col">
+                <textarea
+                  value={headersString}
+                  onChange={(e) => updateState({ headersString: e.target.value })}
+                  placeholder="{\n  &quot;Authorization&quot;: &quot;Bearer token&quot;,\n  &quot;Content-Type&quot;: &quot;application/json&quot;\n}"
+                  className="flex-1 w-full p-2 bg-transparent border-none resize-none focus:outline-none focus:ring-0 text-xs font-mono text-[var(--zd-text-primary)] placeholder-[var(--zd-text-muted)]/50 custom-scrollbar leading-relaxed"
+                  spellCheck={false}
+                />
+              </div>
+            ) : (
+              <div className="absolute inset-0 p-3 flex flex-col">
+                <textarea
+                  value={body}
+                  onChange={(e) => updateState({ body: e.target.value })}
+                  disabled={method === 'GET' || method === 'HEAD'}
+                  placeholder={
+                    method === 'GET' || method === 'HEAD'
+                      ? 'Body payload is disabled for GET/HEAD requests.'
+                      : '{\n  "key": "value",\n  "items": [1, 2, 3]\n}'
+                  }
+                  className="flex-1 w-full p-2 bg-transparent border-none resize-none focus:outline-none focus:ring-0 text-xs font-mono text-[var(--zd-text-primary)] placeholder-[var(--zd-text-muted)]/50 custom-scrollbar leading-relaxed disabled:opacity-40"
+                  spellCheck={false}
+                />
+              </div>
+            )}
           </div>
         </div>
 
         {/* Response Panel */}
-        <div className="flex-1 flex flex-col relative bg-[var(--zd-bg)] min-h-[320px]">
+        <div className="zd-tool-fill relative bg-[var(--zd-bg)]">
           {/* Response Toolbar */}
           <div className="px-4 py-2.5 bg-[var(--zd-surface-raised)] border-b border-[var(--zd-border)] flex justify-between items-center shrink-0">
             <div className="flex items-center gap-3">
@@ -285,11 +245,7 @@ export default function ApiTester() {
                 <span>Response Output</span>
               </span>
               {status !== null && (
-                <motion.div 
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  className="flex items-center gap-2.5"
-                >
+                <div className="flex items-center gap-2.5">
                   <span className={`px-2.5 py-0.5 rounded-md text-[11px] font-mono font-bold ${getStatusColor(status)}`}>
                     {status === 0 ? 'NET_ERROR' : `${status} ${status === 200 ? 'OK' : status === 201 ? 'CREATED' : ''}`}
                   </span>
@@ -298,7 +254,7 @@ export default function ApiTester() {
                       <Clock className="w-3 h-3 text-[var(--zd-accent)]" /> {time} ms
                     </span>
                   )}
-                </motion.div>
+                </div>
               )}
             </div>
 
@@ -326,18 +282,14 @@ export default function ApiTester() {
           {/* Response Content Area */}
           <div className="flex-1 relative flex flex-col overflow-hidden">
             {error ? (
-              <motion.div 
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex-1 p-8 flex flex-col items-center justify-center text-center gap-3 m-4 rounded-xl bg-[#FF7675]/5 border border-[#FF7675]/20"
-              >
+              <div className="flex-1 p-8 flex flex-col items-center justify-center text-center gap-3 m-4 rounded-xl bg-[#FF7675]/5 border border-[#FF7675]/20">
                 <div className="w-10 h-10 rounded-full bg-[#FF7675]/10 flex items-center justify-center text-[#FF7675] mb-1">
                   <ShieldAlert className="w-5 h-5" />
                 </div>
                 <p className="text-sm text-[var(--zd-text-primary)] font-bold">Request Execution Failed</p>
                 <p className="text-xs text-[#FF7675] font-mono max-w-md whitespace-pre-wrap leading-relaxed">{error}</p>
                 <p className="text-[11px] text-[var(--zd-text-muted)] mt-2">Check CORS policy, network connectivity, or SSL verification.</p>
-              </motion.div>
+              </div>
             ) : response ? (
               <textarea
                 value={response}
@@ -349,14 +301,9 @@ export default function ApiTester() {
             ) : (
               /* Premium Empty State */
               <div className="flex-1 flex flex-col items-center justify-center p-8 text-center gap-4">
-                <motion.div 
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ duration: 0.5 }}
-                  className="w-16 h-16 rounded-2xl bg-[var(--zd-surface)] border border-[var(--zd-border)] flex items-center justify-center text-[var(--zd-text-muted)] shadow-sm"
-                >
+                <div className="w-16 h-16 rounded-2xl bg-[var(--zd-surface)] border border-[var(--zd-border)] flex items-center justify-center text-[var(--zd-text-muted)] shadow-sm">
                   <Network className="w-8 h-8 stroke-[1.5]" />
-                </motion.div>
+                </div>
                 <div className="max-w-xs">
                   <p className="text-sm font-semibold text-[var(--zd-text-primary)] mb-1">Awaiting Request</p>
                   <p className="text-xs text-[var(--zd-text-muted)] leading-relaxed">
@@ -367,9 +314,32 @@ export default function ApiTester() {
             )}
           </div>
         </div>
-        
       </div>
-    </motion.div>
+    </>
+  );
+
+  if (embedded) return <ToolEmbedFrame>{testerBody}</ToolEmbedFrame>;
+
+  return (
+    <ToolPage fullWidth>
+      <ToolHeader
+        icon={Network}
+        title="API Tester Pro"
+        description="Zero-latency client-side HTTP & REST testing studio"
+        badges={
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold uppercase bg-[var(--zd-accent-soft)] text-[var(--zd-accent)] border border-[var(--zd-accent)]/30">
+            Stitch UI
+          </span>
+        }
+        actions={
+          <div className="hidden sm:flex items-center gap-2 text-xs text-[var(--zd-text-muted)] bg-[var(--zd-surface-raised)] px-3 py-1.5 rounded-lg border border-[var(--zd-border)]">
+            <Sparkles className="w-3.5 h-3.5 text-[var(--zd-accent)]" />
+            <span>100% In-Browser & Privacy Safe</span>
+          </div>
+        }
+      />
+      <ToolWorkspace>{testerBody}</ToolWorkspace>
+    </ToolPage>
   );
 }
 

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 /* ═══════════════════════════════════════════════════════
@@ -7,7 +7,7 @@
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-mono: "Roboto Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-mono: "JetBrains Mono", "Roboto Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   --breakpoint-3xl: 1920px;
   --breakpoint-4xl: 2560px;
 }
@@ -39,6 +39,11 @@
   --zd-radius-lg: 16px;
   --zd-radius-xl: 24px;
   --zd-nav-bg: rgba(255, 255, 255, 0.9);
+  --zd-grid-opacity: 0.025;
+  --zd-grain-opacity: 0.025;
+  --zd-border-glow: rgba(108, 92, 231, 0.25);
+  --zd-gradient-ring: linear-gradient(135deg, var(--zd-primary) 0%, var(--zd-accent) 100%);
+  --zd-label-tracking: 0.12em;
 }
 
 /* ─── Dark Mode ─── */
@@ -62,6 +67,9 @@
   --zd-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(0, 0, 0, 0.25);
   --zd-shadow-glow: 0 0 60px rgba(139, 124, 247, 0.2);
   --zd-nav-bg: rgba(10, 10, 10, 0.85);
+  --zd-grid-opacity: 0.03;
+  --zd-grain-opacity: 0.035;
+  --zd-border-glow: rgba(139, 124, 247, 0.35);
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -89,7 +97,7 @@
     background-color: var(--zd-bg);
     color: var(--zd-text-secondary);
     line-height: 1.6;
-    transition: background-color 0.3s ease, color 0.3s ease;
+    transition: background-color 0.15s ease, color 0.15s ease;
   }
 
   .dark body {
@@ -200,6 +208,25 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
 
   /* Animations */
   .animate-pulse-glow {
@@ -208,11 +235,135 @@
 
   /* UI Effects */
   .glass-panel {
-    @apply backdrop-blur-md bg-white/80 dark:bg-slate-900/80;
+    @apply backdrop-blur-md;
+    background-color: color-mix(in srgb, var(--zd-surface-raised) 85%, transparent);
   }
 
   .btn-micro {
-    @apply transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98];
+    @apply transition-transform duration-150 hover:scale-[1.01] active:scale-[0.99];
+  }
+
+  /* ─── Retro-Futuristic Design System Utilities ─── */
+  .zd-dot-grid {
+    background-image: radial-gradient(circle at 1px 1px, var(--zd-text-primary) 1px, transparent 0);
+    background-size: 36px 36px;
+    opacity: var(--zd-grid-opacity);
+  }
+
+  .zd-grain {
+    position: relative;
+  }
+  .zd-grain::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: var(--zd-grain-opacity);
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  }
+
+  .zd-glow-border {
+    box-shadow: var(--zd-shadow-md), 0 0 0 1px var(--zd-border);
+  }
+
+  .zd-glow-border-interactive {
+    box-shadow: var(--zd-shadow-sm), 0 0 0 1px var(--zd-border);
+    transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  }
+  .zd-glow-border-interactive:hover {
+    box-shadow: var(--zd-shadow-md), 0 0 0 1px var(--zd-border-hover);
+  }
+
+  .zd-panel-min-h {
+    flex: 1 1 0%;
+    min-height: 0;
+  }
+
+  .zd-editor-min-h {
+    flex: 1 1 0%;
+    min-height: 0;
+  }
+
+  .zd-tool-fill {
+    flex: 1 1 0%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .zd-code-panel-body {
+    flex: 1 1 0%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .zd-mono-label {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: var(--zd-label-tracking);
+    text-transform: uppercase;
+    color: var(--zd-text-muted);
+  }
+
+  .zd-workspace {
+    border-radius: var(--zd-radius-lg);
+    border: 1px solid var(--zd-border);
+    background-color: var(--zd-surface);
+    box-shadow: var(--zd-shadow-md);
+    overflow: hidden;
+  }
+
+  .zd-icon-ring {
+    position: relative;
+    background: var(--zd-primary-soft);
+    border-radius: var(--zd-radius-md);
+  }
+  .zd-icon-ring::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: var(--zd-gradient-ring);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0.35;
+    pointer-events: none;
+  }
+
+  /* JSON Toolkit compact toolbar */
+  .toolbar-btn {
+    @apply inline-flex items-center justify-center gap-1.5 h-8 px-2 rounded-md text-xs font-medium shrink-0 transition-colors disabled:opacity-50 disabled:pointer-events-none;
+    color: var(--zd-text-secondary);
+  }
+  .toolbar-btn:hover {
+    color: var(--zd-primary);
+    background: var(--zd-primary-soft);
+  }
+  .toolbar-btn-primary {
+    color: var(--zd-primary);
+    background: var(--zd-surface);
+    box-shadow: var(--zd-shadow-sm);
+  }
+  .toolbar-btn-primary:hover {
+    background: var(--zd-primary-soft);
+  }
+  .toolbar-btn-active {
+    color: var(--zd-primary);
+    background: var(--zd-surface);
+    box-shadow: var(--zd-shadow-sm);
+  }
+  .toolbar-divider {
+    @apply w-px h-5 shrink-0 mx-0.5;
+    background: var(--zd-border);
+  }
+  .toolbar-label {
+    @apply hidden xl:inline;
   }
 
   /* Gutter for split panes (preserved from existing) */
@@ -225,5 +376,16 @@
   }
   .gutter.gutter-horizontal {
     background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAeCAYAAADkftS9AAAAIklEQVQoU2M4c+bMfxAGAgYYmwGrIIIDA9NBRg0gAA8gMQAA+xccqQx5/JIAAAAASUVORK5CYII=');
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

@@ -1,44 +1,82 @@
-import type { Tool } from '../../types/tool';
+import type { Tool, ToolTier } from '../../types/tool';
+import { FEATURED_TOOL_IDS } from '../../types/tool';
 import {
   FileJson,
-  Fingerprint,
   Binary,
-  KeyRound,
-  Hash,
-  Link2,
   GitCompare,
   Clock,
-  Code2,
   SearchCode,
-  TerminalSquare,
   Database,
-  Network
+  Network,
+  BrainCircuit,
+  Shield,
 } from 'lucide-react';
 
-export const toolRegistry: Tool[] = [
-  {
-    id: 'api-tester',
-    name: 'API Tester Pro',
-    category: 'Network',
-    route: '/api-tester',
-    icon: Network,
-    component: () => import('../../modules/tools/api-tester'),
+const NO_SHARE_IDS = new Set(['json-toolkit']);
+
+function enrichTool(tool: Tool): Tool {
+  const tier: ToolTier = (FEATURED_TOOL_IDS as readonly string[]).includes(tool.id)
+    ? 'featured'
+    : 'standard';
+  return {
+    ...tool,
     metadata: {
-      description: 'Zero-latency client-side HTTP & REST API testing studio with custom headers and JSON syntax highlighting.',
-      tags: ['api', 'rest', 'http', 'tester', 'client', 'fetch', 'headers', 'request', 'response', 'json', 'postman', 'curl'],
+      ...tool.metadata,
+      tier,
+      supportsShare: !NO_SHARE_IDS.has(tool.id),
+    },
+  };
+}
+
+const rawToolRegistry: Tool[] = [
+  // ── Hubs (landing cards) ──
+  {
+    id: 'json-toolkit',
+    name: 'JSON Toolkit',
+    category: 'Data',
+    route: '/json-toolkit',
+    icon: FileJson,
+    component: () => import('../../modules/hubs/json-hub'),
+    worker: () => new Worker(new URL('../../modules/tools/json-toolkit/json.worker.ts', import.meta.url), { type: 'module' }),
+    metadata: {
+      description: 'Format, validate, and explore JSON — convert YAML, generate types, and query with JMESPath in one workspace.',
+      tags: ['json', 'format', 'yaml', 'types', 'jmespath', 'schema', 'convert'],
     },
   },
-
   {
-    id: 'yaml-json-converter',
-    name: 'YAML ↔ JSON Converter',
-    category: 'Data',
-    route: '/yaml-json-converter',
-    icon: FileJson,
-    component: () => import('../../modules/tools/yaml-json-converter'),
+    id: 'http',
+    name: 'HTTP Workshop',
+    category: 'Network',
+    route: '/http',
+    icon: Network,
+    component: () => import('../../modules/hubs/http-hub'),
     metadata: {
-      description: 'Instantly convert between YAML and JSON formats with real-time validation and formatting.',
-      tags: ['yaml', 'json', 'convert', 'data', 'format', 'parser', 'bidirectional'],
+      description: 'Test REST APIs and convert cURL commands to JavaScript, Python, or Go — all client-side.',
+      tags: ['api', 'rest', 'http', 'curl', 'fetch', 'tester', 'postman'],
+    },
+  },
+  {
+    id: 'encode-decode',
+    name: 'Encode / Decode',
+    category: 'Encoding',
+    route: '/encode-decode',
+    icon: Binary,
+    component: () => import('../../modules/hubs/encode-hub'),
+    metadata: {
+      description: 'Encode and decode Base64 strings and URL components entirely in your browser.',
+      tags: ['base64', 'url', 'encode', 'decode', 'uri', 'percent encoding'],
+    },
+  },
+  {
+    id: 'security',
+    name: 'Security Suite',
+    category: 'Security',
+    route: '/security',
+    icon: Shield,
+    component: () => import('../../modules/hubs/security-hub'),
+    metadata: {
+      description: 'Hash strings, decode JWTs, and generate RSA key pairs — privacy-first crypto tools.',
+      tags: ['hash', 'jwt', 'rsa', 'crypto', 'security', 'token', 'pem'],
     },
   },
   {
@@ -50,7 +88,7 @@ export const toolRegistry: Tool[] = [
     component: () => import('../../modules/tools/diff-checker'),
     metadata: {
       description: 'Compare two text files or code snippets side-by-side with real-time syntax highlighting and inline diff views.',
-      tags: ['diff', 'compare', 'text', 'match', 'code', 'difference', 'checker', 'inline diff', 'side-by-side', 'version control'],
+      tags: ['diff', 'compare', 'text', 'match', 'code', 'difference', 'checker'],
     },
   },
   {
@@ -62,97 +100,9 @@ export const toolRegistry: Tool[] = [
     component: () => import('../../modules/tools/epoch-converter'),
     metadata: {
       description: 'Convert Unix epoch timestamps to human-readable dates, local timezones, and UTC instantly.',
-      tags: ['epoch', 'timestamp', 'date', 'time', 'unix', 'converter', 'timezone', 'utc', 'seconds', 'milliseconds'],
+      tags: ['epoch', 'timestamp', 'date', 'time', 'unix', 'converter', 'timezone', 'utc'],
     },
   },
-  {
-    id: 'json-type-converter',
-    name: 'JSON to Types Converter',
-    category: 'Data',
-    route: '/json-type-converter',
-    icon: Code2,
-    component: () => import('../../modules/tools/json-type-converter'),
-    metadata: {
-      description: 'Automatically generate TypeScript interfaces, Go structs, Rust structs, and JSON Schema from JSON payloads.',
-      tags: ['json', 'types', 'typescript', 'go', 'rust', 'convert', 'interfaces', 'structs', 'schema', 'generator', 'types definition'],
-    },
-  },
-
-  {
-    id: 'json-toolkit',
-    name: 'JSON Toolkit',
-    category: 'Data',
-    route: '/json-toolkit',
-    icon: FileJson,
-    component: () => import('../../modules/tools/json-toolkit'),
-    worker: () => new Worker(new URL('../../modules/tools/json-toolkit/json.worker.ts', import.meta.url), { type: 'module' }),
-    metadata: {
-      description: 'Comprehensive JSON studio to format, minify, validate schemas, repair broken JSON, and convert between JSON and CSV data.',
-      tags: ['json', 'format', 'minify', 'validate', 'schema', 'tree view', 'editor', 'csv to json', 'repair json', 'beautify', 'viewer'],
-    },
-  },
-  {
-    id: 'uuid-generator',
-    name: 'UUID Generator',
-    category: 'Generators',
-    route: '/uuid-generator',
-    icon: Fingerprint,
-    component: () => import('../../modules/tools/uuid-generator'),
-    metadata: {
-      description: 'Generate secure, random UUID v4 and time-sorted UUID v7 identifiers instantly for databases and APIs.',
-      tags: ['uuid', 'guid', 'generator', 'unique', 'identifier', 'v4', 'v7', 'random', 'keys', 'database'],
-    },
-  },
-  {
-    id: 'base64-codec',
-    name: 'Base64 Encode/Decode',
-    category: 'Encoding',
-    route: '/base64-codec',
-    icon: Binary,
-    component: () => import('../../modules/tools/base64-codec'),
-    metadata: {
-      description: 'Securely encode and decode Base64 strings, text, and files entirely locally in your browser.',
-      tags: ['base64', 'encode', 'decode', 'binary', 'text', 'files', 'converter', 'string manipulation', 'codec'],
-    },
-  },
-  {
-    id: 'jwt-decoder',
-    name: 'JWT Decoder',
-    category: 'Security',
-    route: '/jwt-decoder',
-    icon: KeyRound,
-    component: () => import('../../modules/tools/jwt-decoder'),
-    metadata: {
-      description: 'Decode, inspect, and verify JWT tokens securely. View headers, payloads, and claims without sending tokens to a server.',
-      tags: ['jwt', 'token', 'decode', 'security', 'auth', 'json web token', 'claims', 'verify', 'authentication', 'payload'],
-    },
-  },
-  {
-    id: 'hash-generator',
-    name: 'Hash Generator',
-    category: 'Security',
-    route: '/hash-generator',
-    icon: Hash,
-    component: () => import('../../modules/tools/hash-generator'),
-    metadata: {
-      description: 'Generate secure cryptographic hashes instantly including MD5, SHA-1, SHA-256, and SHA-512 from any text input.',
-      tags: ['hash', 'md5', 'sha', 'security', 'crypto', 'sha256', 'sha512', 'checksum', 'generator', 'encryption'],
-    },
-  },
-
-  {
-    id: 'url-encoder',
-    name: 'URL Encoder/Decoder',
-    category: 'Encoding',
-    route: '/url-encoder',
-    icon: Link2,
-    component: () => import('../../modules/tools/url-encoder'),
-    metadata: {
-      description: 'Safely encode and decode URL components, query strings, and complete URIs to ensure valid web links.',
-      tags: ['url', 'uri', 'encode', 'decode', 'link', 'query string', 'web', 'percent encoding', 'format'],
-    },
-  },
-
   {
     id: 'regex-tester',
     name: 'Regex Tester',
@@ -166,28 +116,161 @@ export const toolRegistry: Tool[] = [
     },
   },
   {
-    id: 'curl-converter',
-    name: 'cURL Converter',
-    category: 'Text',
-    route: '/curl-converter',
-    icon: TerminalSquare,
-    component: () => import('../../modules/tools/curl-converter'),
+    id: 'mock-data-generator',
+    name: 'Mock Data Generator',
+    category: 'Generators',
+    route: '/mock-data-generator',
+    icon: Database,
+    component: () => import('../../modules/tools/mock-data-generator'),
     metadata: {
-      description: 'Convert cURL commands to modern code snippets for JavaScript, Python, Go, and more.',
-      tags: ['curl', 'fetch', 'requests', 'http', 'converter', 'code', 'snippet'],
+      description: 'Generate realistic mock JSON data from custom schema definitions.',
+      tags: ['mock', 'faker', 'data', 'json', 'generator', 'schema', 'test data'],
     },
   },
   {
-    id: 'sql-formatter',
-    name: 'SQL Formatter',
+    id: 'token-counter',
+    name: 'LLM Token Counter',
     category: 'Text',
-    route: '/sql-formatter',
-    icon: Database,
-    component: () => import('../../modules/tools/sql-formatter'),
+    route: '/token-counter',
+    icon: BrainCircuit,
+    component: () => import('../../modules/tools/token-counter'),
     metadata: {
-      description: 'Beautify and format raw SQL queries into readable, indented statements.',
-      tags: ['sql', 'format', 'database', 'query', 'beautify', 'indent'],
+      description: 'Count tokens and characters for LLM prompts using GPT tokenizer.',
+      tags: ['token', 'llm', 'gpt', 'counter', 'ai', 'prompt'],
     },
-  }
+  },
+
+  // ── Hub children (deep links only, hidden from landing) ──
+  {
+    id: 'yaml-json-converter',
+    name: 'YAML ↔ JSON',
+    category: 'Data',
+    route: '/yaml-json-converter',
+    icon: FileJson,
+    component: () => import('../../modules/hubs/json-hub').then((m) => ({ default: m.JsonHubYaml })),
+    metadata: {
+      description: 'Convert between YAML and JSON formats.',
+      tags: ['yaml', 'json', 'convert'],
+      hiddenFromBrowse: true,
+    },
+  },
+  {
+    id: 'json-type-converter',
+    name: 'JSON to Types',
+    category: 'Data',
+    route: '/json-type-converter',
+    icon: FileJson,
+    component: () => import('../../modules/hubs/json-hub').then((m) => ({ default: m.JsonHubTypes })),
+    metadata: {
+      description: 'Generate TypeScript, Go, and Rust types from JSON.',
+      tags: ['json', 'types', 'typescript'],
+      hiddenFromBrowse: true,
+    },
+  },
+  {
+    id: 'json-path',
+    name: 'JSON Path',
+    category: 'Data',
+    route: '/json-path',
+    icon: FileJson,
+    component: () => import('../../modules/hubs/json-hub').then((m) => ({ default: m.JsonHubPath })),
+    metadata: {
+      description: 'Query JSON with JMESPath expressions.',
+      tags: ['json', 'jmespath', 'query'],
+      hiddenFromBrowse: true,
+    },
+  },
+  {
+    id: 'api-tester',
+    name: 'API Tester',
+    category: 'Network',
+    route: '/api-tester',
+    icon: Network,
+    component: () => import('../../modules/hubs/http-hub'),
+    metadata: {
+      description: 'Client-side HTTP & REST API testing.',
+      tags: ['api', 'http', 'rest'],
+      hiddenFromBrowse: true,
+    },
+  },
+  {
+    id: 'curl-converter',
+    name: 'cURL Converter',
+    category: 'Network',
+    route: '/curl-converter',
+    icon: Network,
+    component: () => import('../../modules/hubs/http-hub').then((m) => ({ default: m.HttpHubCurl })),
+    metadata: {
+      description: 'Convert cURL to code snippets.',
+      tags: ['curl', 'http'],
+      hiddenFromBrowse: true,
+    },
+  },
+  {
+    id: 'base64-codec',
+    name: 'Base64 Codec',
+    category: 'Encoding',
+    route: '/base64-codec',
+    icon: Binary,
+    component: () => import('../../modules/hubs/encode-hub'),
+    metadata: {
+      description: 'Base64 encode and decode.',
+      tags: ['base64'],
+      hiddenFromBrowse: true,
+    },
+  },
+  {
+    id: 'url-encoder',
+    name: 'URL Encoder',
+    category: 'Encoding',
+    route: '/url-encoder',
+    icon: Binary,
+    component: () => import('../../modules/hubs/encode-hub').then((m) => ({ default: m.EncodeHubUrl })),
+    metadata: {
+      description: 'URL encode and decode.',
+      tags: ['url'],
+      hiddenFromBrowse: true,
+    },
+  },
+  {
+    id: 'hash-generator',
+    name: 'Hash Generator',
+    category: 'Security',
+    route: '/hash-generator',
+    icon: Shield,
+    component: () => import('../../modules/hubs/security-hub'),
+    metadata: {
+      description: 'Generate cryptographic hashes.',
+      tags: ['hash', 'sha'],
+      hiddenFromBrowse: true,
+    },
+  },
+  {
+    id: 'jwt-decoder',
+    name: 'JWT Decoder',
+    category: 'Security',
+    route: '/jwt-decoder',
+    icon: Shield,
+    component: () => import('../../modules/hubs/security-hub').then((m) => ({ default: m.SecurityHubJwt })),
+    metadata: {
+      description: 'Decode JWT tokens offline.',
+      tags: ['jwt', 'token'],
+      hiddenFromBrowse: true,
+    },
+  },
+  {
+    id: 'rsa-generator',
+    name: 'RSA Generator',
+    category: 'Security',
+    route: '/rsa-generator',
+    icon: Shield,
+    component: () => import('../../modules/hubs/security-hub').then((m) => ({ default: m.SecurityHubRsa })),
+    metadata: {
+      description: 'Generate RSA key pairs.',
+      tags: ['rsa', 'pem'],
+      hiddenFromBrowse: true,
+    },
+  },
 ];
 
+export const toolRegistry = rawToolRegistry.map(enrichTool);

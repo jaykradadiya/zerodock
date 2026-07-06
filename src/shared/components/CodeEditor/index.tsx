@@ -3,6 +3,7 @@ import Editor from '@monaco-editor/react';
 import type { EditorProps } from '@monaco-editor/react';
 import { usePreferenceStore } from '../../../core/store/usePreferenceStore';
 import { useWorkspaceStore } from '../../../modules/tools/json-toolkit/store/workspaceStore';
+import { cn } from '../ui/cn';
 
 interface CodeEditorProps extends Omit<EditorProps, 'theme' | 'onChange'> {
   modelId?: string;
@@ -11,21 +12,31 @@ interface CodeEditorProps extends Omit<EditorProps, 'theme' | 'onChange'> {
   readOnly?: boolean;
   onChange?: (value: string | undefined) => void;
   editorRef?: React.MutableRefObject<any>;
+  className?: string;
 }
 
-export function CodeEditor({ modelId, value, language = 'json', readOnly = false, onChange, editorRef: externalEditorRef, ...props }: CodeEditorProps) {
+export function CodeEditor({
+  modelId,
+  value,
+  language = 'json',
+  readOnly = false,
+  onChange,
+  editorRef: externalEditorRef,
+  className,
+  ...props
+}: CodeEditorProps) {
   const { theme } = usePreferenceStore();
   const getFileContent = useWorkspaceStore(s => s.getFileContent);
   const updateTabContent = useWorkspaceStore(s => s.updateTabContent);
   const tabs = useWorkspaceStore(s => s.tabs);
-  
+
   const editorRef = useRef<any>(null);
   const monacoRef = useRef<any>(null);
   const timeoutRef = useRef<any>(null);
-
   const modelIdRef = useRef(modelId);
   const onChangeRef = useRef(onChange);
   const readOnlyRef = useRef(readOnly);
+  const isWorkspaceModel = Boolean(modelId);
 
   useEffect(() => {
     modelIdRef.current = modelId;
@@ -39,7 +50,6 @@ export function CodeEditor({ modelId, value, language = 'json', readOnly = false
     readOnlyRef.current = readOnly;
   }, [readOnly]);
 
-  // Cleanup unused Monaco models when tabs are removed
   useEffect(() => {
     if (!monacoRef.current) return;
     const monaco = monacoRef.current;
@@ -50,7 +60,6 @@ export function CodeEditor({ modelId, value, language = 'json', readOnly = false
       const filename = pathParts[pathParts.length - 1];
       if (filename && filename.endsWith('.json')) {
         const id = filename.replace('.json', '');
-        // Only dispose if it corresponds to a tab UUID but is not in our tabs set
         if (id && id.length > 10 && !currentTabIds.has(id)) {
           m.dispose();
         }
@@ -61,13 +70,15 @@ export function CodeEditor({ modelId, value, language = 'json', readOnly = false
   useEffect(() => {
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      // Clean up all models when editor unmounts to prevent memory leak
-      if (monacoRef.current) {
-        const models = monacoRef.current.editor.getModels();
-        models.forEach((m: any) => m.dispose());
+      // Only dispose this editor's ephemeral model — never workspace tab models
+      if (!isWorkspaceModel && editorRef.current) {
+        const model = editorRef.current.getModel();
+        if (model && typeof model.isDisposed === 'function' && !model.isDisposed()) {
+          model.dispose();
+        }
       }
     };
-  }, []);
+  }, [isWorkspaceModel]);
 
   const handleEditorWillMount = (monaco: any) => {
     monaco.editor.defineTheme('zerodock-dark', {
@@ -75,10 +86,10 @@ export function CodeEditor({ modelId, value, language = 'json', readOnly = false
       inherit: true,
       rules: [],
       colors: {
-        'editor.background': '#16161A', // var(--zd-surface) dark
-        'editor.foreground': '#EAEAF0', // var(--zd-text-primary) dark
-        'editor.lineHighlightBackground': '#1C1C21', // var(--zd-surface-raised) dark
-        'editorLineNumber.foreground': '#5E5E72', // var(--zd-text-muted) dark
+        'editor.background': '#16161A',
+        'editor.foreground': '#EAEAF0',
+        'editorLineHighlightBackground': '#1C1C21',
+        'editorLineNumber.foreground': '#5E5E72',
       }
     });
     monaco.editor.defineTheme('zerodock-light', {
@@ -86,10 +97,10 @@ export function CodeEditor({ modelId, value, language = 'json', readOnly = false
       inherit: true,
       rules: [],
       colors: {
-        'editor.background': '#FFFFFF', // var(--zd-surface) light
-        'editor.foreground': '#1A1A2E', // var(--zd-text-primary) light
-        'editor.lineHighlightBackground': '#FAFAF8', // var(--zd-surface-raised) light
-        'editorLineNumber.foreground': '#8E8EA0', // var(--zd-text-muted) light
+        'editor.background': '#FFFFFF',
+        'editor.foreground': '#1A1A2E',
+        'editorLineHighlightBackground': '#FAFAF8',
+        'editorLineNumber.foreground': '#8E8EA0',
       }
     });
 
@@ -122,15 +133,13 @@ export function CodeEditor({ modelId, value, language = 'json', readOnly = false
   const loadModel = async () => {
     if (!editorRef.current || !monacoRef.current) return;
     const monaco = monacoRef.current;
-    
+
     if (modelId) {
       const uri = monaco.Uri.parse(`file:///${modelId}.json`);
       let model = monaco.editor.getModel(uri);
-      
+
       if (!model) {
-        // Show loading state implicitly by waiting
         const content = await getFileContent(modelId);
-        // Create model bypassing react props
         model = monaco.editor.createModel(content, language, uri);
       }
       editorRef.current.setModel(model);
@@ -141,7 +150,15 @@ export function CodeEditor({ modelId, value, language = 'json', readOnly = false
     loadModel();
   }, [modelId]);
 
-  // Sync value prop if modified externally (sample loaded/cleared) without resetting cursor position
+  // Recover workspace tab model if a panel editor accidentally disposed it
+  useEffect(() => {
+    if (!modelId || !editorRef.current || !monacoRef.current) return;
+    const model = editorRef.current.getModel();
+    if (!model || (typeof model.isDisposed === 'function' && model.isDisposed())) {
+      void loadModel();
+    }
+  }, [modelId, tabs.length]);
+
   useEffect(() => {
     if (editorRef.current && value !== undefined && !modelId) {
       const currentValue = editorRef.current.getValue();
@@ -161,13 +178,13 @@ export function CodeEditor({ modelId, value, language = 'json', readOnly = false
     editor.onDidChangeModelContent(() => {
       const val = editor.getValue();
       if (onChangeRef.current) onChangeRef.current(val);
-      
+
       const currentModelId = modelIdRef.current;
       if (currentModelId && !readOnlyRef.current) {
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
         timeoutRef.current = setTimeout(() => {
           updateTabContent(currentModelId, val);
-        }, val.length > 1024 * 1024 ? 3000 : 1500); // Debounce longer for >1MB files
+        }, val.length > 1024 * 1024 ? 3000 : 1500);
       }
     });
 
@@ -175,12 +192,12 @@ export function CodeEditor({ modelId, value, language = 'json', readOnly = false
   };
 
   return (
-    <div className="flex-1 min-h-0 w-full h-full border border-[var(--zd-border)] overflow-hidden flex flex-col">
+    <div className={cn('zd-tool-fill w-full overflow-hidden bg-[var(--zd-surface)]', className)}>
       <Editor
         height="100%"
         width="100%"
         language={language}
-        defaultValue={!modelId ? value : undefined} // Treat as uncontrolled to avoid cursor reset
+        defaultValue={!modelId ? value : undefined}
         theme={theme === 'dark' ? 'zerodock-dark' : 'zerodock-light'}
         beforeMount={handleEditorWillMount}
         onMount={handleEditorDidMount}
@@ -196,14 +213,13 @@ export function CodeEditor({ modelId, value, language = 'json', readOnly = false
           automaticLayout: true,
           tabSize: 2,
           colorDecorators: true,
-          // Optimization for large files
           largeFileOptimizations: true,
           scrollbar: {
             alwaysConsumeMouseWheel: false
           }
         }}
         loading={
-          <div className="flex-1 h-full flex items-center justify-center text-slate-400 text-sm">
+          <div className="h-full flex items-center justify-center text-[var(--zd-text-muted)] text-sm">
             Loading editor...
           </div>
         }

@@ -1,15 +1,19 @@
 import { create } from 'zustand';
 
 interface PipelineState {
-  payload: string | null;
-  sourceToolId: string | null;
-  setPipelineData: (payload: string, sourceToolId: string) => void;
-  clearPipelineData: () => void;
+  pipelineData: string | null;
+  setPipelineData: (data: string) => void;
+  consumePipelineData: () => string | null;
 }
 
-export const usePipelineStore = create<PipelineState>((set) => ({
-  payload: null,
-  sourceToolId: null,
-  setPipelineData: (payload, sourceToolId) => set({ payload, sourceToolId }),
-  clearPipelineData: () => set({ payload: null, sourceToolId: null }),
+export const usePipelineStore = create<PipelineState>((set, get) => ({
+  pipelineData: null,
+  setPipelineData: (data) => set({ pipelineData: data }),
+  consumePipelineData: () => {
+    const data = get().pipelineData;
+    if (data !== null) {
+      set({ pipelineData: null });
+    }
+    return data;
+  },
 }));

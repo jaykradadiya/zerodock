@@ -192,7 +192,7 @@ export function TableView({ jsonString }: TableViewProps) {
 
   if (error) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 p-8 text-center bg-[var(--zd-surface)] border border-[var(--zd-border)]">
+      <div className="flex-1 flex flex-col items-center justify-center text-[var(--zd-text-secondary)] p-8 text-center bg-[var(--zd-surface)] border border-[var(--zd-border)]">
         <TableIcon className="w-12 h-12 mb-4 text-slate-300 dark:text-slate-700" />
         <p className="text-sm font-medium">{error}</p>
         <p className="text-xs mt-2 max-w-md">Ensure your JSON matches the expected structure.</p>
@@ -205,11 +205,11 @@ export function TableView({ jsonString }: TableViewProps) {
       <div className="flex-1 flex flex-col h-full bg-[var(--zd-surface)]">
         {pathOptions.length > 1 && (
           <div className="flex items-center gap-2 p-2 border-b border-[var(--zd-border)] bg-[var(--zd-surface-raised)]/30 shrink-0">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Select Path:</span>
+            <span className="text-xs font-semibold text-[var(--zd-text-muted)] uppercase tracking-wider">Select Path:</span>
             <select 
               value={selectedPath} 
               onChange={(e) => setSelectedPath(e.target.value)}
-              className="text-xs font-medium bg-[var(--zd-surface)] border border-[var(--zd-border)] rounded px-2.5 py-1 outline-none focus:border-[var(--zd-primary)] text-slate-800 dark:text-slate-200"
+              className="text-xs font-medium bg-[var(--zd-surface)] border border-[var(--zd-border)] rounded px-2.5 py-1 outline-none focus:border-[var(--zd-primary)] text-[var(--zd-text-primary)]"
             >
               {pathOptions.map(opt => (
                 <option key={opt.path} value={opt.path}>{opt.label}</option>
@@ -229,11 +229,11 @@ export function TableView({ jsonString }: TableViewProps) {
       {/* Path Selector Toolbar */}
       {pathOptions.length > 1 && (
         <div className="flex items-center gap-2 p-2 border-b border-[var(--zd-border)] bg-[var(--zd-surface-raised)]/30 shrink-0">
-          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Select Path:</span>
+          <span className="text-xs font-semibold text-[var(--zd-text-muted)] uppercase tracking-wider">Select Path:</span>
           <select 
             value={selectedPath} 
             onChange={(e) => setSelectedPath(e.target.value)}
-            className="text-xs font-medium bg-[var(--zd-surface)] border border-[var(--zd-border)] rounded px-2.5 py-1 outline-none focus:border-[var(--zd-primary)] focus:ring-1 focus:ring-[var(--zd-primary-soft)] text-slate-800 dark:text-slate-200"
+            className="text-xs font-medium bg-[var(--zd-surface)] border border-[var(--zd-border)] rounded px-2.5 py-1 outline-none focus:border-[var(--zd-primary)] focus:ring-1 focus:ring-[var(--zd-primary-soft)] text-[var(--zd-text-primary)]"
           >
             {pathOptions.map(opt => (
               <option key={opt.path} value={opt.path}>{opt.label}</option>
@@ -245,7 +245,7 @@ export function TableView({ jsonString }: TableViewProps) {
       {/* Table grid wrapper */}
       <div className="flex-1 overflow-auto custom-scrollbar min-h-0">
         <table className="w-full text-sm text-left border-collapse">
-          <thead className="text-xs text-slate-500 uppercase bg-[var(--zd-surface-raised)] sticky top-0 z-10 border-b border-[var(--zd-border)]">
+          <thead className="text-xs text-[var(--zd-text-muted)] uppercase bg-[var(--zd-surface-raised)] sticky top-0 z-10 border-b border-[var(--zd-border)]">
             <tr>
               <th className="px-4 py-3 font-semibold border-r border-[var(--zd-border)] w-16 text-center text-slate-400">#</th>
               {columns.map(col => (

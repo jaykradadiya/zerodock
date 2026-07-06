@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { Search, Terminal, Sun, Moon, Sparkles, CornerDownLeft } from 'lucide-react';
+import { Search, Terminal, Sun, Moon, Volume2, VolumeX, CornerDownLeft, Sparkles } from 'lucide-react';
 import { toolRegistry } from '../../core/registry/tools';
 import { usePreferenceStore } from '../../core/store/usePreferenceStore';
 import { useUIStore } from '../../core/store/useUIStore';
@@ -12,11 +12,11 @@ const GithubIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 export function CommandPalette() {
-  const { theme, toggleTheme, recentTools } = usePreferenceStore();
-  const { commandPaletteOpen, setCommandPaletteOpen } = useUIStore();
+  const { theme, toggleTheme, recentTools, favoriteTools, soundEnabled, toggleSound } = usePreferenceStore();
+  const { commandPaletteOpen, setCommandPaletteOpen, contextCommands } = useUIStore();
   const [search, setSearch] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [activeCategory, setActiveCategory] = useState<'All' | 'Recent' | 'Tools' | 'Preferences' | 'External'>('All');
+  const [activeCategory, setActiveCategory] = useState<'All' | 'Favorites' | 'Recent' | 'Tools' | 'Preferences' | 'External'>('All');
   
   const navigate = useNavigate();
   const paletteRef = useRef<HTMLDivElement | null>(null);
@@ -79,6 +79,21 @@ export function CommandPalette() {
     };
   }).filter(Boolean) as typeof toolItems;
 
+  const favoriteItems = favoriteTools.map((id) => {
+    const tool = toolRegistry.find(t => t.id === id);
+    if (!tool) return null;
+    return {
+      id: `fav-${tool.id}`,
+      name: tool.name,
+      description: tool.metadata.description,
+      icon: tool.icon,
+      category: 'Favorites',
+      action: () => {
+        navigate({ to: tool.route as any });
+        setCommandPaletteOpen(false);
+      },
+    };
+  }).filter(Boolean) as typeof toolItems;
   const actionItems = [
     {
       id: 'toggle-theme',
@@ -88,6 +103,17 @@ export function CommandPalette() {
       category: 'Preferences',
       action: () => {
         toggleTheme();
+        setCommandPaletteOpen(false);
+      },
+    },
+    {
+      id: 'toggle-sound',
+      name: `Toggle Sound Effects`,
+      description: soundEnabled ? 'Disable UI sound effects' : 'Enable UI sound effects',
+      icon: soundEnabled ? Volume2 : VolumeX,
+      category: 'Preferences',
+      action: () => {
+        toggleSound();
         setCommandPaletteOpen(false);
       },
     },
@@ -104,7 +130,19 @@ export function CommandPalette() {
     },
   ];
 
-  const allItems = [...recentItems, ...toolItems, ...actionItems];
+  const contextItems = contextCommands.map(cmd => ({
+    id: cmd.id,
+    name: cmd.name,
+    description: cmd.description,
+    icon: cmd.icon,
+    category: 'Context',
+    action: () => {
+      cmd.action();
+      setCommandPaletteOpen(false);
+    }
+  }));
+
+  const allItems = [...contextItems, ...favoriteItems, ...recentItems, ...toolItems, ...actionItems];
 
 
   // Derive active items first
@@ -112,10 +150,12 @@ export function CommandPalette() {
     ? allItems 
     : allItems.filter(item => item.category === activeCategory);
 
-  const filteredItems = activeItems.filter(item => 
-    item.name.toLowerCase().includes(search.toLowerCase()) || 
-    (item.description && item.description.toLowerCase().includes(search.toLowerCase()))
-  );
+  const filteredItems = search === '' 
+    ? activeItems.filter(item => item.category === 'Context' || item.category === 'Favorites' || item.category === 'Recent' || item.category === 'Preferences')
+    : activeItems.filter(item => 
+        item.name.toLowerCase().includes(search.toLowerCase()) || 
+        (item.description && item.description.toLowerCase().includes(search.toLowerCase()))
+      );
 
   // Force reset index if bounds are exceeded due to search/filter changes
   if (selectedIndex >= filteredItems.length && filteredItems.length > 0) {
@@ -169,7 +209,7 @@ export function CommandPalette() {
 
         {/* Category Filter Tabs */}
         <div className="flex items-center gap-1.5 px-4 py-2 border-b border-[var(--zd-border)] bg-[var(--zd-surface-raised)]/30 overflow-x-auto shrink-0 select-none">
-          {(['All', 'Recent', 'Tools', 'Preferences', 'External'] as const).map(cat => (
+          {(['All', 'Favorites', 'Recent', 'Tools', 'Preferences', 'External'] as const).map(cat => (
             <button
               key={cat}
               onClick={() => setActiveCategory(cat)}

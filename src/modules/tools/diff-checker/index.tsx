@@ -141,7 +141,7 @@ export default function DiffChecker() {
   }, [modifiedText]);
 
   return (
-    <div className="flex-1 flex flex-col items-center p-4 xl:p-8 w-full h-[calc(100vh-96px)] xl:h-[calc(100vh-128px)] min-h-0 relative">
+    <div className="flex-1 flex flex-col items-center p-3 sm:p-4 xl:p-8 2xl:p-10 3xl:p-12 w-full min-h-0 relative">
       
       {/* Header */}
       <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 shrink-0">
@@ -150,8 +150,8 @@ export default function DiffChecker() {
             <GitCompare className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Text Diff Checker</h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">Compare two text files side-by-side or inline in real-time.</p>
+            <h1 className="text-2xl 2xl:text-3xl font-bold text-[var(--zd-text-primary)]">Text Diff Checker</h1>
+            <p className="text-[var(--zd-text-secondary)] mt-1 text-sm">Compare two text files side-by-side or inline in real-time.</p>
           </div>
         </div>
         
@@ -161,7 +161,7 @@ export default function DiffChecker() {
           <select 
             value={language}
             onChange={(e) => setLanguage(e.target.value)}
-            className="text-sm border border-[var(--zd-border)] rounded-xl bg-[var(--zd-surface)] text-slate-800 dark:text-slate-200 px-3 py-2 outline-none focus:border-[var(--zd-primary)] focus:ring-2 focus:ring-[var(--zd-primary-soft)] transition-all"
+            className="text-sm border border-[var(--zd-border)] rounded-xl bg-[var(--zd-surface)] text-[var(--zd-text-primary)] px-3 py-2 outline-none focus:border-[var(--zd-primary)] focus:ring-2 focus:ring-[var(--zd-primary-soft)] transition-all"
           >
             <option value="plaintext">Plain Text</option>
             <option value="json">JSON</option>
@@ -179,7 +179,7 @@ export default function DiffChecker() {
             className={`flex items-center gap-1.5 px-3 py-2 border border-[var(--zd-border)] rounded-xl text-sm font-semibold transition-all ${
               sideBySide 
                 ? 'bg-[var(--zd-primary-soft)] text-[var(--zd-primary)] border-[var(--zd-primary)]/30' 
-                : 'bg-[var(--zd-surface)] text-slate-600 dark:text-slate-400 hover:bg-[var(--zd-primary-soft)] hover:text-[var(--zd-primary)]'
+                : 'bg-[var(--zd-surface)] text-[var(--zd-text-secondary)] hover:bg-[var(--zd-primary-soft)] hover:text-[var(--zd-primary)]'
             }`}
             title={sideBySide ? "Switch to Inline View" : "Switch to Side-by-Side View"}
           >
@@ -190,7 +190,7 @@ export default function DiffChecker() {
           {/* Sample Button */}
           <button
             onClick={loadSample}
-            className="flex items-center gap-1.5 px-3 py-2 bg-[var(--zd-surface)] border border-[var(--zd-border)] rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)] transition-all"
+            className="flex items-center gap-1.5 px-3 py-2 bg-[var(--zd-surface)] border border-[var(--zd-border)] rounded-xl text-sm font-semibold text-[var(--zd-text-secondary)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)] transition-all"
           >
             <Sparkles className="w-4 h-4" />
             <span className="hidden sm:inline">Sample</span>

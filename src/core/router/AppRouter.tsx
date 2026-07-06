@@ -4,13 +4,18 @@ import {
   createRootRoute,
   RouterProvider,
   Outlet,
+  useRouterState,
 } from '@tanstack/react-router';
+import { motion, AnimatePresence } from 'framer-motion';
 import { toolRegistry } from '../registry/tools';
 import { Suspense, lazy, useEffect } from 'react';
 import { useUIStore } from '../store/useUIStore';
 import { usePreferenceStore } from '../store/usePreferenceStore';
 import { Navbar } from '../../landing/components/Navbar';
 import { ErrorBoundary } from '../../shared/components/ErrorBoundary';
+import { ToastContainer } from '../../shared/components/ToastContainer';
+import { SkeletonLoader } from '../../shared/components/SkeletonLoader';
+
 
 import { LandingPage } from '../../landing/LandingPage';
 
@@ -43,7 +48,8 @@ const LazyStorageWarningModal = lazyRetry(() => import('../../shared/components/
  */
 function RootLayout() {
   const { theme } = usePreferenceStore();
-  const { commandPaletteOpen, setCommandPaletteOpen, storageWarning } = useUIStore();
+  const { commandPaletteOpen, setCommandPaletteOpen, storageWarning, zenMode } = useUIStore();
+  const routerState = useRouterState();
 
   // Toggle Command Palette globally
   useEffect(() => {
@@ -70,9 +76,20 @@ function RootLayout() {
       }}
       className={theme === 'dark' ? 'dark' : ''}
     >
-      <Navbar />
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        <Outlet />
+      {!zenMode && <Navbar />}
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', paddingTop: zenMode ? 0 : '4rem', minHeight: zenMode ? '100vh' : 'calc(100vh - 4rem)' }} className={!zenMode ? '2xl:pt-[4.5rem] 2xl:[min-height:calc(100vh-4.5rem)]' : ''}>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={routerState.location.pathname}
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
+            style={{ flex: 1, display: 'flex', flexDirection: 'column' }}
+          >
+            <Outlet />
+          </motion.div>
+        </AnimatePresence>
       </main>
       {commandPaletteOpen && (
         <Suspense fallback={null}>
@@ -84,42 +101,14 @@ function RootLayout() {
           <LazyStorageWarningModal />
         </Suspense>
       )}
+      <ToastContainer />
     </div>
   );
 }
 
 /*
- * ToolLayout — wraps individual tool pages with consistent spacing and header.
+ * ToolLoadingFallback is now handled by SkeletonLoader
  */
-function ToolLoadingFallback({ toolName }: { toolName: string }) {
-  return (
-    <div
-      style={{
-        flex: 1,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: 'var(--zd-text-muted)',
-        fontSize: '15px',
-        fontWeight: 500,
-        gap: '8px',
-      }}
-    >
-      <div
-        style={{
-          width: '16px',
-          height: '16px',
-          border: '2px solid var(--zd-border)',
-          borderTopColor: 'var(--zd-primary)',
-          borderRadius: '50%',
-          animation: 'spin 0.8s linear infinite',
-        }}
-      />
-      Loading {toolName}…
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-    </div>
-  );
-}
 
 // useEffect is imported at the top
 
@@ -201,11 +190,9 @@ const toolRoutes = toolRegistry.map((tool) => {
         description={tool.metadata.description}
         toolId={tool.id}
       >
-        <Suspense fallback={<ToolLoadingFallback toolName={tool.name} />}>
+        <Suspense fallback={<SkeletonLoader toolName={tool.name} />}>
           <ErrorBoundary>
-            <div style={{ paddingTop: '64px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-              <LazyComponent />
-            </div>
+            <LazyComponent />
           </ErrorBoundary>
         </Suspense>
       </SEOWrapper>

@@ -18,14 +18,14 @@ const highlightJSON = (obj: any) => {
     let cls = 'text-blue-500 dark:text-blue-400'; // number
     if (/^"/.test(match)) {
       if (/:$/.test(match)) {
-        cls = 'text-slate-900 dark:text-slate-100 font-semibold'; // key
+        cls = 'text-[var(--zd-text-primary)] font-semibold'; // key
       } else {
         cls = 'text-emerald-600 dark:text-emerald-400'; // string
       }
     } else if (/true|false/.test(match)) {
       cls = 'text-orange-500 dark:text-orange-400'; // boolean
     } else if (/null/.test(match)) {
-      cls = 'text-slate-400 dark:text-slate-500'; // null
+      cls = 'text-slate-400 dark:text-[var(--zd-text-muted)]'; // null
     }
     return `<span class="${cls}">${match}</span>`;
   });
@@ -127,24 +127,24 @@ export default function JWTDecoder() {
   };
 
   return (
-    <div className="flex-1 flex flex-col items-center p-6 md:p-12 w-full max-w-6xl mx-auto h-full min-h-0">
+    <div className="flex-1 flex flex-col items-center p-4 sm:p-6 md:p-8 xl:p-10 2xl:p-12 3xl:p-16 w-full max-w-6xl 2xl:max-w-7xl 3xl:max-w-[1440px] mx-auto h-full min-h-0">
       <div className="w-full flex items-center gap-4 mb-8 shrink-0">
-        <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
+        <div className="w-12 h-12 rounded-xl bg-[var(--zd-primary-soft)] flex items-center justify-center text-[var(--zd-primary)]">
           <KeyRound className="w-6 h-6" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">JWT Decoder</h1>
-          <p className="text-slate-500 dark:text-slate-400">Decode JSON Web Tokens instantly</p>
+          <h1 className="text-2xl 2xl:text-3xl font-bold text-[var(--zd-text-primary)]">JWT Decoder</h1>
+          <p className="text-[var(--zd-text-secondary)]">Decode JSON Web Tokens instantly</p>
         </div>
       </div>
 
       <div className="w-full flex flex-col md:flex-row flex-1 min-h-0 gap-6">
         {/* Left: Input */}
-        <div className="flex-1 flex flex-col bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden min-h-[200px]">
-          <div className="px-4 py-3 bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center shrink-0">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Encoded Token</span>
+        <div className="flex-1 flex flex-col bg-[var(--zd-bg)] rounded-2xl border border-[var(--zd-border)] shadow-sm overflow-hidden min-h-[200px]">
+          <div className="px-4 py-3 bg-[var(--zd-surface)] border-b border-[var(--zd-border)] flex justify-between items-center shrink-0">
+            <span className="text-xs font-semibold text-[var(--zd-text-muted)] uppercase tracking-wider">Encoded Token</span>
             {token && (
-              <button onClick={() => setToken('')} className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">Clear</button>
+              <button onClick={() => setToken('')} className="text-xs text-[var(--zd-text-muted)] hover:text-[var(--zd-text-primary)]">Clear</button>
             )}
           </div>
           
@@ -163,9 +163,9 @@ export default function JWTDecoder() {
         </div>
 
         {/* Right: Output */}
-        <div className="flex-1 flex flex-col bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden min-h-[300px] md:min-h-0">
-          <div className="px-4 py-3 bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center shrink-0">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Decoded Data</span>
+        <div className="flex-1 flex flex-col bg-[var(--zd-bg)] rounded-2xl border border-[var(--zd-border)] shadow-sm overflow-hidden min-h-[300px] md:min-h-0">
+          <div className="px-4 py-3 bg-[var(--zd-surface)] border-b border-[var(--zd-border)] flex justify-between items-center shrink-0">
+            <span className="text-xs font-semibold text-[var(--zd-text-muted)] uppercase tracking-wider">Decoded Data</span>
             {decoded && !decoded.error && (
               <div className="flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400">
                 <ShieldCheck className="w-3.5 h-3.5" /> Valid Syntax
@@ -193,11 +193,11 @@ export default function JWTDecoder() {
                   className={`transition-opacity duration-200 ${hoveredSection && hoveredSection !== 'header' ? 'opacity-40' : 'opacity-100'}`}
                 >
                   <h3 className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: JWT_COLORS.header }}>
-                    Header <span className="font-normal lowercase text-slate-400 dark:text-slate-500 ml-1">Algorithm & Token Type</span>
+                    Header <span className="font-normal lowercase text-slate-400 dark:text-[var(--zd-text-muted)] ml-1">Algorithm & Token Type</span>
                   </h3>
-                  <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-lg border border-slate-200 dark:border-slate-800">
+                  <div className="bg-[var(--zd-surface)] p-4 rounded-lg border border-[var(--zd-border)]">
                     <pre 
-                      className="text-sm font-mono whitespace-pre-wrap break-all text-slate-800 dark:text-slate-200"
+                      className="text-sm font-mono whitespace-pre-wrap break-all text-[var(--zd-text-primary)]"
                       dangerouslySetInnerHTML={{ __html: highlightJSON(decoded.header) }}
                     />
                   </div>
@@ -211,7 +211,7 @@ export default function JWTDecoder() {
                 >
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: JWT_COLORS.payload }}>
-                      Payload <span className="font-normal lowercase text-slate-400 dark:text-slate-500 ml-1">Data</span>
+                      Payload <span className="font-normal lowercase text-slate-400 dark:text-[var(--zd-text-muted)] ml-1">Data</span>
                     </h3>
                     {decoded.isExpired !== undefined && (
                       <span className={`text-xs font-medium px-2 py-0.5 rounded ${decoded.isExpired ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'}`}>
@@ -219,9 +219,9 @@ export default function JWTDecoder() {
                       </span>
                     )}
                   </div>
-                  <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-lg border border-slate-200 dark:border-slate-800">
+                  <div className="bg-[var(--zd-surface)] p-4 rounded-lg border border-[var(--zd-border)]">
                     <pre 
-                      className="text-sm font-mono whitespace-pre-wrap break-all text-slate-800 dark:text-slate-200"
+                      className="text-sm font-mono whitespace-pre-wrap break-all text-[var(--zd-text-primary)]"
                       dangerouslySetInnerHTML={{ __html: highlightJSON(decoded.payload) }}
                     />
                   </div>
@@ -236,7 +236,7 @@ export default function JWTDecoder() {
                   <h3 className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: JWT_COLORS.signature }}>
                     Signature
                   </h3>
-                  <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-lg border border-slate-200 dark:border-slate-800">
+                  <div className="bg-[var(--zd-surface)] p-4 rounded-lg border border-[var(--zd-border)]">
                     <p 
                       className="text-sm font-mono break-all"
                       style={{ color: JWT_COLORS.signature }}

@@ -259,14 +259,12 @@ export default function JsonTypeConverter() {
   const [copied, setCopied] = useState(false);
 
   // Consume transit pipelines
-  const { payload: pipelinePayload, clearPipelineData } = usePipelineStore();
-
   useEffect(() => {
-    if (pipelinePayload !== null) {
-      setInputText(pipelinePayload);
-      clearPipelineData();
+    const pipedData = usePipelineStore.getState().consumePipelineData();
+    if (pipedData !== null) {
+      setInputText(pipedData);
     }
-  }, [pipelinePayload]);
+  }, []);
 
   // Handle conversion trigger
   useEffect(() => {
@@ -316,7 +314,7 @@ export default function JsonTypeConverter() {
   };
 
   return (
-    <div className="flex-1 flex flex-col items-center p-4 xl:p-8 w-full h-[calc(100vh-96px)] xl:h-[calc(100vh-128px)] min-h-0 relative">
+    <div className="flex-1 flex flex-col items-center p-3 sm:p-4 xl:p-8 2xl:p-10 3xl:p-12 w-full min-h-0 relative">
       
       {/* Header */}
       <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 shrink-0">
@@ -325,8 +323,8 @@ export default function JsonTypeConverter() {
             <Code2 className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">JSON to Types Converter</h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">Convert JSON structures into TypeScript Interfaces, Go Structs, Rust Structs, or JSON Schema.</p>
+            <h1 className="text-2xl 2xl:text-3xl font-bold text-[var(--zd-text-primary)]">JSON to Types Converter</h1>
+            <p className="text-[var(--zd-text-secondary)] mt-1 text-sm">Convert JSON structures into TypeScript Interfaces, Go Structs, Rust Structs, or JSON Schema.</p>
           </div>
         </div>
         
@@ -336,7 +334,7 @@ export default function JsonTypeConverter() {
           <select 
             value={targetLang}
             onChange={(e) => setTargetLang(e.target.value as any)}
-            className="text-sm border border-[var(--zd-border)] rounded-xl bg-[var(--zd-surface)] text-slate-800 dark:text-slate-200 px-3 py-2 outline-none focus:border-[var(--zd-primary)] focus:ring-2 focus:ring-[var(--zd-primary-soft)] transition-all font-semibold"
+            className="text-sm border border-[var(--zd-border)] rounded-xl bg-[var(--zd-surface)] text-[var(--zd-text-primary)] px-3 py-2 outline-none focus:border-[var(--zd-primary)] focus:ring-2 focus:ring-[var(--zd-primary-soft)] transition-all font-semibold"
           >
             <option value="typescript">TypeScript Interfaces</option>
             <option value="go">Go Structs</option>
@@ -379,7 +377,7 @@ export default function JsonTypeConverter() {
         
         {/* Left Side: Input JSON */}
         <div className="flex-1 flex flex-col min-w-0 border-b md:border-b-0 md:border-r border-[var(--zd-border)]">
-          <div className="px-4 py-2 bg-[var(--zd-surface-raised)] border-b border-[var(--zd-border)] shrink-0 flex items-center justify-between text-xs font-semibold text-slate-500 uppercase tracking-wider">
+          <div className="px-4 py-2 bg-[var(--zd-surface-raised)] border-b border-[var(--zd-border)] shrink-0 flex items-center justify-between text-xs font-semibold text-[var(--zd-text-muted)] uppercase tracking-wider">
             <span>JSON Input</span>
             {error && <span className="text-red-500 font-medium normal-case">{error}</span>}
           </div>
@@ -396,7 +394,7 @@ export default function JsonTypeConverter() {
 
         {/* Right Side: Converted Output */}
         <div className="flex-1 flex flex-col min-w-0">
-          <div className="px-4 py-2 bg-[var(--zd-surface-raised)] border-b border-[var(--zd-border)] shrink-0 flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+          <div className="px-4 py-2 bg-[var(--zd-surface-raised)] border-b border-[var(--zd-border)] shrink-0 flex items-center gap-2 text-xs font-semibold text-[var(--zd-text-muted)] uppercase tracking-wider">
             <span>Generated Code</span>
             <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
             <span className="text-[var(--zd-primary)]">{targetLang === 'schema' ? 'json' : targetLang}</span>

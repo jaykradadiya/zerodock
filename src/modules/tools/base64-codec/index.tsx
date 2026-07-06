@@ -21,6 +21,15 @@ export default function Base64Codec() {
   const { setPipelineData } = usePipelineStore();
   const navigate = useNavigate();
 
+  // Check for pipelined data on mount
+  useEffect(() => {
+    const pipedData = usePipelineStore.getState().consumePipelineData();
+    if (pipedData) {
+      setMode('encode');
+      setInput(pipedData);
+    }
+  }, []);
+
   useEffect(() => {
     setError(null);
     if (!input) {
@@ -81,19 +90,19 @@ export default function Base64Codec() {
   })();
 
   const handlePipelineToJson = () => {
-    setPipelineData(output, 'base64-codec');
+    setPipelineData(output);
     navigate({ to: '/json-toolkit' as any });
   };
 
   return (
-    <div className="flex-1 flex flex-col items-center p-6 md:p-12 w-full max-w-6xl mx-auto h-full min-h-0">
+    <div className="flex-1 flex flex-col items-center p-4 sm:p-6 md:p-8 xl:p-10 2xl:p-12 3xl:p-16 w-full max-w-6xl 2xl:max-w-7xl 3xl:max-w-[1440px] mx-auto h-full min-h-0">
       <div className="w-full flex items-center gap-4 mb-8 shrink-0">
         <div className="w-12 h-12 rounded-xl bg-[var(--zd-primary-soft)] flex items-center justify-center text-[var(--zd-primary)]">
           <Binary className="w-6 h-6" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Base64 Encode/Decode</h1>
-          <p className="text-slate-500 dark:text-slate-400">Convert text to and from Base64 encoding</p>
+          <h1 className="text-2xl 2xl:text-3xl font-bold text-[var(--zd-text-primary)]">Base64 Encode/Decode</h1>
+          <p className="text-[var(--zd-text-secondary)]">Convert text to and from Base64 encoding</p>
         </div>
       </div>
 
@@ -106,7 +115,7 @@ export default function Base64Codec() {
               className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
                 mode === 'encode' 
                   ? 'bg-[var(--zd-surface)] text-[var(--zd-primary)] border border-[var(--zd-border)]/50 shadow-sm' 
-                  : 'text-slate-600 dark:text-slate-400 hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]'
+                  : 'text-[var(--zd-text-secondary)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]'
               }`}
             >
               Encode
@@ -116,7 +125,7 @@ export default function Base64Codec() {
               className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
                 mode === 'decode' 
                   ? 'bg-[var(--zd-surface)] text-[var(--zd-primary)] border border-[var(--zd-border)]/50 shadow-sm' 
-                  : 'text-slate-600 dark:text-slate-400 hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]'
+                  : 'text-[var(--zd-text-secondary)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]'
               }`}
             >
               Decode
@@ -124,7 +133,7 @@ export default function Base64Codec() {
           </div>
           
           <div className="flex items-center gap-2">
-            <label className="cursor-pointer flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)] rounded-md transition-colors">
+            <label className="cursor-pointer flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-[var(--zd-text-secondary)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)] rounded-md transition-colors">
               <Upload className="w-4 h-4" />
               Upload Text File
               <input type="file" accept=".txt,.json,.md,.csv" className="hidden" onChange={handleFileUpload} />
@@ -137,7 +146,7 @@ export default function Base64Codec() {
           {/* Input */}
           <div className="flex-1 flex flex-col border-b md:border-b-0 md:border-r border-[var(--zd-border)] relative min-h-[200px]">
             <div className="px-4 py-2 bg-[var(--zd-surface-raised)] border-b border-[var(--zd-border)] flex justify-between items-center shrink-0">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              <span className="text-xs font-semibold text-[var(--zd-text-muted)] uppercase tracking-wider">
                 {mode === 'encode' ? 'Plain Text' : 'Base64 String'}
               </span>
               {input && (
@@ -148,7 +157,7 @@ export default function Base64Codec() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder={mode === 'encode' ? 'Enter text to encode...' : 'Enter Base64 to decode...'}
-              className="flex-1 w-full p-4 bg-transparent border-none resize-none focus:outline-none focus:ring-0 text-sm font-mono text-slate-800 dark:text-slate-200"
+              className="flex-1 w-full p-4 bg-transparent border-none resize-none focus:outline-none focus:ring-0 text-sm font-mono text-[var(--zd-text-primary)]"
             />
           </div>
 
@@ -159,7 +168,7 @@ export default function Base64Codec() {
                 setMode(mode === 'encode' ? 'decode' : 'encode');
                 setInput(output);
               }}
-              className="p-2 bg-[var(--zd-surface)] border border-[var(--zd-border)] rounded-full shadow-sm text-slate-500 hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)] transition-colors"
+              className="p-2 bg-[var(--zd-surface)] border border-[var(--zd-border)] rounded-full shadow-sm text-[var(--zd-text-muted)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)] transition-colors"
               title="Swap"
             >
               <ArrowRightLeft className="w-4 h-4" />
@@ -169,7 +178,7 @@ export default function Base64Codec() {
           {/* Output */}
           <div className="flex-1 flex flex-col relative bg-[var(--zd-surface-raised)]/20 min-h-[200px]">
             <div className="px-4 py-2 bg-[var(--zd-surface-raised)] border-b border-[var(--zd-border)] flex justify-between items-center shrink-0">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              <span className="text-xs font-semibold text-[var(--zd-text-muted)] uppercase tracking-wider">
                 {mode === 'encode' ? 'Base64 String' : 'Plain Text'}
               </span>
               
@@ -185,7 +194,7 @@ export default function Base64Codec() {
                   </button>
                 )}
                 {output && (
-                  <button onClick={copyToClipboard} className="text-xs text-slate-500 hover:text-[var(--zd-primary)] flex items-center gap-1 transition-colors">
+                  <button onClick={copyToClipboard} className="text-xs text-[var(--zd-text-muted)] hover:text-[var(--zd-primary)] flex items-center gap-1 transition-colors">
                     {copied ? <Check className="w-3 h-3 text-[var(--zd-accent)]" /> : <Copy className="w-3 h-3" />}
                     {copied ? 'Copied' : 'Copy'}
                   </button>
@@ -201,7 +210,7 @@ export default function Base64Codec() {
                 value={output}
                 readOnly
                 placeholder="Result will appear here..."
-                className="flex-1 w-full p-4 bg-transparent border-none resize-none focus:outline-none focus:ring-0 text-sm font-mono text-slate-800 dark:text-slate-200"
+                className="flex-1 w-full p-4 bg-transparent border-none resize-none focus:outline-none focus:ring-0 text-sm font-mono text-[var(--zd-text-primary)]"
               />
             )}
           </div>

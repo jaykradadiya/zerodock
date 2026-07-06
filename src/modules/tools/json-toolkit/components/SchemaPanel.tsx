@@ -14,7 +14,7 @@ export function SchemaPanel({ schema, onChange, errors, isValidating, onClose }:
   return (
     <div className="flex-1 flex flex-col border-r border-[var(--zd-border)] min-h-[200px] w-full max-w-sm shrink-0 bg-[var(--zd-surface-raised)]/30">
       <div className="px-4 py-2 bg-[var(--zd-surface-raised)] border-b border-[var(--zd-border)] flex justify-between items-center shrink-0">
-        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+        <span className="text-xs font-semibold text-[var(--zd-text-muted)] uppercase tracking-wider flex items-center gap-2">
           <ShieldCheck className="w-3.5 h-3.5" />
           JSON Schema
         </span>
@@ -32,13 +32,13 @@ export function SchemaPanel({ schema, onChange, errors, isValidating, onClose }:
       </div>
 
       <div className="h-48 overflow-y-auto bg-[var(--zd-surface)] shrink-0">
-        <div className="sticky top-0 px-4 py-2 bg-[var(--zd-surface-raised)]/90 backdrop-blur-sm border-b border-[var(--zd-border)] text-xs font-semibold text-slate-500 uppercase tracking-wider z-10">
+        <div className="sticky top-0 px-4 py-2 bg-[var(--zd-surface-raised)]/90 backdrop-blur-sm border-b border-[var(--zd-border)] text-xs font-semibold text-[var(--zd-text-muted)] uppercase tracking-wider z-10">
           Validation Results
         </div>
         
         <div className="p-4">
           {isValidating ? (
-            <div className="text-sm text-slate-500 dark:text-slate-400 animate-pulse">Validating...</div>
+            <div className="text-sm text-[var(--zd-text-secondary)] animate-pulse">Validating...</div>
           ) : errors.length === 0 ? (
             <div className="flex items-center gap-2 text-green-600 dark:text-green-500">
               <CheckCircle2 className="w-4 h-4" />

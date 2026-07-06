@@ -20,12 +20,12 @@ export function TreeNode({ name, value, isLast, depth = 0, initiallyExpanded = t
   const toggle = () => setIsExpanded(!isExpanded);
 
   const getValueColor = (val: any) => {
-    if (val === null) return 'text-slate-400 dark:text-slate-500';
+    if (val === null) return 'text-slate-400 dark:text-[var(--zd-text-muted)]';
     switch (typeof val) {
       case 'string': return 'text-green-600 dark:text-green-400';
       case 'number': return 'text-blue-600 dark:text-blue-400';
       case 'boolean': return 'text-orange-600 dark:text-orange-400';
-      default: return 'text-slate-800 dark:text-slate-200';
+      default: return 'text-[var(--zd-text-primary)]';
     }
   };
 
@@ -60,21 +60,21 @@ export function TreeNode({ name, value, isLast, depth = 0, initiallyExpanded = t
           {name !== null && (
             <span className="text-[var(--zd-primary)] font-medium">"{name}"</span>
           )}
-          {name !== null && <span className="text-slate-500">:</span>}
+          {name !== null && <span className="text-[var(--zd-text-muted)]">:</span>}
           
-          <span className="text-slate-500">{bracketOpen}</span>
+          <span className="text-[var(--zd-text-muted)]">{bracketOpen}</span>
           
           {!isExpanded && !isEmpty && (
             <>
               <span className="text-xs text-slate-400 bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] px-1.5 py-0.5 rounded-md mx-1">{typeLabel}</span>
-              <span className="text-slate-500">{bracketClose}</span>
-              {!isLast && <span className="text-slate-500">,</span>}
+              <span className="text-[var(--zd-text-muted)]">{bracketClose}</span>
+              {!isLast && <span className="text-[var(--zd-text-muted)]">,</span>}
             </>
           )}
           {isEmpty && (
             <>
-              <span className="text-slate-500">{bracketClose}</span>
-              {!isLast && <span className="text-slate-500">,</span>}
+              <span className="text-[var(--zd-text-muted)]">{bracketClose}</span>
+              {!isLast && <span className="text-[var(--zd-text-muted)]">,</span>}
             </>
           )}
         </div>
@@ -106,8 +106,8 @@ export function TreeNode({ name, value, isLast, depth = 0, initiallyExpanded = t
 
         {isExpanded && !isEmpty && (
           <div className="flex items-center group -ml-1 pl-1 rounded py-0.5" style={{ paddingLeft: '1.25rem' }}>
-            <span className="text-slate-500">{bracketClose}</span>
-            {!isLast && <span className="text-slate-500">,</span>}
+            <span className="text-[var(--zd-text-muted)]">{bracketClose}</span>
+            {!isLast && <span className="text-[var(--zd-text-muted)]">,</span>}
           </div>
         )}
       </div>
@@ -122,12 +122,12 @@ export function TreeNode({ name, value, isLast, depth = 0, initiallyExpanded = t
       {name !== null && (
         <span className="text-[var(--zd-primary)] font-medium shrink-0">"{name}"</span>
       )}
-      {name !== null && <span className="text-slate-500 mx-1 shrink-0">:</span>}
+      {name !== null && <span className="text-[var(--zd-text-muted)] mx-1 shrink-0">:</span>}
       
       <span className={`${getValueColor(value)} break-all`}>
         {formatValue(value)}
       </span>
-      {!isLast && <span className="text-slate-500 shrink-0">,</span>}
+      {!isLast && <span className="text-[var(--zd-text-muted)] shrink-0">,</span>}
     </div>
   );
 }

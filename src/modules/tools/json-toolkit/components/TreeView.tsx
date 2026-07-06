@@ -44,7 +44,7 @@ export function TreeView({ jsonString, tabId }: TreeViewProps) {
         <div className="flex items-center gap-2">
           <button 
             onClick={() => setExpandAllKey(k => k + 1)}
-            className="text-xs font-medium text-slate-500 hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)] bg-[var(--zd-surface)] border border-[var(--zd-border)] px-2 py-1 rounded shadow-sm transition-colors"
+            className="text-xs font-medium text-[var(--zd-text-muted)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)] bg-[var(--zd-surface)] border border-[var(--zd-border)] px-2 py-1 rounded shadow-sm transition-colors"
           >
             Reset view
           </button>

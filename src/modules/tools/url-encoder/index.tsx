@@ -47,27 +47,27 @@ export default function URLEncoder() {
   };
 
   return (
-    <div className="flex-1 flex flex-col items-center p-6 md:p-12 w-full max-w-6xl mx-auto h-full min-h-0">
+    <div className="flex-1 flex flex-col items-center p-4 sm:p-6 md:p-8 xl:p-10 2xl:p-12 3xl:p-16 w-full max-w-6xl 2xl:max-w-7xl 3xl:max-w-[1440px] mx-auto h-full min-h-0">
       <div className="w-full flex items-center gap-4 mb-8 shrink-0">
-        <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
+        <div className="w-12 h-12 rounded-xl bg-[var(--zd-primary-soft)] flex items-center justify-center text-[var(--zd-primary)]">
           <Link2 className="w-6 h-6" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">URL Encoder / Decoder</h1>
-          <p className="text-slate-500 dark:text-slate-400">Safely encode or decode URL parameters</p>
+          <h1 className="text-2xl 2xl:text-3xl font-bold text-[var(--zd-text-primary)]">URL Encoder / Decoder</h1>
+          <p className="text-[var(--zd-text-secondary)]">Safely encode or decode URL parameters</p>
         </div>
       </div>
 
-      <div className="w-full flex flex-col flex-1 min-h-0 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+      <div className="w-full flex flex-col flex-1 min-h-0 bg-[var(--zd-bg)] rounded-2xl border border-[var(--zd-border)] shadow-sm overflow-hidden">
         {/* Controls */}
-        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-center bg-slate-50/50 dark:bg-slate-900/50 shrink-0">
-          <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
+        <div className="p-4 border-b border-[var(--zd-border)] flex items-center justify-center bg-[var(--zd-surface)] shrink-0">
+          <div className="flex items-center gap-2 bg-[var(--zd-surface-raised)] p-1 rounded-lg">
             <button
               onClick={() => { setMode('encode'); setInput(output); }}
               className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
                 mode === 'encode' 
-                  ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' 
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  ? 'bg-[var(--zd-surface)] border border-[var(--zd-border)] text-blue-600 dark:text-blue-400 shadow-sm' 
+                  : 'text-[var(--zd-text-secondary)] hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
               Encode
@@ -76,8 +76,8 @@ export default function URLEncoder() {
               onClick={() => { setMode('decode'); setInput(output); }}
               className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
                 mode === 'decode' 
-                  ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' 
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  ? 'bg-[var(--zd-surface)] border border-[var(--zd-border)] text-blue-600 dark:text-blue-400 shadow-sm' 
+                  : 'text-[var(--zd-text-secondary)] hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
               Decode
@@ -88,20 +88,20 @@ export default function URLEncoder() {
         {/* Workspace */}
         <div className="flex flex-col md:flex-row flex-1 min-h-0">
           {/* Input */}
-          <div className="flex-1 flex flex-col border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-800 relative min-h-[200px]">
-            <div className="px-4 py-2 bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center shrink-0">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+          <div className="flex-1 flex flex-col border-b md:border-b-0 md:border-r border-[var(--zd-border)] relative min-h-[200px]">
+            <div className="px-4 py-2 bg-[var(--zd-surface)] border-b border-[var(--zd-border)] flex justify-between items-center shrink-0">
+              <span className="text-xs font-semibold text-[var(--zd-text-muted)] uppercase tracking-wider">
                 {mode === 'encode' ? 'Plain Text' : 'URL Encoded'}
               </span>
               {input && (
-                <button onClick={() => setInput('')} className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">Clear</button>
+                <button onClick={() => setInput('')} className="text-xs text-[var(--zd-text-muted)] hover:text-[var(--zd-text-primary)]">Clear</button>
               )}
             </div>
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder={mode === 'encode' ? 'Enter string to URL encode...' : 'Enter encoded string to decode...'}
-              className="flex-1 w-full p-4 bg-transparent border-none resize-none focus:outline-none focus:ring-0 text-sm font-mono text-slate-800 dark:text-slate-200"
+              className="flex-1 w-full p-4 bg-transparent border-none resize-none focus:outline-none focus:ring-0 text-sm font-mono text-[var(--zd-text-primary)]"
             />
           </div>
 
@@ -112,7 +112,7 @@ export default function URLEncoder() {
                 setMode(mode === 'encode' ? 'decode' : 'encode');
                 setInput(output);
               }}
-              className="p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full shadow-sm text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+              className="p-2 bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] rounded-full shadow-sm text-[var(--zd-text-muted)] hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
               title="Swap"
             >
               <ArrowRightLeft className="w-4 h-4" />
@@ -120,9 +120,9 @@ export default function URLEncoder() {
           </div>
 
           {/* Output */}
-          <div className="flex-1 flex flex-col relative bg-slate-50/30 dark:bg-slate-900/30 min-h-[200px]">
-            <div className="px-4 py-2 bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center shrink-0">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+          <div className="flex-1 flex flex-col relative bg-[var(--zd-bg)] min-h-[200px]">
+            <div className="px-4 py-2 bg-[var(--zd-surface)] border-b border-[var(--zd-border)] flex justify-between items-center shrink-0">
+              <span className="text-xs font-semibold text-[var(--zd-text-muted)] uppercase tracking-wider">
                 {mode === 'encode' ? 'URL Encoded' : 'Plain Text'}
               </span>
               {output && (
@@ -141,7 +141,7 @@ export default function URLEncoder() {
                 value={output}
                 readOnly
                 placeholder="Result will appear here..."
-                className="flex-1 w-full p-4 bg-transparent border-none resize-none focus:outline-none focus:ring-0 text-sm font-mono text-slate-800 dark:text-slate-200 break-all"
+                className="flex-1 w-full p-4 bg-transparent border-none resize-none focus:outline-none focus:ring-0 text-sm font-mono text-[var(--zd-text-primary)] break-all"
               />
             )}
           </div>

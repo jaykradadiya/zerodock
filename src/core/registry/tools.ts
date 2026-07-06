@@ -1,37 +1,34 @@
 import type { Tool } from '../../types/tool';
 import {
   FileJson,
-  Layers,
   Fingerprint,
   Binary,
   KeyRound,
   Hash,
-  Palette,
   Link2,
   GitCompare,
   Clock,
   Code2,
-  Calculator,
-  CalendarClock,
   SearchCode,
   TerminalSquare,
   Database,
-  ShieldCheck
+  Network
 } from 'lucide-react';
 
 export const toolRegistry: Tool[] = [
   {
-    id: 'password-generator',
-    name: 'Password Generator',
-    category: 'Security',
-    route: '/password-generator',
-    icon: ShieldCheck,
-    component: () => import('../../modules/tools/password-generator'),
+    id: 'api-tester',
+    name: 'API Tester Pro',
+    category: 'Network',
+    route: '/api-tester',
+    icon: Network,
+    component: () => import('../../modules/tools/api-tester'),
     metadata: {
-      description: 'Generate secure, random passwords and passphrases locally in your browser.',
-      tags: ['password', 'generator', 'security', 'random', 'passphrase', 'keys'],
+      description: 'Zero-latency client-side HTTP & REST API testing studio with custom headers and JSON syntax highlighting.',
+      tags: ['api', 'rest', 'http', 'tester', 'client', 'fetch', 'headers', 'request', 'response', 'json', 'postman', 'curl'],
     },
   },
+
   {
     id: 'yaml-json-converter',
     name: 'YAML ↔ JSON Converter',
@@ -80,18 +77,7 @@ export const toolRegistry: Tool[] = [
       tags: ['json', 'types', 'typescript', 'go', 'rust', 'convert', 'interfaces', 'structs', 'schema', 'generator', 'types definition'],
     },
   },
-  {
-    id: 'pdf-merger',
-    name: 'Merge PDF',
-    category: 'PDF Tools',
-    route: '/pdf-merger',
-    icon: Layers,
-    component: () => import('../../modules/tools/pdf-merger'),
-    metadata: {
-      description: 'Quickly merge and combine multiple PDF documents and images into a single organized PDF file directly in your browser.',
-      tags: ['pdf', 'merge', 'combine', 'join', 'document', 'images to pdf', 'append', 'organize pdf', 'pdf tools'],
-    },
-  },
+
   {
     id: 'json-toolkit',
     name: 'JSON Toolkit',
@@ -153,18 +139,7 @@ export const toolRegistry: Tool[] = [
       tags: ['hash', 'md5', 'sha', 'security', 'crypto', 'sha256', 'sha512', 'checksum', 'generator', 'encryption'],
     },
   },
-  {
-    id: 'color-converter',
-    name: 'Color Converter',
-    category: 'Design',
-    route: '/color-converter',
-    icon: Palette,
-    component: () => import('../../modules/tools/color-converter'),
-    metadata: {
-      description: 'Convert colors between HEX, RGB, RGBA, and HSL formats with a visual color picker for UI/UX design.',
-      tags: ['color', 'hex', 'rgb', 'hsl', 'converter', 'design', 'palette', 'rgba', 'color picker', 'css colors'],
-    },
-  },
+
   {
     id: 'url-encoder',
     name: 'URL Encoder/Decoder',
@@ -177,30 +152,7 @@ export const toolRegistry: Tool[] = [
       tags: ['url', 'uri', 'encode', 'decode', 'link', 'query string', 'web', 'percent encoding', 'format'],
     },
   },
-  {
-    id: 'downpayment-calculator',
-    name: 'Downpayment & Installment Calculator',
-    category: 'Calculators',
-    route: '/downpayment-calculator',
-    icon: Calculator,
-    component: () => import('../../modules/tools/downpayment-calculator'),
-    metadata: {
-      description: 'Calculate down payment portions, monthly installments, total interest charges, and detailed payment timelines for loans.',
-      tags: ['downpayment', 'installment', 'finance', 'calculator', 'interest', 'loan', 'mortgage', 'monthly payment', 'amortization'],
-    },
-  },
-  {
-    id: 'crontab-guru',
-    name: 'Crontab Guru',
-    category: 'Text',
-    route: '/crontab-guru',
-    icon: CalendarClock,
-    component: () => import('../../modules/tools/crontab-guru'),
-    metadata: {
-      description: 'Quickly parse and format cron expressions into human-readable text.',
-      tags: ['cron', 'crontab', 'schedule', 'time', 'parser'],
-    },
-  },
+
   {
     id: 'regex-tester',
     name: 'Regex Tester',

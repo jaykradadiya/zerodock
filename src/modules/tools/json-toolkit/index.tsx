@@ -13,6 +13,7 @@ import { ErrorBoundary } from '../../../shared/components/ErrorBoundary';
 import type { ValidationError } from './validate.worker';
 import { useWorkspaceStore } from './store/workspaceStore';
 import { usePipelineStore } from '../../../core/store/usePipelineStore';
+import { useHistoryStore } from '../../../core/store/useHistoryStore';
 
 import JsonWorker from './json.worker.ts?worker';
 import RepairWorker from './repair.worker.ts?worker';
@@ -109,6 +110,14 @@ export default function JsonFormatter() {
     activeTabIdRef.current = activeTabId;
   }, [activeTabId]);
 
+  // Check for pipelined data on mount
+  useEffect(() => {
+    const pipedData = usePipelineStore.getState().consumePipelineData();
+    if (pipedData && activeTabId) {
+      updateTabContent(activeTabId, pipedData);
+    }
+  }, [activeTabId, updateTabContent]);
+
   const handleOutputModeChange = async (mode: 'hidden' | 'tree' | 'table') => {
     try {
       if (mode === 'hidden') {
@@ -161,15 +170,7 @@ export default function JsonFormatter() {
     workspace.initialize();
   }, []);
 
-  // Pipeline payload consumption
-  const { payload: pipelinePayload, sourceToolId, clearPipelineData } = usePipelineStore();
-  useEffect(() => {
-    if (pipelinePayload !== null && sourceToolId !== 'json-toolkit') {
-      addTab(`Imported_${tabs.length + 1}.json`, pipelinePayload).then(() => {
-        clearPipelineData();
-      }).catch(console.error);
-    }
-  }, [pipelinePayload, sourceToolId, addTab, clearPipelineData, tabs.length]);
+
 
   const applyEditToEditor = useCallback((newText: string) => {
     if (editorRef.current) {
@@ -197,6 +198,12 @@ export default function JsonFormatter() {
       if (e.data.type === 'SUCCESS') {
         applyEditToEditor(e.data.payload);
         setError(null);
+        useHistoryStore.getState().addHistoryItem({
+          toolId: 'json-toolkit',
+          toolName: 'JSON Toolkit',
+          action: 'Formatted / Processed JSON',
+          preview: `${e.data.payload.substring(0, 30)}...`,
+        });
       } else if (e.data.type === 'ERROR') {
         setError(e.data.payload);
       }
@@ -207,6 +214,12 @@ export default function JsonFormatter() {
       if (e.data.type === 'SUCCESS') {
         applyEditToEditor(e.data.payload);
         setError(null);
+        useHistoryStore.getState().addHistoryItem({
+          toolId: 'json-toolkit',
+          toolName: 'JSON Toolkit',
+          action: 'Repaired & Cleaned JSON',
+          preview: `${e.data.payload.substring(0, 30)}...`,
+        });
       } else if (e.data.type === 'ERROR') {
         setError(e.data.payload);
       }
@@ -387,17 +400,17 @@ export default function JsonFormatter() {
     if (!content) return;
     
     // Set pipeline data
-    usePipelineStore.getState().setPipelineData(content, 'json-toolkit');
+    usePipelineStore.getState().setPipelineData(content);
     // Navigate to Type Converter
     navigate({ to: '/json-type-converter' as any });
   };
 
   if (isLoading) {
-    return <div className="flex-1 flex items-center justify-center text-slate-500">Loading Workspace...</div>;
+    return <div className="flex-1 flex items-center justify-center text-[var(--zd-text-muted)]">Loading Workspace...</div>;
   }
 
   return (
-    <div className="flex-1 flex flex-col items-center p-4 xl:p-8 w-full h-full min-h-0 relative">
+    <div className="flex-1 flex flex-col items-center p-3 sm:p-4 xl:p-8 2xl:p-10 3xl:p-12 w-full h-full min-h-0 relative">
       
       {/* Header */}
       <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 shrink-0">
@@ -407,13 +420,13 @@ export default function JsonFormatter() {
           </div>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Workspace</h1>
+              <h1 className="text-2xl 2xl:text-3xl font-bold text-[var(--zd-text-primary)]">Workspace</h1>
               <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--zd-accent-soft)] border border-[var(--zd-accent)]/20 text-[var(--zd-accent)] text-xs font-semibold shadow-sm animate-pulse-glow">
                 <Lock className="w-3 h-3" />
                 <span>100% Local</span>
               </div>
             </div>
-            <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">Handle multiple massive JSON files securely in-browser.</p>
+            <p className="text-[var(--zd-text-secondary)] mt-1 text-sm">Handle multiple massive JSON files securely in-browser.</p>
           </div>
         </div>
         
@@ -430,7 +443,7 @@ export default function JsonFormatter() {
             />
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all text-slate-600 dark:text-slate-400 hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all text-[var(--zd-text-secondary)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]"
               title="Open Files"
             >
               <Upload className="w-4 h-4" />
@@ -438,7 +451,7 @@ export default function JsonFormatter() {
             </button>
             <button
               onClick={handleFetchUrl}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all text-slate-600 dark:text-slate-400 hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all text-[var(--zd-text-secondary)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]"
               title="Fetch from URL"
             >
               <LinkIcon className="w-4 h-4" />
@@ -446,7 +459,7 @@ export default function JsonFormatter() {
             </button>
             <button
               onClick={() => handleDownload('json')}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all text-slate-600 dark:text-slate-400 hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all text-[var(--zd-text-secondary)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]"
               title="Save active tab to Disk"
             >
               <Download className="w-4 h-4" />
@@ -454,7 +467,7 @@ export default function JsonFormatter() {
             </button>
             <button
               onClick={() => handleDownload('csv')}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all text-slate-600 dark:text-slate-400 hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all text-[var(--zd-text-secondary)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]"
               title="Export active tab to CSV"
             >
               <TableProperties className="w-4 h-4" />
@@ -468,7 +481,7 @@ export default function JsonFormatter() {
           <div className="flex items-center gap-1 bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] p-1 rounded-xl">
             <button
               onClick={() => setViewMode('editor')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${viewMode === 'editor' ? 'bg-[var(--zd-surface)] text-[var(--zd-primary)] border border-[var(--zd-border)]/50 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]/40'}`}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${viewMode === 'editor' ? 'bg-[var(--zd-surface)] text-[var(--zd-primary)] border border-[var(--zd-border)]/50 shadow-sm' : 'text-[var(--zd-text-secondary)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]/40'}`}
             >
               Editor
             </button>
@@ -479,7 +492,7 @@ export default function JsonFormatter() {
                 else if (!modDiffId && tabs.length > 0) setModDiffId(tabs[0].id);
                 setViewMode('compare');
               }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${viewMode === 'compare' ? 'bg-[var(--zd-surface)] text-[var(--zd-primary)] border border-[var(--zd-border)]/50 shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]/40'}`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${viewMode === 'compare' ? 'bg-[var(--zd-surface)] text-[var(--zd-primary)] border border-[var(--zd-border)]/50 shadow-sm' : 'text-[var(--zd-text-secondary)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]/40'}`}
             >
               <GitCompare className="w-4 h-4" />
               Compare
@@ -542,7 +555,7 @@ export default function JsonFormatter() {
                       setEditingTabId(tab.id);
                       setEditingTabName(tab.name);
                     }}
-                    className={`text-sm truncate flex-1 ${activeTabId === tab.id ? 'text-slate-900 dark:text-slate-100 font-medium' : 'text-slate-600 dark:text-slate-400'}`}
+                    className={`text-sm truncate flex-1 ${activeTabId === tab.id ? 'text-[var(--zd-text-primary)] font-medium' : 'text-[var(--zd-text-secondary)]'}`}
                     title="Double click to rename"
                   >
                     {tab.name}
@@ -550,7 +563,7 @@ export default function JsonFormatter() {
                 )}
                 <button 
                   onClick={(e) => { e.stopPropagation(); removeTab(tab.id); }}
-                  className={`p-0.5 rounded hover:bg-[var(--zd-primary-soft)] hover:text-[var(--zd-primary)] ${activeTabId === tab.id ? 'opacity-100 text-slate-500' : 'opacity-0 group-hover:opacity-100 text-slate-400'}`}
+                  className={`p-0.5 rounded hover:bg-[var(--zd-primary-soft)] hover:text-[var(--zd-primary)] ${activeTabId === tab.id ? 'opacity-100 text-[var(--zd-text-muted)]' : 'opacity-0 group-hover:opacity-100 text-slate-400'}`}
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -562,7 +575,7 @@ export default function JsonFormatter() {
           <div className="flex items-center gap-1 px-2 border-l border-[var(--zd-border)] bg-[var(--zd-surface-raised)] h-full shrink-0 relative">
             <button 
               onClick={() => addTab(`Untitled ${tabs.length + 1}`, '')}
-              className="p-2 text-slate-500 hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)] rounded-md transition-colors"
+              className="p-2 text-[var(--zd-text-muted)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)] rounded-md transition-colors"
               title="Add Tab"
             >
               <Plus className="w-4.5 h-4.5" />
@@ -576,7 +589,7 @@ export default function JsonFormatter() {
                     setShowTabDropdown(!showTabDropdown);
                     setTabSearchQuery('');
                   }}
-                  className={`p-2 rounded-md transition-colors text-slate-500 hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)] ${showTabDropdown ? 'text-[var(--zd-primary)] bg-[var(--zd-primary-soft)]' : ''}`}
+                  className={`p-2 rounded-md transition-colors text-[var(--zd-text-muted)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)] ${showTabDropdown ? 'text-[var(--zd-primary)] bg-[var(--zd-primary-soft)]' : ''}`}
                   title="Find tabs"
                 >
                   <ChevronDown className="w-4 h-4" />
@@ -590,7 +603,7 @@ export default function JsonFormatter() {
                         placeholder="Search tabs..."
                         value={tabSearchQuery}
                         onChange={(e) => setTabSearchQuery(e.target.value)}
-                        className="bg-transparent text-xs w-full outline-none text-slate-800 dark:text-slate-200"
+                        className="bg-transparent text-xs w-full outline-none text-[var(--zd-text-primary)]"
                         autoFocus
                       />
                     </div>
@@ -605,7 +618,7 @@ export default function JsonFormatter() {
                               setActiveTab(tab.id);
                               setShowTabDropdown(false);
                             }}
-                            className={`flex items-center gap-2 w-full text-left px-2.5 py-2 rounded-lg text-xs transition-all ${activeTabId === tab.id ? 'bg-[var(--zd-primary-soft)] text-[var(--zd-primary)] font-semibold' : 'text-slate-600 dark:text-slate-400 hover:bg-[var(--zd-primary-soft)] hover:text-[var(--zd-primary)]'}`}
+                            className={`flex items-center gap-2 w-full text-left px-2.5 py-2 rounded-lg text-xs transition-all ${activeTabId === tab.id ? 'bg-[var(--zd-primary-soft)] text-[var(--zd-primary)] font-semibold' : 'text-[var(--zd-text-secondary)] hover:bg-[var(--zd-primary-soft)] hover:text-[var(--zd-primary)]'}`}
                           >
                             <FileJson className="w-3.5 h-3.5 shrink-0" />
                             <span className="truncate flex-1">{tab.name}</span>
@@ -628,16 +641,16 @@ export default function JsonFormatter() {
                 <button onClick={() => processJson('format')} disabled={isProcessing || !activeTabId} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium bg-[var(--zd-surface)] text-[var(--zd-primary)] shadow-[var(--zd-shadow-sm)] hover:bg-[var(--zd-primary-soft)] hover:shadow-md transition-all disabled:opacity-50">
                   <Play className="w-4 h-4" /> Format
                 </button>
-                <button onClick={() => processJson('minify')} disabled={isProcessing || !activeTabId} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)] transition-all disabled:opacity-50">
+                <button onClick={() => processJson('minify')} disabled={isProcessing || !activeTabId} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium text-[var(--zd-text-secondary)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)] transition-all disabled:opacity-50">
                   <Minimize2 className="w-4 h-4" /> Minify
                 </button>
-                <button onClick={repairJson} disabled={isProcessing || !activeTabId} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)] transition-all disabled:opacity-50" title="Auto-repair broken JSON">
+                <button onClick={repairJson} disabled={isProcessing || !activeTabId} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium text-[var(--zd-text-secondary)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)] transition-all disabled:opacity-50" title="Auto-repair broken JSON">
                   <Wrench className="w-4 h-4" /> Repair
                 </button>
-                <button onClick={() => setShowTransform(true)} disabled={isProcessing || !activeTabId} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)] transition-all disabled:opacity-50" title="Query or transform data">
+                <button onClick={() => setShowTransform(true)} disabled={isProcessing || !activeTabId} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium text-[var(--zd-text-secondary)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)] transition-all disabled:opacity-50" title="Query or transform data">
                   <Database className="w-4 h-4" /> Transform
                 </button>
-                <button onClick={handlePipelineToTypes} disabled={!activeTabId} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)] transition-all disabled:opacity-50" title="Generate TypeScript/Go/Rust types from this JSON">
+                <button onClick={handlePipelineToTypes} disabled={!activeTabId} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium text-[var(--zd-text-secondary)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)] transition-all disabled:opacity-50" title="Generate TypeScript/Go/Rust types from this JSON">
                   <Code2 className="w-4 h-4" /> Types
                 </button>
               </div>
@@ -662,14 +675,14 @@ export default function JsonFormatter() {
 
             {viewMode === 'editor' && (
               <div className="relative">
-                <button onClick={() => setShowSettings(!showSettings)} className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${showSettings ? 'bg-[var(--zd-primary-soft)] text-[var(--zd-primary)]' : 'text-slate-600 dark:text-slate-400 hover:bg-[var(--zd-primary-soft)]/50 hover:text-[var(--zd-primary)]'}`}>
+                <button onClick={() => setShowSettings(!showSettings)} className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${showSettings ? 'bg-[var(--zd-primary-soft)] text-[var(--zd-primary)]' : 'text-[var(--zd-text-secondary)] hover:bg-[var(--zd-primary-soft)]/50 hover:text-[var(--zd-primary)]'}`}>
                   <Settings2 className="w-4 h-4" /> Options
                 </button>
                 {showSettings && (
                   <div className="absolute top-full left-0 mt-2 w-64 bg-[var(--zd-surface)] border border-[var(--zd-border)] rounded-xl shadow-[var(--zd-shadow-lg)] z-50 p-4 flex flex-col gap-4 backdrop-blur-md bg-white/95 dark:bg-slate-900/95">
                     <div className="flex items-center justify-between">
                       <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Indentation</label>
-                      <select value={indent.toString()} onChange={(e) => setIndent(e.target.value === 'tab' ? 'tab' : Number(e.target.value))} className="text-sm border border-[var(--zd-border)] rounded-lg bg-transparent text-slate-800 dark:text-slate-200 px-2.5 py-1.5 outline-none focus:border-[var(--zd-primary)] focus:ring-2 focus:ring-[var(--zd-primary-soft)]">
+                      <select value={indent.toString()} onChange={(e) => setIndent(e.target.value === 'tab' ? 'tab' : Number(e.target.value))} className="text-sm border border-[var(--zd-border)] rounded-lg bg-transparent text-[var(--zd-text-primary)] px-2.5 py-1.5 outline-none focus:border-[var(--zd-primary)] focus:ring-2 focus:ring-[var(--zd-primary-soft)]">
                         <option value="2">2 Spaces</option>
                         <option value="4">4 Spaces</option>
                         <option value="tab">Tab</option>
@@ -683,7 +696,7 @@ export default function JsonFormatter() {
                       <input type="checkbox" checked={smartFormat} onChange={(e) => setSmartFormat(e.target.checked)} className="w-4 h-4 rounded border-[var(--zd-border)] text-[var(--zd-primary)] focus:ring-[var(--zd-primary)] bg-[var(--zd-surface-raised)]" />
                       <div className="flex flex-col">
                         <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Smart Format</span>
-                        <span className="text-xs text-slate-500 dark:text-slate-400">Collapse simple arrays</span>
+                        <span className="text-xs text-[var(--zd-text-secondary)]">Collapse simple arrays</span>
                       </div>
                     </label>
                   </div>
@@ -692,7 +705,7 @@ export default function JsonFormatter() {
             )}
             
             {viewMode === 'editor' && (
-              <button onClick={() => setShowSchema(!showSchema)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${showSchema ? 'bg-[var(--zd-primary-soft)] text-[var(--zd-primary)]' : 'text-slate-600 dark:text-slate-400 hover:bg-[var(--zd-primary-soft)]/50 hover:text-[var(--zd-primary)]'}`} title="Validate with JSON Schema">
+              <button onClick={() => setShowSchema(!showSchema)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${showSchema ? 'bg-[var(--zd-primary-soft)] text-[var(--zd-primary)]' : 'text-[var(--zd-text-secondary)] hover:bg-[var(--zd-primary-soft)]/50 hover:text-[var(--zd-primary)]'}`} title="Validate with JSON Schema">
                 <ShieldCheck className="w-4 h-4" /> Validate
               </button>
             )}
@@ -706,7 +719,7 @@ export default function JsonFormatter() {
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
                     outputMode === 'hidden' 
                       ? 'bg-[var(--zd-surface)] text-[var(--zd-primary)] border border-[var(--zd-border)]/50 shadow-sm' 
-                      : 'text-slate-500 hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]/30'
+                      : 'text-[var(--zd-text-muted)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]/30'
                   }`}
                 >
                   Code
@@ -716,7 +729,7 @@ export default function JsonFormatter() {
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
                     outputMode === 'tree' 
                       ? 'bg-[var(--zd-surface)] text-[var(--zd-primary)] border border-[var(--zd-border)]/50 shadow-sm' 
-                      : 'text-slate-500 hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]/30'
+                      : 'text-[var(--zd-text-muted)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]/30'
                   }`}
                 >
                   <LayoutTemplate className="w-4 h-4" /> Tree
@@ -726,7 +739,7 @@ export default function JsonFormatter() {
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
                     outputMode === 'table' 
                       ? 'bg-[var(--zd-surface)] text-[var(--zd-primary)] border border-[var(--zd-border)]/50 shadow-sm' 
-                      : 'text-slate-500 hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]/30'
+                      : 'text-[var(--zd-text-muted)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]/30'
                   }`}
                 >
                   <TableProperties className="w-4 h-4" /> Table
@@ -737,7 +750,7 @@ export default function JsonFormatter() {
             <div className="h-8 w-px bg-[var(--zd-border)]" />
             <button 
               onClick={() => setIsFullscreen(!isFullscreen)} 
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium text-slate-500 hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]/30 transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium text-[var(--zd-text-muted)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]/30 transition-all"
             >
               {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
               <span className="hidden sm:inline">{isFullscreen ? 'Exit' : 'Expand'}</span>
@@ -771,7 +784,7 @@ export default function JsonFormatter() {
               {origDiffId && modDiffId ? (
                 <DiffView originalModelId={origDiffId} modifiedModelId={modDiffId} />
               ) : (
-                <div className="flex-1 flex items-center justify-center text-slate-500 bg-slate-50/50 dark:bg-slate-900/50">Please open at least two tabs to compare</div>
+                <div className="flex-1 flex items-center justify-center text-[var(--zd-text-muted)] bg-[var(--zd-surface)]">Please open at least two tabs to compare</div>
               )}
             </ErrorBoundary>
           ) : (
@@ -786,7 +799,7 @@ export default function JsonFormatter() {
                     onChange={handleEditorChange}
                   />
                 ) : (
-                  <div className="flex-1 flex items-center justify-center text-slate-500 bg-slate-50/50 dark:bg-slate-900/50 min-w-0">No open tabs. Drag and drop files here, or click +</div>
+                  <div className="flex-1 flex items-center justify-center text-[var(--zd-text-muted)] bg-[var(--zd-surface)] min-w-0">No open tabs. Drag and drop files here, or click +</div>
                 )}
               </div>
               

@@ -65,15 +65,15 @@ export function TransformModal({ input, isOpen, onClose, onApply }: TransformMod
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden">
+      <div className="bg-[var(--zd-bg)] rounded-2xl border border-[var(--zd-border)] shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden">
         
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 shrink-0">
+        <div className="flex items-center justify-between p-4 border-b border-[var(--zd-border)] shrink-0">
           <div>
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Transform Data</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Query and manipulate your JSON using JMESPath or JavaScript.</p>
+            <h2 className="text-lg font-semibold text-[var(--zd-text-primary)]">Transform Data</h2>
+            <p className="text-sm text-[var(--zd-text-secondary)]">Query and manipulate your JSON using JMESPath or JavaScript.</p>
           </div>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+          <button onClick={onClose} className="p-2 text-[var(--zd-text-muted)] hover:text-[var(--zd-text-primary)] rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -82,18 +82,18 @@ export function TransformModal({ input, isOpen, onClose, onApply }: TransformMod
         <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
           
           {/* Left Column: Input */}
-          <div className="flex-1 flex flex-col border-r border-slate-200 dark:border-slate-800">
-            <div className="p-4 bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 shrink-0 flex items-center gap-2">
+          <div className="flex-1 flex flex-col border-r border-[var(--zd-border)]">
+            <div className="p-4 bg-[var(--zd-surface)] border-b border-[var(--zd-border)] shrink-0 flex items-center gap-2">
               <button
                 onClick={() => { setType('jmespath'); setQuery(''); }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${type === 'jmespath' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'}`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${type === 'jmespath' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' : 'text-[var(--zd-text-secondary)] hover:bg-slate-200 dark:hover:bg-slate-800'}`}
               >
                 <Database className="w-4 h-4" />
                 JMESPath
               </button>
               <button
                 onClick={() => { setType('javascript'); setQuery('return data;'); }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${type === 'javascript' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'}`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${type === 'javascript' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' : 'text-[var(--zd-text-secondary)] hover:bg-slate-200 dark:hover:bg-slate-800'}`}
               >
                 <Code2 className="w-4 h-4" />
                 JavaScript
@@ -108,14 +108,14 @@ export function TransformModal({ input, isOpen, onClose, onApply }: TransformMod
                 value={query}
                 onChange={e => setQuery(e.target.value)}
                 placeholder={type === 'jmespath' ? 'e.g. users[?age > `20`].name' : 'e.g. return data.filter(u => u.age > 20).map(u => u.name);'}
-                className="flex-1 w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg p-3 font-mono text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 resize-none"
+                className="flex-1 w-full bg-[var(--zd-surface)] border border-[var(--zd-border)] rounded-lg p-3 font-mono text-sm text-[var(--zd-text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50 resize-none"
               />
             </div>
           </div>
 
           {/* Right Column: Preview */}
-          <div className="flex-1 flex flex-col bg-slate-50/50 dark:bg-slate-900/50 min-w-[300px]">
-            <div className="p-4 bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 shrink-0">
+          <div className="flex-1 flex flex-col bg-[var(--zd-surface)] min-w-[300px]">
+            <div className="p-4 bg-[var(--zd-surface)] border-b border-[var(--zd-border)] shrink-0">
               <span className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2">
                 Preview
                 {isProcessing && <span className="text-xs text-blue-500 animate-pulse">(computing...)</span>}
@@ -142,7 +142,7 @@ export function TransformModal({ input, isOpen, onClose, onApply }: TransformMod
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-3 shrink-0 bg-slate-50 dark:bg-slate-900">
+        <div className="p-4 border-t border-[var(--zd-border)] flex justify-end gap-3 shrink-0 bg-slate-50 dark:bg-slate-900">
           <button
             onClick={onClose}
             className="px-4 py-2 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"

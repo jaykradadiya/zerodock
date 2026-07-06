@@ -67,15 +67,15 @@ export default function SqlFormatter() {
   };
 
   return (
-    <div className="flex-1 flex flex-col items-center p-4 xl:p-8 w-full h-[calc(100vh-96px)] xl:h-[calc(100vh-128px)] min-h-0 relative">
+    <div className="flex-1 flex flex-col items-center p-3 sm:p-4 xl:p-8 2xl:p-10 3xl:p-12 w-full min-h-0 relative">
       <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 shrink-0">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-[var(--zd-primary-soft)] flex items-center justify-center text-[var(--zd-primary)] shrink-0">
             <Database className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">SQL Formatter</h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">Beautify and format SQL queries</p>
+            <h1 className="text-2xl 2xl:text-3xl font-bold text-[var(--zd-text-primary)]">SQL Formatter</h1>
+            <p className="text-[var(--zd-text-secondary)] mt-1 text-sm">Beautify and format SQL queries</p>
           </div>
         </div>
         
@@ -94,7 +94,7 @@ export default function SqlFormatter() {
       <div className="w-full flex-1 min-h-0 bg-[var(--zd-surface)] rounded-2xl border border-[var(--zd-border)] shadow-[var(--zd-shadow-md)] overflow-hidden flex flex-col md:flex-row relative">
         
         <div className="flex-1 flex flex-col min-w-0 border-b md:border-b-0 md:border-r border-[var(--zd-border)]">
-          <div className="px-4 py-2 bg-[var(--zd-surface-raised)] border-b border-[var(--zd-border)] shrink-0 flex items-center justify-between text-xs font-semibold text-slate-500 uppercase tracking-wider">
+          <div className="px-4 py-2 bg-[var(--zd-surface-raised)] border-b border-[var(--zd-border)] shrink-0 flex items-center justify-between text-xs font-semibold text-[var(--zd-text-muted)] uppercase tracking-wider">
             <span>Raw SQL</span>
           </div>
           <div className="flex-1 min-h-0 relative">
@@ -109,7 +109,7 @@ export default function SqlFormatter() {
         </div>
 
         <div className="flex-1 flex flex-col min-w-0">
-          <div className="px-4 py-2 bg-[var(--zd-surface-raised)] border-b border-[var(--zd-border)] shrink-0 flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+          <div className="px-4 py-2 bg-[var(--zd-surface-raised)] border-b border-[var(--zd-border)] shrink-0 flex items-center gap-2 text-xs font-semibold text-[var(--zd-text-muted)] uppercase tracking-wider">
             <span>Formatted SQL</span>
             <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
             <span className="text-[var(--zd-primary)]">Beautified</span>

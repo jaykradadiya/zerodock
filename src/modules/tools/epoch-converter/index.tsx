@@ -260,7 +260,7 @@ export default function EpochConverter() {
 
 
   return (
-    <div className="flex-1 flex flex-col items-center p-4 xl:p-8 w-full max-w-4xl mx-auto h-full overflow-y-auto custom-scrollbar">
+    <div className="flex-1 flex flex-col items-center p-4 sm:p-6 xl:p-8 2xl:p-10 w-full max-w-4xl 2xl:max-w-5xl mx-auto h-full overflow-y-auto custom-scrollbar">
       
       {/* Header */}
       <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 shrink-0">
@@ -269,8 +269,8 @@ export default function EpochConverter() {
             <Clock className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Epoch Timestamp Converter</h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm">Parse Unix timestamps to human times and construct epochs in local or UTC.</p>
+            <h1 className="text-2xl 2xl:text-3xl font-bold text-[var(--zd-text-primary)]">Epoch Timestamp Converter</h1>
+            <p className="text-[var(--zd-text-secondary)] mt-1 text-sm">Parse Unix timestamps to human times and construct epochs in local or UTC.</p>
           </div>
         </div>
       </div>
@@ -282,7 +282,7 @@ export default function EpochConverter() {
             <Globe className="w-4.5 h-4.5" />
           </div>
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Target Timezone</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-[var(--zd-text-muted)]">Target Timezone</span>
             <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">
               Convert and view timestamps in your selected region.
             </div>
@@ -292,7 +292,7 @@ export default function EpochConverter() {
           <select
             value={targetTimezone}
             onChange={(e) => setTargetTimezone(e.target.value)}
-            className="w-full px-3 py-2 text-sm bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] rounded-xl text-slate-800 dark:text-slate-200 outline-none focus:border-[var(--zd-primary)] transition-all font-semibold cursor-pointer"
+            className="w-full px-3 py-2 text-sm bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] rounded-xl text-[var(--zd-text-primary)] outline-none focus:border-[var(--zd-primary)] transition-all font-semibold cursor-pointer"
           >
             {SUPPORTED_TIMEZONES.map((tz) => (
               <option key={tz.value} value={tz.value}>
@@ -313,14 +313,14 @@ export default function EpochConverter() {
             <span className="text-xs font-bold uppercase tracking-wider text-[var(--zd-primary)]">
               Current Unix Timestamp
             </span>
-            <div className="text-3xl font-extrabold font-mono text-slate-900 dark:text-slate-100 tracking-tight flex flex-wrap items-baseline gap-2">
+            <div className="text-3xl font-extrabold font-mono text-[var(--zd-text-primary)] tracking-tight flex flex-wrap items-baseline gap-2">
               <span>{Math.floor(liveTime / 1000)}</span>
-              <span className="text-slate-400 dark:text-slate-500 text-lg">seconds</span>
+              <span className="text-slate-400 dark:text-[var(--zd-text-muted)] text-lg">seconds</span>
               <span className="text-slate-300 dark:text-slate-700 mx-2">|</span>
               <span className="text-[var(--zd-accent)]">{liveTime}</span>
-              <span className="text-slate-400 dark:text-slate-500 text-lg">milliseconds</span>
+              <span className="text-slate-400 dark:text-[var(--zd-text-muted)] text-lg">milliseconds</span>
             </div>
-            <p className="text-xs text-slate-500">Ticking in real-time. Freeze or copy values using the buttons on the right.</p>
+            <p className="text-xs text-[var(--zd-text-muted)]">Ticking in real-time. Freeze or copy values using the buttons on the right.</p>
           </div>
           
           <div className="flex items-center gap-3">
@@ -357,13 +357,13 @@ export default function EpochConverter() {
           
           {/* Panel 1: Epoch to Human */}
           <div className="bg-[var(--zd-surface)] border border-[var(--zd-border)] rounded-2xl p-6 shadow-[var(--zd-shadow-md)] flex flex-col gap-4">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <h3 className="text-lg font-bold text-[var(--zd-text-primary)] flex items-center gap-2">
               <Calendar className="w-5 h-5 text-[var(--zd-primary)]" />
               Epoch to Date Time
             </h3>
             
             <div className="flex flex-col gap-2">
-              <label className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+              <label className="text-xs font-semibold text-[var(--zd-text-secondary)]">
                 Enter Timestamp (Seconds or Milliseconds)
               </label>
               <div className="flex gap-2">
@@ -371,7 +371,7 @@ export default function EpochConverter() {
                   type="text"
                   value={inputEpoch}
                   onChange={(e) => setInputEpoch(e.target.value)}
-                  className="flex-1 px-4 py-2.5 text-sm bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] rounded-xl text-slate-800 dark:text-slate-200 outline-none focus:border-[var(--zd-primary)] focus:ring-2 focus:ring-[var(--zd-primary-soft)] transition-all font-mono"
+                  className="flex-1 px-4 py-2.5 text-sm bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] rounded-xl text-[var(--zd-text-primary)] outline-none focus:border-[var(--zd-primary)] focus:ring-2 focus:ring-[var(--zd-primary-soft)] transition-all font-mono"
                   placeholder="e.g. 1781523600"
                 />
                 <button
@@ -392,8 +392,8 @@ export default function EpochConverter() {
               <div className="flex flex-col gap-3 mt-2">
                 {/* UTC String */}
                 <div className="bg-[var(--zd-surface-raised)]/50 p-3 rounded-xl border border-[var(--zd-border)]/50 flex flex-col gap-1 relative group">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">UTC / GMT Time</span>
-                  <span className="text-sm font-semibold text-slate-900 dark:text-slate-100 break-all">{utcString || '—'}</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-[var(--zd-text-muted)]">UTC / GMT Time</span>
+                  <span className="text-sm font-semibold text-[var(--zd-text-primary)] break-all">{utcString || '—'}</span>
                   {utcString && (
                     <button 
                       onClick={() => triggerCopy(utcString, 'parsed')}
@@ -407,8 +407,8 @@ export default function EpochConverter() {
 
                 {/* Local String */}
                 <div className="bg-[var(--zd-surface-raised)]/50 p-3 rounded-xl border border-[var(--zd-border)]/50 flex flex-col gap-1 relative group">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Local Timezone</span>
-                  <span className="text-sm font-semibold text-slate-900 dark:text-slate-100 break-all">{localString || '—'}</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-[var(--zd-text-muted)]">Local Timezone</span>
+                  <span className="text-sm font-semibold text-[var(--zd-text-primary)] break-all">{localString || '—'}</span>
                   {localString && (
                     <button 
                       onClick={() => triggerCopy(localString, 'parsed')}
@@ -426,7 +426,7 @@ export default function EpochConverter() {
                     <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--zd-accent)]">
                       Target Timezone ({SUPPORTED_TIMEZONES.find((tz) => tz.value === targetTimezone)?.label || targetTimezone})
                     </span>
-                    <span className="text-sm font-semibold text-slate-900 dark:text-slate-100 break-all">{targetString || '—'}</span>
+                    <span className="text-sm font-semibold text-[var(--zd-text-primary)] break-all">{targetString || '—'}</span>
                     {targetString && (
                       <button 
                         onClick={() => triggerCopy(targetString, 'parsed')}
@@ -442,8 +442,8 @@ export default function EpochConverter() {
 
                 {/* ISO 8601 */}
                 <div className="bg-[var(--zd-surface-raised)]/50 p-3 rounded-xl border border-[var(--zd-border)]/50 flex flex-col gap-1 relative group">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">ISO 8601 String</span>
-                  <span className="text-sm font-semibold font-mono text-slate-900 dark:text-slate-100 break-all">{isoString || '—'}</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-[var(--zd-text-muted)]">ISO 8601 String</span>
+                  <span className="text-sm font-semibold font-mono text-[var(--zd-text-primary)] break-all">{isoString || '—'}</span>
                   {isoString && (
                     <button 
                       onClick={() => triggerCopy(isoString, 'parsed')}
@@ -457,7 +457,7 @@ export default function EpochConverter() {
 
                 {/* Relative age */}
                 <div className="bg-[var(--zd-surface-raised)]/50 p-3 rounded-xl border border-[var(--zd-border)]/50 flex flex-col gap-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Relative Time</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-[var(--zd-text-muted)]">Relative Time</span>
                   <span className="text-sm font-semibold text-[var(--zd-primary)]">{relativeAge || '—'}</span>
                 </div>
               </div>
@@ -466,13 +466,13 @@ export default function EpochConverter() {
 
           {/* Panel 2: Human to Epoch */}
           <div className="bg-[var(--zd-surface)] border border-[var(--zd-border)] rounded-2xl p-6 shadow-[var(--zd-shadow-md)] flex flex-col gap-4">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <h3 className="text-lg font-bold text-[var(--zd-text-primary)] flex items-center gap-2">
               <ArrowRightLeft className="w-5 h-5 text-[var(--zd-primary)]" />
               Date Time to Epoch
             </h3>
             
             <div className="flex flex-col gap-2">
-              <label className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+              <label className="text-xs font-semibold text-[var(--zd-text-secondary)]">
                 Enter Date / Time String (Pastable)
               </label>
               <div className="flex gap-2">
@@ -480,7 +480,7 @@ export default function EpochConverter() {
                   type="text"
                   value={dateTimeInput}
                   onChange={(e) => setDateTimeInput(e.target.value)}
-                  className="flex-1 px-4 py-2.5 text-sm bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] rounded-xl text-slate-800 dark:text-slate-200 outline-none focus:border-[var(--zd-primary)] focus:ring-2 focus:ring-[var(--zd-primary-soft)] transition-all font-mono"
+                  className="flex-1 px-4 py-2.5 text-sm bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] rounded-xl text-[var(--zd-text-primary)] outline-none focus:border-[var(--zd-primary)] focus:ring-2 focus:ring-[var(--zd-primary-soft)] transition-all font-mono"
                   placeholder="e.g. 2026-06-15 12:40:00 or ISO/RFC string"
                 />
                 <input
@@ -505,14 +505,14 @@ export default function EpochConverter() {
 
             {/* Timezone Toggle */}
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs font-semibold text-slate-500">Interpret as:</span>
+              <span className="text-xs font-semibold text-[var(--zd-text-muted)]">Interpret as:</span>
               <div className="flex gap-1 bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] p-1 rounded-xl">
                 <button
                   onClick={() => setTimezoneToggle('local')}
                   className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
                     timezoneToggle === 'local' 
                       ? 'bg-[var(--zd-surface)] text-[var(--zd-primary)] shadow-sm' 
-                      : 'text-slate-500 hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]/40 bg-transparent'
+                      : 'text-[var(--zd-text-muted)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]/40 bg-transparent'
                   }`}
                 >
                   Local
@@ -522,7 +522,7 @@ export default function EpochConverter() {
                   className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
                     timezoneToggle === 'utc' 
                       ? 'bg-[var(--zd-surface)] text-[var(--zd-primary)] shadow-sm' 
-                      : 'text-slate-500 hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]/40 bg-transparent'
+                      : 'text-[var(--zd-text-muted)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]/40 bg-transparent'
                   }`}
                 >
                   UTC
@@ -532,7 +532,7 @@ export default function EpochConverter() {
                   className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
                     timezoneToggle === 'target' 
                       ? 'bg-[var(--zd-surface)] text-[var(--zd-primary)] shadow-sm' 
-                      : 'text-slate-500 hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]/40 bg-transparent'
+                      : 'text-[var(--zd-text-muted)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]/40 bg-transparent'
                   }`}
                   title={`Interpret in ${targetTimezone}`}
                 >
@@ -555,8 +555,8 @@ export default function EpochConverter() {
                 )}
                 {/* Result Seconds Epoch */}
                 <div className="bg-[var(--zd-surface-raised)]/50 p-4 rounded-xl border border-[var(--zd-border)]/50 flex flex-col gap-1 relative group">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Epoch Seconds (Unix)</span>
-                  <span className="text-xl font-extrabold font-mono text-slate-900 dark:text-slate-100">{outputEpochSec}</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-[var(--zd-text-muted)]">Epoch Seconds (Unix)</span>
+                  <span className="text-xl font-extrabold font-mono text-[var(--zd-text-primary)]">{outputEpochSec}</span>
                   <button 
                     onClick={() => triggerCopy(outputEpochSec.toString(), 'epoch')}
                     className="absolute right-2.5 top-2.5 p-1.5 rounded bg-[var(--zd-surface)] border border-[var(--zd-border)] opacity-0 group-hover:opacity-100 text-slate-400 hover:text-[var(--zd-primary)] transition-all"
@@ -568,7 +568,7 @@ export default function EpochConverter() {
 
                 {/* Result Milliseconds Epoch */}
                 <div className="bg-[var(--zd-surface-raised)]/50 p-4 rounded-xl border border-[var(--zd-border)]/50 flex flex-col gap-1 relative group">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Epoch Milliseconds</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-[var(--zd-text-muted)]">Epoch Milliseconds</span>
                   <span className="text-xl font-extrabold font-mono text-[var(--zd-accent)]">{outputEpochMs}</span>
                   <button 
                     onClick={() => triggerCopy(outputEpochMs.toString(), 'epoch')}

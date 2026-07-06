@@ -4,59 +4,21 @@ export function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer
-      style={{
-        padding: '40px clamp(16px, 5vw, 48px)',
-        borderTop: '1px solid var(--zd-border)',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: '16px',
-      }}
-    >
+    <footer className="py-12 2xl:py-16 px-4 sm:px-8 md:px-12 2xl:px-16 border-t border-[var(--zd-border)] flex flex-col items-center gap-4 bg-[var(--zd-bg)]">
       {/* Divider line — subtle accent */}
-      <div
-        style={{
-          width: '40px',
-          height: '2px',
-          borderRadius: '1px',
-          background: 'linear-gradient(90deg, var(--zd-primary), var(--zd-accent))',
-          opacity: 0.4,
-          marginBottom: '8px',
-        }}
-      />
+      <div className="w-10 h-[2px] rounded-full bg-gradient-to-r from-[var(--zd-primary)] to-[var(--zd-accent)] opacity-40 mb-2" />
 
       {/* Links row */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '24px',
-          flexWrap: 'wrap',
-          justifyContent: 'center',
-        }}
-      >
+      <div className="flex items-center gap-6 flex-wrap justify-center">
         <FooterLink href="https://github.com/jayradadiya/ZeroDock" label="GitHub" />
         <FooterLink href="https://github.com/jayradadiya/ZeroDock/issues" label="Report a Bug" />
         <FooterLink href="https://github.com/jayradadiya/ZeroDock#contributing" label="Contribute" />
       </div>
 
       {/* Copyright */}
-      <p
-        style={{
-          fontSize: '13px',
-          color: 'var(--zd-text-muted)',
-          margin: 0,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px',
-        }}
-      >
+      <p className="text-xs sm:text-sm text-[var(--zd-text-muted)] m-0 flex items-center gap-1.5 font-normal">
         © {year} ZeroDock · Made with
-        <Heart
-          size={12}
-          style={{ color: '#E17055', fill: '#E17055' }}
-        />
+        <Heart size={12} className="text-[#E17055] fill-[#E17055]" />
         for privacy
       </p>
     </footer>
@@ -69,19 +31,7 @@ function FooterLink({ href, label }: { href: string; label: string }) {
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      style={{
-        fontSize: '13px',
-        fontWeight: 500,
-        color: 'var(--zd-text-muted)',
-        textDecoration: 'none',
-        transition: 'color 0.2s ease',
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.color = 'var(--zd-text-primary)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.color = 'var(--zd-text-muted)';
-      }}
+      className="text-xs sm:text-sm font-medium text-[var(--zd-text-muted)] hover:text-[var(--zd-text-primary)] no-underline transition-colors duration-200"
     >
       {label}
     </a>

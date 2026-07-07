@@ -11,7 +11,6 @@ export interface ContextCommand {
 }
 
 interface UIState {
-  historyDrawerOpen: boolean;
   commandPaletteOpen: boolean;
   zenMode: boolean;
   toolActions: ToolShortcutHandlers;
@@ -22,7 +21,6 @@ interface UIState {
     message: string;
     suggestions: string[];
   } | null;
-  setHistoryDrawerOpen: (open: boolean) => void;
   setCommandPaletteOpen: (open: boolean) => void;
   setZenMode: (open: boolean) => void;
   setToolActions: (actions: ToolShortcutHandlers) => void;
@@ -34,14 +32,12 @@ interface UIState {
 }
 
 export const useUIStore = create<UIState>((set) => ({
-  historyDrawerOpen: false,
   commandPaletteOpen: false,
   zenMode: false,
   toolActions: {},
   contextCommands: [],
   storageWarning: null,
   shortcutsOpen: false,
-  setHistoryDrawerOpen: (historyDrawerOpen) => set({ historyDrawerOpen }),
   setCommandPaletteOpen: (commandPaletteOpen) => set({ commandPaletteOpen }),
   setZenMode: (zenMode) => set({ zenMode }),
   setToolActions: (toolActions) => set({ toolActions }),

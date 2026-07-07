@@ -2,10 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link } from '@tanstack/react-router';
 import { usePreferenceStore } from '../../core/store/usePreferenceStore';
 import { useUIStore } from '../../core/store/useUIStore';
-import { Moon, Sun, Star, Search, History } from 'lucide-react';
-import { useHistoryStore } from '../../core/store/useHistoryStore';
-import { HistoryDrawer } from '../../shared/components/HistoryDrawer';
-import { Badge, Button } from '../../shared/components/ui';
+import { Moon, Sun, Star, Search } from 'lucide-react';
+import { Button } from '../../shared/components/ui';
 
 const GithubIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24" {...props}>
@@ -15,8 +13,7 @@ const GithubIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 export function Navbar() {
   const { theme, toggleTheme } = usePreferenceStore();
-  const { setCommandPaletteOpen, setHistoryDrawerOpen } = useUIStore();
-  const { items: historyItems } = useHistoryStore();
+  const { setCommandPaletteOpen } = useUIStore();
   const [scrolled, setScrolled] = useState(false);
   const [stars, setStars] = useState<string>('Star');
 
@@ -86,22 +83,6 @@ export function Navbar() {
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => setHistoryDrawerOpen(true)}
-            aria-label="View operation history"
-            className="!h-9 group"
-          >
-              <History className="w-3.5 h-3.5 text-[var(--zd-primary)] transition-transform group-hover:rotate-45" />
-              <span className="hidden md:inline font-semibold">History</span>
-              {historyItems.length > 0 && (
-                <Badge variant="primary" className="!rounded-full !px-1.5">
-                  {historyItems.length}
-                </Badge>
-              )}
-            </Button>
-
-          <Button
-            variant="secondary"
-            size="sm"
             onClick={() => setCommandPaletteOpen(true)}
             aria-label="Search tools and commands"
             className="!h-9 group"
@@ -143,7 +124,6 @@ export function Navbar() {
             </Button>
         </div>
       </header>
-      <HistoryDrawer />
     </>
   );
 }

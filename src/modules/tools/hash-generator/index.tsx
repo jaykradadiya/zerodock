@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { KeyRound, ShieldCheck, Sparkles, Hash } from 'lucide-react';
-import { useHistoryStore } from '../../../core/store/useHistoryStore';
 import { CodePanel } from '../../../shared/components/CodePanel';
 import { ToolPage, ToolHeader, ToolWorkspace, SplitPanels, ToolEmbedFrame } from '../../../shared/components/ToolLayout';
 import { useToolEmbed } from '../../../shared/context/ToolEmbedContext';
@@ -66,16 +65,6 @@ export default function HashGenerator() {
         }
       }
       setHashes(results);
-
-      if (input && input !== 'Hello World') {
-        const previewText = results['SHA-256'] || results['HMAC (SHA-256)'] || Object.values(results)[0];
-        useHistoryStore.getState().addHistoryItem({
-          toolId: 'hash-generator',
-          toolName: 'Hash & HMAC Generator',
-          action: isHmac ? 'Computed HMAC' : 'Generated Cryptographic Hashes',
-          preview: previewText ? `${previewText.substring(0, 24)}...` : undefined,
-        });
-      }
     } catch (err) {
       console.error(err);
     }

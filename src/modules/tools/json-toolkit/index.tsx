@@ -17,7 +17,6 @@ import { ErrorBoundary } from '../../../shared/components/ErrorBoundary';
 import type { ValidationError } from './validate.worker';
 import { useWorkspaceStore } from './store/workspaceStore';
 import { usePipelineStore } from '../../../core/store/usePipelineStore';
-import { useHistoryStore } from '../../../core/store/useHistoryStore';
 import { updateURLWithState, getStateFromURL } from '../../../shared/utils/state-share';
 import { exportToFile } from '../../../shared/utils/export';
 import { YamlPanel } from './panels/YamlPanel';
@@ -273,12 +272,6 @@ export default function JsonFormatter() {
       if (e.data.type === 'SUCCESS') {
         applyEditToEditor(e.data.payload);
         setError(null);
-        useHistoryStore.getState().addHistoryItem({
-          toolId: 'json-toolkit',
-          toolName: 'JSON Toolkit',
-          action: 'Formatted / Processed JSON',
-          preview: `${e.data.payload.substring(0, 30)}...`,
-        });
       } else if (e.data.type === 'ERROR') {
         setError(e.data.payload);
       }
@@ -289,12 +282,6 @@ export default function JsonFormatter() {
       if (e.data.type === 'SUCCESS') {
         applyEditToEditor(e.data.payload);
         setError(null);
-        useHistoryStore.getState().addHistoryItem({
-          toolId: 'json-toolkit',
-          toolName: 'JSON Toolkit',
-          action: 'Repaired & Cleaned JSON',
-          preview: `${e.data.payload.substring(0, 30)}...`,
-        });
       } else if (e.data.type === 'ERROR') {
         setError(e.data.payload);
       }

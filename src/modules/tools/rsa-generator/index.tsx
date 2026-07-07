@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Key, RefreshCw, ShieldCheck, Lock } from 'lucide-react';
 import { createToolStore } from '../../../core/store/useToolState';
 import { updateURLWithState, getStateFromURL } from '../../../shared/utils/state-share';
-import { useHistoryStore } from '../../../core/store/useHistoryStore';
 import { CodePanel } from '../../../shared/components/CodePanel';
 import {
   ToolPage, ToolHeader, ToolWorkspace, ToolToolbar,
@@ -74,13 +73,6 @@ export default function RSAGenerator() {
       const privPem = exportKeyAsPEM(exportedPrivateKey, 'PRIVATE KEY');
       setPublicKey(pubPem);
       setPrivateKey(privPem);
-
-      useHistoryStore.getState().addHistoryItem({
-        toolId: 'rsa-generator',
-        toolName: 'RSA Key Pair Generator',
-        action: `Generated ${modulusLength}-bit Keypair`,
-        preview: pubPem.split('\n')[1]?.substring(0, 24) + '...',
-      });
     } catch (err) {
       console.error('Failed to generate keys', err);
     } finally {

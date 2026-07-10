@@ -1,0 +1,43 @@
+[package]
+name = "zerodock-app"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "zerodock"
+path = "src/main.rs"
+
+[features]
+default = ["web"]
+web = ["dioxus/web", "zerodock-platform/web", "zerodock-core/wasm", "zerodock-indexer/wasm"]
+desktop = ["dioxus/desktop", "zerodock-platform/desktop", "zerodock-core/native", "zerodock-indexer/native"]
+
+[dependencies]
+dioxus = { workspace = true, features = ["router"] }
+dioxus-router = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+urlencoding = "2"
+zerodock-core = { workspace = true, default-features = false }
+zerodock-platform = { workspace = true }
+zerodock-indexer = { workspace = true, default-features = false }
+ropey = { workspace = true }
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.0", features = ["v4", "js"] }
+# web-sys / wasm-bindgen are needed on both web (wasm32) and desktop
+# (Tauri webview) — keyboard.rs and the code editor use them in both builds.
+wasm-bindgen = "0.2"
+web-sys = { version = "0.3", features = ["Window", "Document", "Element", "DomTokenList", "Navigator", "Clipboard", "KeyboardEvent", "EventTarget", "HtmlAnchorElement", "HtmlTextAreaElement", "HtmlInputElement", "Location", "DataTransfer", "DragEvent", "MediaQueryList", "File", "FileList", "FileReader", "TextDecoder", "Blob", "ProgressEvent"] }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+tracing-subscriber = { workspace = true }
+tokio = { workspace = true }
+arboard = "3"
+memmap2 = "0.9"
+anyhow = { workspace = true }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen-futures = "0.4"
+gloo-timers = { version = "0.3", features = ["futures"] }
+js-sys = "0.3"

@@ -1,0 +1,40 @@
+[workspace]
+resolver = "2"
+members = [
+    "app",
+    "crates/zerodock-core",
+    "crates/zerodock-platform",
+    "crates/zerodock-indexer",
+    "src-tauri",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+authors = ["ZeroDock"]
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+anyhow = "1"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync"] }
+dioxus = { version = "0.7", features = ["router", "document"] }
+dioxus-router = "0.7"
+ropey = "1.6"
+syntect = { version = "5", default-features = false, features = ["default-fancy"] }
+zerodock-core = { path = "crates/zerodock-core", default-features = false }
+zerodock-platform = { path = "crates/zerodock-platform" }
+zerodock-indexer = { path = "crates/zerodock-indexer", default-features = false }
+
+[profile.release]
+lto = true
+opt-level = "s"
+codegen-units = 1
+
+[profile.wasm-release]
+inherits = "release"
+opt-level = "z"

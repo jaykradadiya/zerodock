@@ -1,0 +1,26 @@
+[package]
+name = "zerodock"
+version.workspace = true
+edition.workspace = true
+description = "ZeroDock native desktop shell"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-shell = "2"
+serde = { workspace = true }
+serde_json = { workspace = true }
+zerodock-app = { path = "../app", default-features = false, features = ["desktop"] }
+zerodock-core = { workspace = true, features = ["native"] }
+zerodock-platform = { workspace = true, features = ["desktop"] }
+zerodock-indexer = { workspace = true, features = ["native"] }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]

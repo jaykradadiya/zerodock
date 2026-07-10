@@ -1,73 +1,81 @@
-# React + TypeScript + Vite
+# ZeroDock
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Privacy-first developer tools — **100% Rust** with [Dioxus](https://dioxuslabs.com) (web + desktop).
 
-Currently, two official plugins are available:
+## Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **UI:** Dioxus RSX (shared codebase)
+- **Web:** WASM via `dx serve --platform web`
+- **Desktop:** Tauri 2 + Dioxus native renderer
+- **Logic:** `zerodock-core`, `zerodock-indexer`, `zerodock-platform` crates
 
-## React Compiler
+## Prerequisites
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+# Install Rust
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+rustup target add wasm32-unknown-unknown
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# Install Dioxus CLI (--locked avoids git2/auth-git2 version conflicts)
+cargo install dioxus-cli --locked
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Development
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+```bash
+# Web (browser, hot-reload)
+dx serve --platform web
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# Desktop (native window)
+dx serve --platform desktop
+
+# Run tests
+cargo test --workspace
+
+# Lint
+cargo clippy --workspace -- -D warnings
 ```
+
+## Build & Deploy
+
+```bash
+# Web bundle → dist/
+dx bundle --platform web
+wrangler deploy
+
+# Desktop bundle
+dx bundle --platform desktop
+# or
+cd src-tauri && cargo tauri build
+```
+
+## Project Structure
+
+```
+Cargo.toml              # Workspace root
+app/                    # Dioxus RSX application (19 tools)
+crates/
+  zerodock-core/        # Crypto, diff, encode, JSON tools
+  zerodock-indexer/     # mmap + byte-offset JSON indexer
+  zerodock-platform/    # Storage, HTTP, file I/O abstractions
+src-tauri/              # Tauri 2 desktop shell
+Dioxus.toml             # Dioxus CLI config
+```
+
+## Tools (19 registered)
+
+| Hub | Tools |
+|-----|-------|
+| JSON Toolkit | format, tree, table, YAML, types, JMESPath |
+| HTTP Workshop | API tester, cURL converter |
+| Encode/Decode | Base64, URL encoder |
+| Security | Hash, JWT, RSA |
+| Standalone | Diff, Epoch, Regex, Mock Data, Token Counter |
+
+### Platform capabilities
+
+| Feature | Web | Desktop |
+|---------|-----|---------|
+| All 19 tools | ✓ | ✓ |
+| Large JSON (10 GB) | ~500 MB | ✓ (mmap) |
+| CORS-free API tester | ✗ | ✓ |

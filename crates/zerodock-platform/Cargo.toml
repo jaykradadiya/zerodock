@@ -1,0 +1,35 @@
+[package]
+name = "zerodock-platform"
+version.workspace = true
+edition.workspace = true
+
+[features]
+default = []
+web = ["dep:gloo-storage", "dep:gloo-net", "dep:wasm-bindgen", "dep:wasm-bindgen-futures", "dep:web-sys", "dep:js-sys"]
+desktop = ["dep:rusqlite", "dep:r2d2", "dep:r2d2_sqlite", "dep:reqwest", "dep:directories", "dep:tokio", "dep:memmap2"]
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+async-trait = "0.1"
+tracing = { workspace = true }
+tokio = { workspace = true, optional = true }
+
+# Web
+gloo-storage = { version = "0.3", optional = true }
+gloo-net = { version = "0.6", optional = true, features = ["http"] }
+wasm-bindgen = { version = "0.2", optional = true }
+wasm-bindgen-futures = { version = "0.4", optional = true }
+web-sys = { version = "0.3", optional = true, features = ["Window", "Storage", "Blob", "Url", "HtmlAnchorElement", "Document", "Performance"] }
+js-sys = { version = "0.3", optional = true }
+
+# Desktop
+rusqlite = { version = "0.32", features = ["bundled"], optional = true }
+r2d2 = { version = "0.8", optional = true }
+r2d2_sqlite = { version = "0.25", optional = true }
+reqwest = { version = "0.12", optional = true, features = ["json", "rustls-tls"], default-features = false }
+directories = { version = "5", optional = true }
+memmap2 = { version = "0.9", optional = true }
+ropey = { workspace = true }

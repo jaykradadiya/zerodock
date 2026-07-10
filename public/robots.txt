@@ -1,4 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://zerodock.jayradadiya.workers.dev/sitemap.xml

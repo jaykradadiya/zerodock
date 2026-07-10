@@ -1,0 +1,20 @@
+[application]
+name = "zerodock"
+default_platform = "web"
+asset_dir = "assets"
+out_dir = "dist"
+tailwind_input = "assets/tailwind.css"
+tailwind_output = "assets/zerodock.css"
+
+[web.app]
+title = "ZeroDock"
+base_path = "/"
+
+[web.wasm]
+opt-level = "z"
+
+[bundle]
+identifier = "com.zerodock.app"
+publisher = "ZeroDock"
+icon = ["assets/favicon.svg"]
+resources = ["assets/"]

@@ -102,6 +102,17 @@ pub fn CommandPalette() -> Element {
                                         record_visit_and_close(state_for_keys.clone(), platform_for_keys.clone(), tool.id);
                                     }
                                 }
+                                Key::Tab => {
+                                    e.prevent_default();
+                                    if total_items > 0 {
+                                        let current = *selected.read();
+                                        if e.modifiers().shift() {
+                                            selected.set(if current == 0 { total_items - 1 } else { current - 1 });
+                                        } else {
+                                            selected.set((current + 1) % total_items);
+                                        }
+                                    }
+                                }
                                 _ => {}
                             }
                         },

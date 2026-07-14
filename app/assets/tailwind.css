@@ -438,7 +438,7 @@ html.dark,
   }
 
   .toolbar-btn {
-    @apply inline-flex items-center justify-center gap-1.5 h-8 px-2 rounded-md text-xs font-medium shrink-0 transition-colors disabled:opacity-50 disabled:pointer-events-none;
+    @apply inline-flex items-center justify-center gap-1.5 h-8 px-2 rounded-md text-xs font-medium shrink-0 transition-colors disabled:opacity-50 disabled:pointer-events-none focus-ring;
     color: var(--zd-text-secondary);
   }
   .toolbar-btn:hover {

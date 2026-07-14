@@ -3,9 +3,7 @@ use crate::hubs::{encode_hub, http_hub, json_hub, security_hub};
 use crate::landing::LandingPage;
 use crate::shell::{self, command_palette, keyboard, navbar, toast};
 use crate::state::{use_app_state, AppState};
-use crate::tools::{
-    diff_checker, epoch_converter, mock_data_generator, regex_tester, token_counter,
-};
+use crate::tools::{diff_checker, epoch_converter, regex_tester, token_counter};
 use dioxus::prelude::*;
 use dioxus_router::{Outlet, Router, Routable};
 
@@ -31,8 +29,6 @@ pub enum Route {
         EpochConverter {},
         #[route("/regex-tester")]
         RegexTester {},
-        #[route("/mock-data-generator")]
-        MockDataGenerator {},
         #[route("/token-counter")]
         TokenCounter {},
         #[route("/yaml-json-converter")]
@@ -53,8 +49,6 @@ pub enum Route {
         HashGenerator {},
         #[route("/jwt-decoder")]
         JwtDecoder {},
-        #[route("/rsa-generator")]
-        RsaGenerator {},
 }
 
 #[component]
@@ -113,7 +107,6 @@ pub fn route_for_path(path: &str) -> Route {
         "/diff-checker" => Route::DiffChecker {},
         "/epoch-converter" => Route::EpochConverter {},
         "/regex-tester" => Route::RegexTester {},
-        "/mock-data-generator" => Route::MockDataGenerator {},
         "/token-counter" => Route::TokenCounter {},
         "/yaml-json-converter" => Route::YamlJsonConverter {},
         "/json-type-converter" => Route::JsonTypeConverter {},
@@ -124,7 +117,6 @@ pub fn route_for_path(path: &str) -> Route {
         "/url-encoder" => Route::UrlEncoder {},
         "/hash-generator" => Route::HashGenerator {},
         "/jwt-decoder" => Route::JwtDecoder {},
-        "/rsa-generator" => Route::RsaGenerator {},
         _ => Route::Landing {},
     }
 }
@@ -143,6 +135,7 @@ fn Shell() -> Element {
         toast::ToastContainer {}
         toast::KeyboardShortcutsHelp {}
         shell::zen_exit::ZenExitAffordance {}
+        shell::preferences_modal::PreferencesModal {}
     }
 }
 
@@ -184,11 +177,6 @@ fn EpochConverter() -> Element {
 #[component]
 fn RegexTester() -> Element {
     rsx! { regex_tester::RegexTester {} }
-}
-
-#[component]
-fn MockDataGenerator() -> Element {
-    rsx! { mock_data_generator::MockDataGenerator {} }
 }
 
 #[component]
@@ -238,10 +226,5 @@ fn HashGenerator() -> Element {
 
 #[component]
 fn JwtDecoder() -> Element {
-    rsx! { security_hub::SecurityHub { initial_tab: "jwt".to_string() } }
-}
-
-#[component]
-fn RsaGenerator() -> Element {
-    rsx! { security_hub::SecurityHub { initial_tab: "rsa".to_string() } }
+    rsx! { encode_hub::EncodeHub { initial_tab: "jwt".to_string() } }
 }

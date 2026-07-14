@@ -15,4 +15,5 @@ pub mod tool_actions;
 pub mod ui;
 pub mod virtual_code_editor;
 pub mod zen_exit;
+pub mod preferences_modal;
 

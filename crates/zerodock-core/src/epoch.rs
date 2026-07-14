@@ -1,4 +1,5 @@
-use chrono::{DateTime, Local, TimeZone, Utc};
+use chrono::{DateTime, Datelike, Local, TimeZone, Utc};
+use chrono_tz::Tz;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct EpochConversion {
@@ -7,10 +8,56 @@ pub struct EpochConversion {
     pub utc: String,
     pub local: String,
     pub relative: String,
+    pub iso8601: String,
+    pub rfc2822: String,
+    pub day_of_week: String,
+    pub week_number: u32,
 }
+
+/// A single named timezone row for the timezone table.
+#[derive(Debug, Clone, PartialEq)]
+pub struct TzRow {
+    pub name: &'static str,
+    pub label: &'static str,
+    pub formatted: String,
+}
+
+/// Well-known fixed timezone list used in the converter table.
+const TZ_LIST: &[(&str, &str, Tz)] = &[
+    ("UTC", "UTC+0", chrono_tz::UTC),
+    ("EST", "UTC-5", chrono_tz::US::Eastern),
+    ("CST", "UTC-6", chrono_tz::US::Central),
+    ("MST", "UTC-7", chrono_tz::US::Mountain),
+    ("PST", "UTC-8", chrono_tz::US::Pacific),
+    ("BRT", "UTC-3", chrono_tz::America::Sao_Paulo),
+    ("GMT", "UTC+0", chrono_tz::Europe::London),
+    ("CET", "UTC+1", chrono_tz::Europe::Paris),
+    ("MSK", "UTC+3", chrono_tz::Europe::Moscow),
+    ("IST", "UTC+5:30", chrono_tz::Asia::Kolkata),
+    ("SGT", "UTC+8", chrono_tz::Asia::Singapore),
+    ("JST", "UTC+9", chrono_tz::Asia::Tokyo),
+    ("AEST", "UTC+10", chrono_tz::Australia::Sydney),
+    ("NZST", "UTC+12", chrono_tz::Pacific::Auckland),
+];
 
 pub fn now_epoch() -> i64 {
     Utc::now().timestamp()
+}
+
+/// Convert an epoch to timezone table rows for well-known timezones.
+pub fn epoch_to_timezones(secs: i64) -> Vec<TzRow> {
+    let dt = Utc.timestamp_opt(secs, 0).single().unwrap_or_else(Utc::now);
+    TZ_LIST
+        .iter()
+        .map(|(name, label, tz)| {
+            let local = dt.with_timezone(tz);
+            TzRow {
+                name,
+                label,
+                formatted: local.format("%Y-%m-%d %H:%M:%S").to_string(),
+            }
+        })
+        .collect()
 }
 
 pub fn epoch_to_human(secs: i64) -> EpochConversion {
@@ -50,6 +97,10 @@ pub fn epoch_to_human(secs: i64) -> EpochConversion {
         utc: dt.format("%Y-%m-%d %H:%M:%S UTC").to_string(),
         local: local.format("%Y-%m-%d %H:%M:%S %Z").to_string(),
         relative,
+        iso8601: dt.format("%Y-%m-%dT%H:%M:%SZ").to_string(),
+        rfc2822: dt.format("%a, %d %b %Y %H:%M:%S +0000").to_string(),
+        day_of_week: dt.format("%A").to_string(),
+        week_number: dt.iso_week().week(),
     }
 }
 
@@ -78,3 +129,4 @@ pub fn parse_to_epoch(input: &str) -> crate::Result<i64> {
     }
     Err(crate::CoreError::Message("Could not parse date".into()))
 }
+

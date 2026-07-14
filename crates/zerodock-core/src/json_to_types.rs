@@ -5,6 +5,8 @@ pub enum TargetLang {
     TypeScript,
     Go,
     Rust,
+    Zod,
+    Pydantic,
     Schema,
 }
 
@@ -14,6 +16,8 @@ pub fn convert_json_to_types(json: &str, lang: TargetLang) -> crate::Result<Stri
         TargetLang::TypeScript => json_to_typescript(&value, "RootObject"),
         TargetLang::Go => json_to_go(&value, "RootObject"),
         TargetLang::Rust => json_to_rust(&value, "RootObject"),
+        TargetLang::Zod => json_to_zod(&value, "RootObject"),
+        TargetLang::Pydantic => json_to_pydantic(&value, "RootObject"),
         TargetLang::Schema => json_to_schema(&value),
     })
 }
@@ -241,5 +245,117 @@ fn schema_for_value(value: &Value) -> serde_json::Value {
                 "required": required
             })
         }
+    }
+}
+
+pub fn json_to_zod(value: &Value, name: &str) -> String {
+    let mut schemas = Vec::new();
+    generate_zod_schema(value, name, &mut schemas);
+    let mut out = String::from("import { z } from \"zod\";\n\n");
+    for schema in schemas.iter().rev() {
+        out.push_str(schema);
+        out.push_str("\n\n");
+    }
+    out.trim_end().to_string()
+}
+
+fn generate_zod_schema(value: &Value, name: &str, out: &mut Vec<String>) -> String {
+    let pascal = to_pascal_case(name);
+    let schema_name = format!("{}Schema", pascal);
+    match value {
+        Value::Object(map) => {
+            let mut lines = Vec::new();
+            lines.push(format!("export const {schema_name} = z.object({{"));
+            for (k, v) in map {
+                let ft = zod_field_type(v, k, out);
+                lines.push(format!("    {k}: {ft},"));
+            }
+            lines.push("});".into());
+            lines.push(format!("export type {pascal} = z.infer<typeof {schema_name}>;"));
+            out.push(lines.join("\n"));
+            schema_name
+        }
+        Value::Array(arr) => {
+            if let Some(first) = arr.first() {
+                format!("z.array({})", zod_field_type(first, name, out))
+            } else {
+                "z.array(z.any())".into()
+            }
+        }
+        _ => zod_field_type(value, name, out),
+    }
+}
+
+fn zod_field_type(value: &Value, key: &str, out: &mut Vec<String>) -> String {
+    match value {
+        Value::Object(_) => generate_zod_schema(value, key, out),
+        Value::Array(arr) => {
+            if let Some(first) = arr.first() {
+                format!("z.array({})", zod_field_type(first, key, out))
+            } else {
+                "z.array(z.any())".into()
+            }
+        }
+        Value::Null => "z.null()".into(),
+        Value::Bool(_) => "z.boolean()".into(),
+        Value::Number(_) => "z.number()".into(),
+        Value::String(_) => "z.string()".into(),
+    }
+}
+
+pub fn json_to_pydantic(value: &Value, name: &str) -> String {
+    let mut models = Vec::new();
+    generate_pydantic_model(value, name, &mut models);
+    let mut out = String::from("from typing import List, Optional, Any, Dict\nfrom pydantic import BaseModel, Field\n\n");
+    for model in models.iter().rev() {
+        out.push_str(model);
+        out.push_str("\n\n");
+    }
+    out.trim_end().to_string()
+}
+
+fn generate_pydantic_model(value: &Value, name: &str, out: &mut Vec<String>) -> String {
+    let pascal = to_pascal_case(name);
+    let model_name = if pascal.ends_with("Model") { pascal.clone() } else { format!("{pascal}Model") };
+    match value {
+        Value::Object(map) => {
+            let mut lines = Vec::new();
+            lines.push(format!("class {model_name}(BaseModel):"));
+            if map.is_empty() {
+                lines.push("    pass".into());
+            } else {
+                for (k, v) in map {
+                    let ft = pydantic_field_type(v, k, out);
+                    lines.push(format!("    {k}: {ft}"));
+                }
+            }
+            out.push(lines.join("\n"));
+            model_name
+        }
+        Value::Array(arr) => {
+            if let Some(first) = arr.first() {
+                format!("List[{}]", pydantic_field_type(first, name, out))
+            } else {
+                "List[Any]".into()
+            }
+        }
+        _ => pydantic_field_type(value, name, out),
+    }
+}
+
+fn pydantic_field_type(value: &Value, key: &str, out: &mut Vec<String>) -> String {
+    match value {
+        Value::Object(_) => generate_pydantic_model(value, key, out),
+        Value::Array(arr) => {
+            if let Some(first) = arr.first() {
+                format!("List[{}]", pydantic_field_type(first, key, out))
+            } else {
+                "List[Any]".into()
+            }
+        }
+        Value::Null => "Optional[Any]".into(),
+        Value::Bool(_) => "bool".into(),
+        Value::Number(_) => "float".into(),
+        Value::String(_) => "str".into(),
     }
 }

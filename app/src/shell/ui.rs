@@ -16,6 +16,8 @@ pub struct ButtonProps {
     pub disabled: bool,
     #[props(default)]
     pub aria_label: Option<String>,
+    #[props(default)]
+    pub shortcut: Option<String>,
 }
 
 #[derive(Clone, Copy, PartialEq, Default)]
@@ -44,7 +46,15 @@ pub fn Button(props: ButtonProps) -> Element {
                     handler.call(e);
                 }
             },
-            {props.children}
+            span { class: "inline-flex items-center gap-1.5",
+                {props.children}
+                if let Some(sc) = &props.shortcut {
+                    span {
+                        class: "inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-black/20 text-current opacity-90 border border-current/25 leading-none shadow-sm",
+                        "{sc}"
+                    }
+                }
+            }
         }
     }
 }

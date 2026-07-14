@@ -4,6 +4,7 @@ use crate::shell::layout::{CodePanel, ResponsiveSplitPanels, StandaloneTool, Too
 use crate::shell::share_link::{state_json, ShareLinkButton, use_shared_state};
 use crate::shell::tool_actions::ToolStandardActions;
 use crate::shell::ui::SegmentedControl;
+use crate::state::use_app_state;
 use dioxus::prelude::*;
 use zerodock_core::{decode_base64, encode_base64};
 
@@ -22,8 +23,16 @@ pub fn Base64Codec() -> Element {
 
 #[component]
 pub fn Base64CodecContent() -> Element {
-    let mut input = use_signal(String::new);
-    let mut encode_mode = use_signal(|| true);
+    let mut state = use_app_state();
+    let initial_data = use_hook(|| {
+        let pasted = state.tool_states.read().get("base64-codec").cloned();
+        if pasted.is_some() {
+            state.tool_states.write().remove("base64-codec");
+        }
+        pasted
+    });
+    let mut input = use_signal(|| initial_data.clone().unwrap_or_default());
+    let mut encode_mode = use_signal(|| initial_data.is_none());
 
     use_shared_state("base64-codec", input);
 

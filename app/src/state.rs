@@ -22,18 +22,24 @@ impl Preferences {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProfileBackup {
+    pub version: String,
+    pub timestamp: String,
+    pub preferences: Preferences,
+    pub tool_states: HashMap<String, String>,
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct UiState {
     pub command_palette_open: bool,
+    pub preferences_open: bool,
     pub zen_mode: bool,
     pub shortcuts_help_open: bool,
     pub toasts: Vec<Toast>,
     pub primary_action_tick: u64,
     pub primary_action_registered: bool,
-
 }
-
-
 
 #[derive(Debug, Clone)]
 pub struct Toast {

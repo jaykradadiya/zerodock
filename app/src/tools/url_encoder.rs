@@ -4,6 +4,7 @@ use crate::shell::layout::{CodePanel, ResponsiveSplitPanels, StandaloneTool, Too
 use crate::shell::share_link::{state_json, ShareLinkButton, use_shared_state};
 use crate::shell::tool_actions::ToolStandardActions;
 use crate::shell::ui::SegmentedControl;
+use crate::state::use_app_state;
 use dioxus::prelude::*;
 use zerodock_core::{decode_url, encode_url};
 
@@ -22,8 +23,16 @@ pub fn UrlEncoder() -> Element {
 
 #[component]
 pub fn UrlEncoderContent() -> Element {
-    let mut input = use_signal(String::new);
-    let mut mode_encode = use_signal(|| true);
+    let mut state = use_app_state();
+    let initial_data = use_hook(|| {
+        let pasted = state.tool_states.read().get("url-encoder").cloned();
+        if pasted.is_some() {
+            state.tool_states.write().remove("url-encoder");
+        }
+        pasted
+    });
+    let mut input = use_signal(|| initial_data.clone().unwrap_or_default());
+    let mut mode_encode = use_signal(|| initial_data.is_none());
 
     use_shared_state("url-encoder", input);
 

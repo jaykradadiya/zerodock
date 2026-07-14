@@ -1,9 +1,9 @@
 use crate::shell::empty_state::EmptyState;
 use crate::shell::layout::{CodePanel, ResponsiveSplitPanels, StandaloneTool, ToolBody, ToolToolbar};
 use crate::shell::tool_actions::ToolStandardActions;
-use crate::shell::ui::{Badge, InlineAlert, Input};
+use crate::shell::ui::{Badge, InlineAlert, Input, TabGroup, TabVariant};
 use dioxus::prelude::*;
-use zerodock_core::{test_regex, validate_regex};
+use zerodock_core::{explain_regex_ast, test_regex, validate_regex};
 
 const SAMPLE_TEXT: &str = "Order 123 shipped on 2024-01-15";
 const SAMPLE_PATTERN: &str = r"\d+";
@@ -13,7 +13,7 @@ pub fn RegexTester() -> Element {
     rsx! {
         StandaloneTool {
             title: "Regex Tester",
-            description: "Test regular expressions with ReDoS-safe Rust regex engine",
+            description: "Test regular expressions with ReDoS-safe Rust regex engine and plain-text English AST explanations",
             RegexTesterContent {}
         }
     }
@@ -24,6 +24,7 @@ pub fn RegexTesterContent() -> Element {
     let mut pattern = use_signal(|| SAMPLE_PATTERN.to_string());
     let mut flags = use_signal(|| "g".to_string());
     let mut text = use_signal(|| SAMPLE_TEXT.to_string());
+    let mut active_tab = use_signal(|| "matches".to_string());
 
     let result = use_memo(move || {
         if pattern.read().is_empty() {
@@ -34,6 +35,13 @@ pub fn RegexTesterContent() -> Element {
         }
         test_regex(&pattern.read(), &text.read(), &flags.read())
             .map_err(|e| e.to_string())
+    });
+
+    let ast_result = use_memo(move || {
+        if pattern.read().is_empty() {
+            return Ok(vec![]);
+        }
+        explain_regex_ast(&pattern.read()).map_err(|e| e.to_string())
     });
 
     rsx! {
@@ -70,7 +78,7 @@ pub fn RegexTesterContent() -> Element {
             }
             ResponsiveSplitPanels {
                 input_label: "Test String",
-                output_label: "Matches",
+                output_label: "Analysis & Matches",
                 input_panel: rsx! {
                     CodePanel {
                         title: "Test String".to_string(),
@@ -83,28 +91,85 @@ pub fn RegexTesterContent() -> Element {
                 },
                 output_panel: rsx! {
                     div {
-                        class: "zd-tool-fill p-4 overflow-y-auto custom-scrollbar min-h-0 border-b md:border-b-0 md:border-r border-[var(--zd-border)]",
-                        if result.read().is_err() {
-                            EmptyState {
-                                icon: "!",
-                                title: "Invalid pattern",
-                                hint: "Fix the regex pattern to see matches.",
+                        class: "zd-tool-fill flex flex-col min-h-0 border-b md:border-b-0 md:border-r border-[var(--zd-border)]",
+                        div {
+                            class: "px-3 py-2 border-b border-[var(--zd-border)] flex items-center justify-between bg-[var(--zd-surface-soft)] shrink-0",
+                            span { class: "text-xs font-semibold text-[var(--zd-text-secondary)]", "Analysis & Output" }
+                            TabGroup {
+                                tabs: vec![
+                                    ("matches", "Matches"),
+                                    ("ast", "AST Explanation Tree"),
+                                ],
+                                active: active_tab.read().clone(),
+                                on_change: EventHandler::new(move |t| active_tab.set(t)),
+                                variant: TabVariant::Toolbar,
                             }
-                        } else if let Ok(matches) = result.read().as_ref() {
-                            if matches.is_empty() {
-                                EmptyState {
-                                    icon: ".*",
-                                    title: "No matches",
-                                    hint: "Adjust your pattern or test string.",
+                        }
+                        div {
+                            class: "flex-1 min-h-0 p-4 overflow-y-auto custom-scrollbar",
+                            if active_tab.read().as_str() == "matches" {
+                                if result.read().is_err() {
+                                    EmptyState {
+                                        icon: "!",
+                                        title: "Invalid pattern",
+                                        hint: "Fix the regex pattern to see matches.",
+                                    }
+                                } else if let Ok(matches) = result.read().as_ref() {
+                                    if matches.is_empty() {
+                                        EmptyState {
+                                            icon: ".*",
+                                            title: "No matches",
+                                            hint: "Adjust your pattern or test string.",
+                                        }
+                                    }
+                                    for m in matches.iter() {
+                                        div {
+                                            class: "mb-3 p-3 rounded-xl border border-[var(--zd-border)] bg-[var(--zd-surface)]",
+                                            code { class: "font-mono text-sm text-[var(--zd-primary)]", "{m.full_match}" }
+                                            p { class: "text-xs text-[var(--zd-text-muted)] mt-1 font-mono", "pos {m.start}–{m.end}" }
+                                            if !m.groups.is_empty() {
+                                                p { class: "text-xs mt-1 font-mono text-[var(--zd-text-secondary)]", "groups: {m.groups:?}" }
+                                            }
+                                        }
+                                    }
                                 }
-                            }
-                            for m in matches.iter() {
-                                div {
-                                    class: "mb-3 p-3 rounded-xl border border-[var(--zd-border)] bg-[var(--zd-surface)]",
-                                    code { class: "font-mono text-sm text-[var(--zd-primary)]", "{m.full_match}" }
-                                    p { class: "text-xs text-[var(--zd-text-muted)] mt-1 font-mono", "pos {m.start}–{m.end}" }
-                                    if !m.groups.is_empty() {
-                                        p { class: "text-xs mt-1 font-mono text-[var(--zd-text-secondary)]", "groups: {m.groups:?}" }
+                            } else {
+                                if ast_result.read().is_err() {
+                                    EmptyState {
+                                        icon: "!",
+                                        title: "AST Parse Error",
+                                        hint: "Pattern could not be parsed into AST nodes.",
+                                    }
+                                } else if let Ok(nodes) = ast_result.read().as_ref() {
+                                    if nodes.is_empty() {
+                                        EmptyState {
+                                            icon: "🌳",
+                                            title: "Empty Pattern",
+                                            hint: "Enter a regular expression to view its plain-text explanation tree.",
+                                        }
+                                    } else {
+                                        div {
+                                            class: "flex flex-col gap-2 font-mono text-xs",
+                                            for node in nodes.iter() {
+                                                {
+                                                    let indent_style = format!("margin-left: {}rem;", (node.depth as f64) * 1.5);
+                                                    rsx! {
+                                                        div {
+                                                            class: "flex items-start gap-2.5 p-2 rounded-lg border border-[var(--zd-border)] bg-[var(--zd-surface)] hover:border-[var(--zd-primary)] transition-colors shadow-sm",
+                                                            style: "{indent_style}",
+                                                            div {
+                                                                class: "px-2 py-0.5 rounded bg-[var(--zd-surface-soft)] border border-[var(--zd-border)] text-[var(--zd-primary)] font-bold shrink-0 min-w-[2.5rem] text-center",
+                                                                "{node.snippet}"
+                                                            }
+                                                            div {
+                                                                class: "text-[var(--zd-text-primary)] font-sans flex-1 pt-0.5 leading-relaxed",
+                                                                "{node.explanation}"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }

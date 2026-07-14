@@ -29,9 +29,16 @@ pub struct FileTab {
     pub is_modified: bool,
 }
 
+#[derive(Clone, PartialEq, Debug)]
+pub struct FileTabMeta {
+    pub id: String,
+    pub name: String,
+    pub is_modified: bool,
+}
+
 #[component]
 pub fn WorkspaceTabBar(
-    tabs: Signal<Vec<FileTab>>,
+    tabs_meta: Memo<Vec<FileTabMeta>>,
     active_id: Signal<String>,
     on_select: EventHandler<String>,
     on_close: EventHandler<String>,
@@ -45,9 +52,9 @@ pub fn WorkspaceTabBar(
     let mut find_query = use_signal(String::new);
     let mut drag_from = use_signal(|| None::<usize>);
 
-    let filtered_tabs: Vec<FileTab> = {
+    let filtered_tabs: Vec<FileTabMeta> = {
         let q = find_query.read().to_lowercase();
-        tabs.read()
+        tabs_meta.read()
             .iter()
             .filter(|t| q.is_empty() || t.name.to_lowercase().contains(&q))
             .cloned()
@@ -57,7 +64,7 @@ pub fn WorkspaceTabBar(
     rsx! {
         div { class: "flex items-center bg-[var(--zd-surface-raised)] border-b border-[var(--zd-border)] shrink-0 pr-3",
             div { class: "flex items-center gap-1 px-3 py-1.5 overflow-x-auto custom-scrollbar select-none flex-1 min-w-0",
-            for (idx, tab) in tabs.read().iter().enumerate() {
+            for (idx, tab) in tabs_meta.read().iter().enumerate() {
                 {
                     let id = tab.id.clone();
                     let name = tab.name.clone();
@@ -122,7 +129,7 @@ pub fn WorkspaceTabBar(
                             if tab.is_modified {
                                 span { class: "zd-status-dot inline-block", aria_hidden: "true" }
                             }
-                            if tabs.read().len() > 1 {
+                            if tabs_meta.read().len() > 1 {
                                 button {
                                     class: "opacity-0 group-hover:opacity-100 hover:text-[var(--zd-accent)] transition-opacity px-1 rounded hover:bg-[var(--zd-surface-raised)]",
                                     aria_label: "Close tab",
@@ -192,23 +199,40 @@ pub fn JsonHub(initial_panel: Option<String>) -> Element {
     let platform = use_context::<PlatformServices>();
     let mut state = use_app_state();
     
+    let initial_content = use_hook(|| {
+        let pasted = state.tool_states.read().get("json-toolkit").cloned();
+        if pasted.is_some() {
+            state.tool_states.write().remove("json-toolkit");
+        }
+        pasted.unwrap_or_else(|| r#"{"name":"ZeroDock","version":1,"features":["rust","dioxus"]}"#.to_string())
+    });
+
     let mut tabs = use_signal(|| vec![
         FileTab {
             id: "tab_1".to_string(),
             name: "data.json".to_string(),
-            content: r#"{"name":"ZeroDock","version":1,"features":["rust","dioxus"]}"#.to_string(),
+            content: initial_content.clone(),
             is_modified: false,
         }
     ]);
     let mut active_tab_id = use_signal(|| "tab_1".to_string());
 
+    let tabs_meta = use_memo(move || {
+        tabs.read()
+            .iter()
+            .map(|t| FileTabMeta {
+                id: t.id.clone(),
+                name: t.name.clone(),
+                is_modified: t.is_modified,
+            })
+            .collect::<Vec<_>>()
+    });
+
     // Rope mirror of the active tab's content, used only by the large-file
     // (virtualized) editor path. Kept separate from `FileTab.content: String`
     // so every other panel (tree/table/yaml/types/path/diff) is unaffected —
     // they keep reading `get_active_content()` snapshots exactly as before.
-    let mut active_rope = use_signal(|| Rope::from_str(
-        r#"{"name":"ZeroDock","version":1,"features":["rust","dioxus"]}"#,
-    ));
+    let mut active_rope = use_signal(|| Rope::from_str(&initial_content));
     // Tracks which tab `active_rope` currently mirrors, so switching tabs
     // reloads the Rope from that tab's String content instead of leaking
     // the previous tab's buffer into the newly active one.
@@ -248,7 +272,10 @@ pub fn JsonHub(initial_panel: Option<String>) -> Element {
     // targeted per-edit Rope mutation `VirtualCodeEditor` already does
     // in-place) must update BOTH signals in the same call, or the two can
     // diverge and the large-file editor / Tree view show stale content.
-    let mut set_active_content = move |val: String| {
+    let mut undo_stack = use_signal(|| Vec::<String>::new());
+    let mut redo_stack = use_signal(|| Vec::<String>::new());
+
+    let mut set_active_content_raw = move |val: String| {
         let active_id = active_tab_id.peek().clone();
         tabs.write().iter_mut().for_each(|t| {
             if t.id == active_id {
@@ -259,6 +286,16 @@ pub fn JsonHub(initial_panel: Option<String>) -> Element {
         active_rope.set(Rope::from_str(&val));
         active_rope_tab_id.set(active_id);
     };
+
+    let mut set_active_content = move |val: String| {
+        let current = get_active_content();
+        if current != val {
+            undo_stack.write().push(current);
+            redo_stack.write().clear();
+        }
+        set_active_content_raw(val);
+    };
+
 
     // Applies a targeted (char_start, char_end, replacement) edit coming from
     // `VirtualCodeEditor` — the Rope itself was already mutated in place by
@@ -307,6 +344,8 @@ pub fn JsonHub(initial_panel: Option<String>) -> Element {
     let mut show_import_url = use_signal(|| false);
     let mut import_url = use_signal(String::new);
     let mut import_loading = use_signal(|| false);
+    let mut show_bottom_jmespath = use_signal(|| false);
+    let mut bottom_jmespath_query = use_signal(|| "features[0]".to_string());
 
 
 
@@ -365,7 +404,7 @@ pub fn JsonHub(initial_panel: Option<String>) -> Element {
                 active_tab: header_tab,
             }
             WorkspaceTabBar {
-                tabs: tabs,
+                tabs_meta: tabs_meta,
                 active_id: active_tab_id,
                 on_select: EventHandler::new(move |id: String| active_tab_id.set(id)),
                 on_close: EventHandler::new(move |id: String| {
@@ -418,13 +457,22 @@ pub fn JsonHub(initial_panel: Option<String>) -> Element {
                             }
                             div { class: "zd-toolbar-group",
                                 span { class: "zd-toolbar-group-label", "Panels" }
-                                ModeToggle { active: *panel.read() == "yaml", onclick: move |_| { panel.set("yaml".into()); view_mode.set("editor".into()); }, "YAML" }
+                                ModeToggle { active: *panel.read() == "yaml", onclick: move |_| { panel.set("yaml".into()); view_mode.set("editor".into()); }, "YAML ↔ JSON" }
                                 ModeToggle { active: *panel.read() == "types", onclick: move |_| { panel.set("types".into()); view_mode.set("editor".into()); }, "Types" }
-                                ModeToggle { active: *panel.read() == "path", onclick: move |_| { panel.set("path".into()); view_mode.set("editor".into()); }, "Path" }
+                                Button {
+                                    variant: if *show_bottom_jmespath.read() { ButtonVariant::Primary } else { ButtonVariant::Ghost },
+                                    class: "px-2 py-1 text-xs",
+                                    onclick: move |_| {
+                                        let val = *show_bottom_jmespath.read();
+                                        show_bottom_jmespath.set(!val);
+                                    },
+                                    "JMESPath Bar"
+                                }
                             }
                             div { class: "zd-toolbar-group",
                                 span { class: "zd-toolbar-group-label", "Format" }
                                 Button {
+                                    shortcut: "⌘↵".to_string(),
                                     onclick: move |_| {
                                         let text = get_active_content();
                                         match format_json_opts(&text, *indent_size.read(), *sort_keys.read()) {
@@ -458,6 +506,30 @@ pub fn JsonHub(initial_panel: Option<String>) -> Element {
                                         show_settings.set(next);
                                     },
                                     "Options"
+                                }
+                                Button {
+                                    shortcut: "⌘Z".to_string(),
+                                    disabled: undo_stack.read().is_empty(),
+                                    onclick: move |_| {
+                                        if let Some(prev) = undo_stack.write().pop() {
+                                            let curr = get_active_content();
+                                            redo_stack.write().push(curr);
+                                            set_active_content_raw(prev);
+                                        }
+                                    },
+                                    "Undo"
+                                }
+                                Button {
+                                    shortcut: "⌘⇧Z".to_string(),
+                                    disabled: redo_stack.read().is_empty(),
+                                    onclick: move |_| {
+                                        if let Some(next) = redo_stack.write().pop() {
+                                            let curr = get_active_content();
+                                            undo_stack.write().push(curr);
+                                            set_active_content_raw(next);
+                                        }
+                                    },
+                                    "Redo"
                                 }
                             }
                             div { class: "zd-toolbar-group",
@@ -658,6 +730,40 @@ pub fn JsonHub(initial_panel: Option<String>) -> Element {
                                     }
                                 },
                             }
+                        }
+                    }
+                }
+            }
+            if *show_bottom_jmespath.read() {
+                div {
+                    class: "h-48 border-t border-[var(--zd-border)] bg-[var(--zd-surface-raised)] flex flex-col shrink-0 min-h-0 z-10 shadow-lg",
+                    div {
+                        class: "px-3 py-1.5 border-b border-[var(--zd-border)] flex items-center justify-between bg-[var(--zd-surface)] shrink-0 gap-2",
+                        div {
+                            class: "flex items-center gap-2 flex-1 max-w-xl",
+                            span { class: "text-xs font-mono font-semibold text-[var(--zd-accent)]", "Live JMESPath:" }
+                            input {
+                                class: "flex-1 px-2.5 py-1 text-xs font-mono rounded border border-[var(--zd-border)] bg-[var(--zd-surface-raised)] text-[var(--zd-text-primary)] focus-ring",
+                                placeholder: "e.g. features[0] or users[?age > `20`]",
+                                value: "{bottom_jmespath_query}",
+                                oninput: move |e: Event<FormData>| bottom_jmespath_query.set(e.value()),
+                            }
+                        }
+                        button {
+                            class: "text-xs text-[var(--zd-text-muted)] hover:text-[var(--zd-text-primary)] focus-ring px-1",
+                            onclick: move |_| show_bottom_jmespath.set(false),
+                            "Close (×)"
+                        }
+                    }
+                    div {
+                        class: "flex-1 min-h-0",
+                        CodePanel {
+                            title: "Query Result".to_string(),
+                            value: jmespath_query(&get_active_content(), &bottom_jmespath_query.read()).unwrap_or_else(|e| e.to_string()),
+                            oninput: None,
+                            read_only: true,
+                            show_empty: true,
+                            language: CodeLanguage::Json,
                         }
                     }
                 }
@@ -882,7 +988,9 @@ fn VirtualTableView(content: String) -> Element {
                                     rsx! {
                                         th {
                                             key: "{h}",
-                                            class: "px-3 py-2.5 font-semibold text-[var(--zd-text-primary)] hover:bg-[var(--zd-surface)] cursor-pointer transition-colors whitespace-nowrap",
+                                            tabindex: "0",
+                                            role: "columnheader",
+                                            class: "px-4 py-3 font-semibold text-[var(--zd-text-primary)] hover:bg-[var(--zd-surface)] cursor-pointer transition-colors whitespace-nowrap focus-ring",
                                             onclick: {
                                                 let h = h.clone();
                                                 move |_| {
@@ -892,6 +1000,21 @@ fn VirtualTableView(content: String) -> Element {
                                                     } else {
                                                         sort_col.set(Some(h.clone()));
                                                         sort_desc.set(false);
+                                                    }
+                                                }
+                                            },
+                                            onkeydown: {
+                                                let h = h.clone();
+                                                move |e: Event<KeyboardData>| {
+                                                    if e.key() == Key::Enter || e.key() == Key::Character(" ".into()) {
+                                                        e.prevent_default();
+                                                        if *sort_col.read() == Some(h.clone()) {
+                                                            let next = !*sort_desc.read();
+                                                            sort_desc.set(next);
+                                                        } else {
+                                                            sort_col.set(Some(h.clone()));
+                                                            sort_desc.set(false);
+                                                        }
                                                     }
                                                 }
                                             },
@@ -923,7 +1046,9 @@ fn VirtualTableView(content: String) -> Element {
                                         rsx! {
                                             td {
                                                 key: "{c_idx}",
-                                                class: "px-3 py-2 max-w-xs truncate {cell_class}",
+                                                tabindex: "0",
+                                                role: "cell",
+                                                class: "px-4 py-3 max-w-sm truncate {cell_class} focus-ring",
                                                 title: "{cell}",
                                                 if cell.is_empty() { "-" } else { "{cell}" }
                                             }
@@ -1034,10 +1159,20 @@ fn TypesPanel(content: String) -> Element {
         let target = match lang.read().as_str() {
             "go" => TargetLang::Go,
             "rust" => TargetLang::Rust,
+            "zod" => TargetLang::Zod,
+            "pydantic" => TargetLang::Pydantic,
             "schema" => TargetLang::Schema,
             _ => TargetLang::TypeScript,
         };
         convert_json_to_types(&content, target).unwrap_or_else(|e| e.to_string())
+    };
+
+    let filename = match lang.read().as_str() {
+        "go" => "types.go",
+        "rust" => "types.rs",
+        "pydantic" => "models.py",
+        "schema" => "schema.json",
+        _ => "types.ts",
     };
 
     rsx! {
@@ -1048,8 +1183,10 @@ fn TypesPanel(content: String) -> Element {
                 TabGroup {
                     tabs: vec![
                         ("typescript", "TypeScript"),
-                        ("go", "Go"),
-                        ("rust", "Rust"),
+                        ("zod", "Zod Schema"),
+                        ("pydantic", "Pydantic (Python)"),
+                        ("go", "Go Structs"),
+                        ("rust", "Rust Structs"),
                         ("schema", "JSON Schema"),
                     ],
                     active: lang.read().clone(),
@@ -1058,7 +1195,7 @@ fn TypesPanel(content: String) -> Element {
                 }
             }
             CodePanel {
-                title: "Generated Types".to_string(),
+                title: "Generated Types & Schemas".to_string(),
                 value: output.clone(),
                 oninput: None,
                 read_only: true,
@@ -1066,7 +1203,7 @@ fn TypesPanel(content: String) -> Element {
                 language: CodeLanguage::Plain,
                 header_actions: rsx! {
                     ExportButton {
-                        filename: "types.ts",
+                        filename: filename,
                         content: output.clone(),
                         label: "Download",
                     }

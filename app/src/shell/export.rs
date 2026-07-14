@@ -39,7 +39,7 @@ pub fn download_text(filename: &str, content: &str, mime: &str) -> Result<String
 
 #[component]
 pub fn ExportButton(
-    filename: &'static str,
+    #[props(into)] filename: String,
     content: String,
     #[props(default)] mime: &'static str,
     #[props(default)] label: &'static str,
@@ -49,10 +49,15 @@ pub fn ExportButton(
         button {
             class: "toolbar-btn",
             disabled: content.trim().is_empty(),
-            onclick: move |_| {
-                match download_text(filename, &content, mime) {
-                    Ok(_path) => state.toast(format!("Exported {filename}"), ToastKind::Success),
-                    Err(e) => state.toast(format!("Export failed: {e}"), ToastKind::Error),
+            onclick: {
+                let filename = filename.clone();
+                let content = content.clone();
+                let mut state = state.clone();
+                move |_| {
+                    match download_text(&filename, &content, mime) {
+                        Ok(_path) => state.toast(format!("Exported {}", filename), ToastKind::Success),
+                        Err(e) => state.toast(format!("Export failed: {e}"), ToastKind::Error),
+                    }
                 }
             },
             "{label}"

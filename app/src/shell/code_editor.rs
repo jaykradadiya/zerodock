@@ -4,6 +4,10 @@ use std::collections::BTreeSet;
 use ropey::Rope;
 use zerodock_core::{find_collapsible_blocks, highlight_to_html, line_count, EditorLanguage};
 use std::collections::HashSet;
+pub use zerodock_editor::{
+    Command as EditorCommand, Document as EngineDocument, RenderSnapshot as EditorRenderSnapshot,
+    Selection as EditorSelection, Viewport as EditorViewport,
+};
 
 #[derive(Clone, Copy, PartialEq, Default)]
 pub enum CodeLanguage {
@@ -31,16 +35,44 @@ pub struct EditorState {
     pub cursor_char: usize,
     pub scroll_top: usize,
     pub folded_lines: BTreeSet<usize>,
+    pub engine: zerodock_editor::Document,
 }
 
 impl EditorState {
     pub fn new(text: &str) -> Self {
+        let engine = zerodock_editor::Document::new(text);
         Self {
-            buffer: Rope::from_str(text),
+            buffer: engine.buffer().as_rope().clone(),
             cursor_char: 0,
             scroll_top: 0,
             folded_lines: BTreeSet::new(),
+            engine,
         }
+    }
+
+    pub fn execute(&mut self, cmd: zerodock_editor::Command) -> Result<(), zerodock_editor::EditorError> {
+        self.engine.execute_command(cmd)?;
+        self.sync_from_engine();
+        Ok(())
+    }
+
+    pub fn sync_from_engine(&mut self) {
+        self.buffer = self.engine.buffer().as_rope().clone();
+        self.cursor_char = self.engine.selections().primary().head;
+    }
+
+    pub fn sync_to_engine(&mut self) {
+        self.engine = zerodock_editor::Document::new(&self.buffer.to_string());
+        let _ = self.engine.execute_command(zerodock_editor::Command::SetSelection(
+            zerodock_editor::Selection::caret(self.cursor_char)
+        ));
+    }
+
+    pub fn render_snapshot(
+        &self,
+        viewport: &zerodock_editor::Viewport,
+    ) -> Result<zerodock_editor::RenderSnapshot, zerodock_editor::EditorError> {
+        self.engine.render_snapshot(viewport)
     }
 }
 
@@ -227,7 +259,7 @@ pub fn CodeEditor(
 
     let highlight_html = highlight_to_html(&display_value, language.into());
     let matches_list = find_match_ranges(&display_value, &find_query.read());
-    let total_lines_val = value.lines().count().max(1);
+    let total_lines_val = lines;
 
     let gutter: String = visible_line_nums
         .iter()

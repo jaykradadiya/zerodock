@@ -68,6 +68,10 @@ pub fn highlight_to_html(source: &str, language: EditorLanguage) -> String {
         }
     }
 
+    if source.ends_with('\n') {
+        html.push_str("\u{200b}");
+    }
+
     html
 }
 
@@ -180,4 +184,10 @@ mod tests {
     fn line_count_empty_is_one() {
         assert_eq!(line_count(""), 1);
     }
+
+    #[test]
+    fn line_count_counts_all_split_lines() {
+        assert_eq!(line_count("hello\nworld\n"), 3);
+    }
 }
+

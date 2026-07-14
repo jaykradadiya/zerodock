@@ -8,6 +8,26 @@
 
 use ropey::Rope;
 
+/// Returns the length of the longest prefix of `bytes` that is valid UTF-8,
+/// so a chunk boundary landing mid-codepoint doesn't corrupt or panic on
+/// decode — the remainder is carried into the next chunk. Platform-agnostic
+/// (no web-sys dependency) so it's natively unit-testable regardless of
+/// target.
+fn utf8_valid_prefix_len(bytes: &[u8]) -> usize {
+    match std::str::from_utf8(bytes) {
+        Ok(_) => bytes.len(),
+        Err(e) => {
+            // `valid_up_to()` is the longest confirmed-valid prefix. Bytes
+            // after it are either a genuinely invalid sequence or an
+            // incomplete one awaiting more bytes from the next chunk; either
+            // way we only trust the confirmed-valid prefix here and let the
+            // *next* chunk's combined decode raise a real error if the tail
+            // turns out to be truly malformed rather than just incomplete.
+            e.valid_up_to()
+        }
+    }
+}
+
 /// Desktop: mmap the file and build a Rope from it off the render thread.
 /// Avoids the extra full-buffer copy a plain `std::fs::read_to_string` would
 /// perform — the mmap is only the *load* source; `Rope::from_reader` copies
@@ -46,7 +66,7 @@ pub async fn load_rope_desktop(
 /// chunks so a large drop/selection doesn't jank the tab.
 #[cfg(target_arch = "wasm32")]
 pub mod web {
-    use super::Rope;
+    use super::{utf8_valid_prefix_len, Rope};
     use web_sys::File;
 
     const CHUNK_BYTES: f64 = 8.0 * 1024.0 * 1024.0;
@@ -129,23 +149,58 @@ pub mod web {
 
         Ok(rope)
     }
+}
 
-    /// Returns the length of the longest prefix of `bytes` that is valid
-    /// UTF-8, so a chunk boundary landing mid-codepoint doesn't corrupt or
-    /// panic on decode — the remainder is carried into the next chunk.
-    fn utf8_valid_prefix_len(bytes: &[u8]) -> usize {
-        match std::str::from_utf8(bytes) {
-            Ok(_) => bytes.len(),
-            Err(e) => {
-                let valid_upto = e.valid_up_to();
-                // If the error has no `error_len` (`None`), the tail is an
-                // incomplete-but-possibly-valid sequence awaiting more bytes;
-                // if it has a length, those bytes are genuinely invalid, but
-                // we still only trust the confirmed-valid prefix here and let
-                // the *next* chunk's combined decode raise a real error if
-                // it's truly malformed.
-                valid_upto
-            }
-        }
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn utf8_prefix_len_full_ascii_is_whole_slice() {
+        let bytes = b"hello world";
+        assert_eq!(utf8_valid_prefix_len(bytes), bytes.len());
+    }
+
+    #[test]
+    fn utf8_prefix_len_splits_before_incomplete_multibyte_char() {
+        // "café" — 'é' is a 2-byte UTF-8 sequence (0xC3 0xA9). Truncate the
+        // slice right after the first byte of 'é', simulating a chunk
+        // boundary landing mid-codepoint.
+        let full = "café";
+        let bytes = full.as_bytes();
+        // "caf" (3 bytes) + first byte of 'é' (0xC3) = 4 bytes total.
+        let truncated = &bytes[..4];
+        let prefix_len = utf8_valid_prefix_len(truncated);
+        assert_eq!(prefix_len, 3, "should stop before the incomplete 'é' byte");
+        assert_eq!(std::str::from_utf8(&truncated[..prefix_len]).unwrap(), "caf");
+    }
+
+    #[test]
+    fn utf8_prefix_len_handles_multibyte_boundary_across_simulated_chunks() {
+        // Simulate the exact two-chunk reassembly load_rope_streaming performs:
+        // chunk 1 ends mid-codepoint, the leftover bytes are prepended to chunk 2.
+        let full = "emoji test: \u{1F600} done"; // 4-byte UTF-8 emoji
+        let bytes = full.as_bytes();
+        let split_at = full.find('\u{1F600}').unwrap() + 2; // split inside the 4-byte sequence
+        let (chunk1, chunk2) = bytes.split_at(split_at);
+
+        let valid_len = utf8_valid_prefix_len(chunk1);
+        let (decoded1, tail) = chunk1.split_at(valid_len);
+        assert!(std::str::from_utf8(decoded1).is_ok());
+        assert!(!tail.is_empty(), "incomplete emoji bytes should be carried over");
+
+        let mut combined = tail.to_vec();
+        combined.extend_from_slice(chunk2);
+        let text2 = std::str::from_utf8(&combined).expect("reassembled bytes must be valid UTF-8");
+
+        let mut reassembled = String::new();
+        reassembled.push_str(std::str::from_utf8(decoded1).unwrap());
+        reassembled.push_str(text2);
+        assert_eq!(reassembled, full);
+    }
+
+    #[test]
+    fn utf8_prefix_len_empty_slice() {
+        assert_eq!(utf8_valid_prefix_len(&[]), 0);
     }
 }

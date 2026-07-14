@@ -3,12 +3,6 @@ use dioxus::prelude::*;
 #[component]
 pub fn DragDropZone(
     on_drop_text: EventHandler<String>,
-    /// Fired instead of `on_drop_text` when the drop is an actual file (not a
-    /// plain-text drag) on web — lets callers route large files through the
-    /// streaming loader (`file_load::web::load_rope_streaming`) instead of
-    /// materializing the whole file as a String up front.
-    #[props(default)]
-    on_drop_file: Option<EventHandler<web_sys::File>>,
     children: Element,
 ) -> Element {
     let mut dragging = use_signal(|| false);
@@ -31,17 +25,6 @@ pub fn DragDropZone(
                 #[cfg(target_arch = "wasm32")]
                 {
                     let dt = e.data().data_transfer();
-                    let files = dt.files();
-                    if let Some(list) = files {
-                        if list.length() > 0 {
-                            if let Some(file) = list.get(0) {
-                                if let Some(h) = on_drop_file.as_ref() {
-                                    h.call(file);
-                                    return;
-                                }
-                            }
-                        }
-                    }
                     if let Some(text) = dt.get_data("text/plain") {
                         if !text.is_empty() {
                             on_drop_text.call(text);
@@ -59,3 +42,15 @@ pub fn DragDropZone(
         }
     }
 }
+
+// NOTE: True large-file drag-drop (bypassing a full-String materialization of
+// the dropped file) is intentionally NOT wired here yet. Dioxus 0.7's
+// `DragEvent::data().data_transfer()` returns Dioxus's own `DragData`
+// wrapper, not a raw `web_sys::DataTransfer` — extracting a `web_sys::File`
+// handle from it (to feed `file_load::web::load_rope_streaming`) requires
+// confirming that wrapper's conversion API, which wasn't verified in this
+// pass. `file_load::web::load_rope_streaming` is implemented, compiles, and
+// is ready to be wired in once that's confirmed; today it has no caller in
+// the drag-drop path. Follow-up: add an explicit "Open File" input/button
+// (`<input type="file">` via web-sys, or Dioxus's file-upload event) as a
+// more directly verifiable entry point than intercepting generic drag-drop.

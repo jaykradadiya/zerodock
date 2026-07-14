@@ -157,8 +157,35 @@ struct Window {
     start_char: usize,
 }
 
+/// Number of lines to show/scroll for, as a human would count them.
+///
+/// `Rope::len_lines()` is defined as `line_break_count() + 1` — it always
+/// counts a phantom trailing "line" after the file's final `\n` (ropey
+/// treats the empty span after the last newline as an addressable line, which
+/// is correct for `line_to_char`/windowing math but wrong for anything a user
+/// reads, like the scrollbar's total height or the "N lines" status text).
+/// For a file ending in `\n` (the common case), subtract that phantom line so
+/// the spacer/scrollbar doesn't reserve one extra row of unreachable space
+/// past the real content.
+fn display_line_count(rope: &Rope) -> usize {
+    rope.len_lines().max(1)
+}
+
+fn rendered_line_count(text: &str) -> usize {
+    if text.is_empty() {
+        1
+    } else {
+        text.split('\n').count()
+    }
+}
+
 fn compute_window(rope: &Rope, scroll_top: f64, viewport_rows: usize) -> Window {
-    let total_lines = rope.len_lines();
+    // Bound the window to the display-facing line count, not ropey's raw
+    // `len_lines()` (which includes a phantom empty line after a trailing
+    // '\n') — otherwise the window can render one blank row past the last
+    // real line, beyond what the spacer/scrollbar (sized off
+    // `display_line_count`) accounts for.
+    let total_lines = display_line_count(rope);
     let first_visible = (scroll_top / ROW_HEIGHT_PX).floor().max(0.0) as usize;
     let first_visible = first_visible.min(total_lines);
     let start_line = first_visible.saturating_sub(OVERSCAN_LINES).min(total_lines);
@@ -241,7 +268,10 @@ pub fn VirtualCodeEditor(
     let editable = !read_only && on_edit_range.is_some();
 
     let rope_snapshot = buffer.read().clone();
-    let total_lines_val = rope_snapshot.len_lines().max(1);
+    // Display-facing line count (excludes ropey's phantom trailing line after
+    // a final '\n') — used for the spacer height and status bar so the
+    // scrollbar doesn't reserve space past the real last line.
+    let total_lines_val = display_line_count(&rope_snapshot);
     let total_height_px = total_lines_val as f64 * ROW_HEIGHT_PX;
 
     let window = compute_window(&rope_snapshot, *scroll_top.read(), *viewport_rows.read());
@@ -252,7 +282,13 @@ pub fn VirtualCodeEditor(
         let collapsed = collapsed_blocks.read();
         let window_line_offset = window.start_line;
         if collapsed.is_empty() || blocks.is_empty() {
-            let nums: Vec<usize> = (window.start_line + 1..=window.end_line.max(window.start_line + 1)).collect();
+            // Derive line numbers from the ACTUAL rendered rows in
+            // `window_text`, not from `end_line - start_line` index
+            // arithmetic — see `rendered_line_count` for why those two can
+            // disagree by one.
+            let nums: Vec<usize> = (0..rendered_line_count(&window_text))
+                .map(|i| window.start_line + 1 + i)
+                .collect();
             (window_text.clone(), nums)
         } else {
             let mut disp_lines = Vec::new();
@@ -532,7 +568,7 @@ pub fn VirtualCodeEditor(
                         // though only the windowed slice is actually rendered.
                         style: "height: {total_height_px}px; position: relative;",
                         div {
-                            class: "flex min-h-full",
+                            class: "flex",
                             style: "position: absolute; top: {window.start_line as f64 * ROW_HEIGHT_PX}px; left: 0; right: 0;",
                             div {
                                 class: "zd-code-gutter shrink-0 flex flex-col",
@@ -886,5 +922,110 @@ mod tests {
         let (slice, start_char) = window_slice(&rope, window);
         assert_eq!(slice, "b\nc\n");
         assert_eq!(start_char, rope.line_to_char(1));
+    }
+
+    // --- display_line_count / scrollbar spacer off-by-one regression tests ---
+
+    #[test]
+    fn display_line_count_counts_all_lines() {
+        let doc = "line1\nline2\nline3\nline4\nline5\n";
+        let rope = Rope::from_str(doc);
+        assert_eq!(display_line_count(&rope), 6);
+    }
+
+    #[test]
+    fn display_line_count_no_trailing_newline_counts_raw() {
+        let doc = "line1\nline2\nline3\nline4\nline5";
+        let rope = Rope::from_str(doc);
+        assert_eq!(display_line_count(&rope), 5);
+    }
+
+    #[test]
+    fn display_line_count_empty_rope_is_one() {
+        let rope = Rope::from_str("");
+        assert_eq!(display_line_count(&rope), 1);
+    }
+
+    #[test]
+    fn display_line_count_single_line_no_newline() {
+        let rope = Rope::from_str("hello");
+        assert_eq!(display_line_count(&rope), 1);
+    }
+
+    #[test]
+    fn display_line_count_single_trailing_newline() {
+        let rope = Rope::from_str("\n");
+        assert_eq!(display_line_count(&rope), 2);
+    }
+
+
+    #[test]
+    fn compute_window_end_line_never_exceeds_display_line_count_for_trailing_newline_doc() {
+        // Regression for the scrollbar-overshoot bug: scrolled to the very
+        // bottom of a trailing-newline file, the window must not reach into
+        // ropey's phantom trailing line — end_line should be bounded by
+        // display_line_count, not the raw (one-larger) len_lines().
+        let doc: String = (0..200).map(|i| format!("line{i}\n")).collect();
+        let rope = Rope::from_str(&doc);
+        let expected_total = display_line_count(&rope);
+        assert_eq!(expected_total, 201);
+        assert_eq!(rope.len_lines(), 201, "sanity: raw count includes the phantom line");
+
+        let window = compute_window(&rope, 1_000_000.0, 50);
+        assert!(
+            window.end_line <= expected_total,
+            "window.end_line ({}) must not exceed display_line_count ({})",
+            window.end_line,
+            expected_total
+        );
+    }
+
+    // --- rendered_line_count / gutter-vs-textarea line-count mismatch ---
+    // Regression for: scrollbar/gutter showing more lines than are actually
+    // rendered in the textarea, because line numbers were derived from
+    // `end_line - start_line` index arithmetic instead of the real number of
+    // rows the window's text slice contains.
+
+    #[test]
+    fn rendered_line_count_trailing_newline_matches_split_count() {
+        let text = "a\nb\n";
+        assert_eq!(rendered_line_count(text), 3);
+    }
+
+    #[test]
+    fn rendered_line_count_no_trailing_newline() {
+        assert_eq!(rendered_line_count("a\nb\nc"), 3);
+    }
+
+    #[test]
+    fn rendered_line_count_empty_is_one() {
+        assert_eq!(rendered_line_count(""), 1);
+    }
+
+    #[test]
+    fn rendered_line_count_single_newline() {
+        assert_eq!(rendered_line_count("\n"), 2);
+    }
+
+    #[test]
+    fn window_slice_and_rendered_line_count_agree_on_gutter_size_mid_file() {
+        // End-to-end regression: for a window that ends mid-file (not at the
+        // document's true end), window_slice's text and the derived line
+        // numbers must have the same length — this is exactly the mismatch
+        // that made the gutter/scrollbar disagree with the rendered textarea.
+        let doc: String = (0..10).map(|i| format!("line{i}\n")).collect();
+        let rope = Rope::from_str(&doc);
+        let window = Window {
+            start_line: 8,
+            end_line: 10,
+            start_char: rope.line_to_char(8),
+        };
+        let (text, _) = window_slice(&rope, window);
+        assert_eq!(text, "line8\nline9\n");
+
+        let nums: Vec<usize> = (0..rendered_line_count(&text))
+            .map(|i| window.start_line + 1 + i)
+            .collect();
+        assert_eq!(nums, vec![9, 10], "gutter line numbers must match the 2 real rendered rows");
     }
 }

@@ -241,6 +241,14 @@ pub fn JsonHub(initial_panel: Option<String>) -> Element {
         }
     });
 
+    // `tabs[].content` is the single source of truth every panel (Tree,
+    // Table, YAML, Types, Path, Diff, Format, Repair) reads via
+    // `get_active_content()`. `active_rope` is a kept-in-sync mirror used only
+    // by `VirtualCodeEditor` for large-file windowed rendering. Every site
+    // that replaces the active tab's content wholesale (as opposed to the
+    // targeted per-edit Rope mutation `VirtualCodeEditor` already does
+    // in-place) must update BOTH signals in the same call, or the two can
+    // diverge and the large-file editor / Tree view show stale content.
     let mut set_active_content = move |val: String| {
         let active_id = active_tab_id.peek().clone();
         tabs.write().iter_mut().for_each(|t| {
@@ -249,6 +257,8 @@ pub fn JsonHub(initial_panel: Option<String>) -> Element {
                 t.is_modified = true;
             }
         });
+        active_rope.set(Rope::from_str(&val));
+        active_rope_tab_id.set(active_id);
     };
 
     // Applies a targeted (char_start, char_end, replacement) edit coming from
@@ -258,6 +268,10 @@ pub fn JsonHub(initial_panel: Option<String>) -> Element {
     // This still materializes a full String, but only once per edit and only
     // for large files that already opted into the virtualized path — the
     // per-keystroke Rope mutation itself never touches the full-file String.
+    // Deliberately does NOT call `active_rope.set(...)` (unlike
+    // `set_active_content`/`import_into_tab`) since the Rope here is already
+    // current — re-setting it would be redundant and would reset
+    // `active_rope_tab_id` unnecessarily.
     let mut sync_active_content_from_rope = move || {
         let active_id = active_tab_id.peek().clone();
         let text = active_rope.peek().to_string();
@@ -278,6 +292,8 @@ pub fn JsonHub(initial_panel: Option<String>) -> Element {
                 t.is_modified = true;
             }
         });
+        active_rope.set(Rope::from_str(&val));
+        active_rope_tab_id.set(active_id);
     };
 
     let mut panel = use_signal(move || initial_panel.clone().unwrap_or_else(|| "editor".to_string()));
@@ -496,7 +512,7 @@ pub fn JsonHub(initial_panel: Option<String>) -> Element {
                             }
                             div { class: "zd-toolbar-group",
                                 span { class: "zd-toolbar-group-label", "Send" }
-                                SendToButton { source_tool_id: "json-toolkit", content: get_active_content() }
+                                SendToButton { source_tool_id: "json-toolkit", content: get_active_content(), json_only: true }
                             }
                             if *indexing.read() {
                                 span { class: "text-xs text-[var(--zd-text-muted)] zd-mono-label ml-2", "Indexing…" }

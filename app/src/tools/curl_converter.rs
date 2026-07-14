@@ -1,5 +1,5 @@
 use crate::shell::layout::{CodePanel, ResponsiveSplitPanels, StandaloneTool, ToolBody, ToolToolbar};
-use crate::shell::pipeline::SendToButton;
+
 use crate::shell::tool_actions::ToolStandardActions;
 use crate::shell::ui::TabGroup;
 use dioxus::prelude::*;
@@ -57,9 +57,7 @@ pub fn CurlConverterContent() -> Element {
                 ToolStandardActions {
                     on_clear: EventHandler::new(move |_| curl.set(String::new())),
                     on_sample: EventHandler::new(move |_| curl.set(SAMPLE_CURL.to_string())),
-                    extra: rsx! {
-                        SendToButton { source_tool_id: "curl-converter", content: output.read().0.clone() }
-                    },
+
                 }
             }
             ResponsiveSplitPanels {

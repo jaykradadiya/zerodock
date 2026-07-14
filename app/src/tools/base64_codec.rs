@@ -1,6 +1,6 @@
 use crate::shell::drag_drop::DragDropZone;
 use crate::shell::layout::{CodePanel, ResponsiveSplitPanels, StandaloneTool, ToolBody, ToolToolbar};
-use crate::shell::pipeline::{use_pipeline_input, SendToButton};
+
 use crate::shell::share_link::{state_json, ShareLinkButton, use_shared_state};
 use crate::shell::tool_actions::ToolStandardActions;
 use crate::shell::ui::SegmentedControl;
@@ -24,7 +24,7 @@ pub fn Base64Codec() -> Element {
 pub fn Base64CodecContent() -> Element {
     let mut input = use_signal(String::new);
     let mut encode_mode = use_signal(|| true);
-    use_pipeline_input("base64-codec", input);
+
     use_shared_state("base64-codec", input);
 
     let output = use_memo(move || {
@@ -58,7 +58,6 @@ pub fn Base64CodecContent() -> Element {
                     on_sample: EventHandler::new(move |_| input.set(SAMPLE.to_string())),
                     extra: rsx! {
                         ShareLinkButton { tool_id: "base64-codec", state_json: share_state }
-                        SendToButton { source_tool_id: "base64-codec", content: out_val.clone() }
                     },
                 }
             }

@@ -1,7 +1,7 @@
 use crate::shell::empty_state::EmptyState;
 use crate::shell::layout::{CodePanel, ResponsiveSplitPanels, StandaloneTool, ToolBody, ToolToolbar};
 use crate::shell::code_editor::CodeLanguage;
-use crate::shell::pipeline::SendToButton;
+
 use crate::shell::tool_actions::ToolStandardActions;
 use crate::shell::ui::{Badge, Card, CopyButton, InlineAlert, Input};
 use dioxus::prelude::*;
@@ -50,9 +50,7 @@ pub fn HashGeneratorContent() -> Element {
                 ToolStandardActions {
                     on_clear: EventHandler::new(move |_| input.set(String::new())),
                     on_sample: EventHandler::new(move |_| input.set(SAMPLE.to_string())),
-                    extra: rsx! {
-                        SendToButton { source_tool_id: "hash-generator", content: input.read().clone() }
-                    },
+
                 }
             }
             if hmac_empty {

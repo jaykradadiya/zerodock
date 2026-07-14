@@ -1,6 +1,6 @@
 use crate::shell::empty_state::EmptyState;
 use crate::shell::layout::{CodePanel, ResponsiveSplitPanels, StandaloneTool, ToolBody};
-use crate::shell::pipeline::{use_pipeline_input, SendToButton};
+
 use crate::shell::ui::{Badge, BadgeVariant, CopyButton, InlineAlert};
 use dioxus::prelude::*;
 use zerodock_core::decode_jwt;
@@ -19,7 +19,7 @@ pub fn JwtDecoder() -> Element {
 #[component]
 pub fn JwtDecoderContent() -> Element {
     let mut input = use_signal(String::new);
-    use_pipeline_input("jwt-decoder", input);
+
 
     let decoded = use_memo(move || {
         if input.read().trim().is_empty() {
@@ -59,9 +59,6 @@ pub fn JwtDecoderContent() -> Element {
                         on_edit: Some(EventHandler::new(move |v: String| input.set(v))),
                         placeholder: "Paste JWT here...",
                         language: crate::shell::code_editor::CodeLanguage::Plain,
-                        header_actions: rsx! {
-                            SendToButton { source_tool_id: "jwt-decoder", content: payload_json.clone() }
-                        },
                     }
                 },
                 output_panel: rsx! {

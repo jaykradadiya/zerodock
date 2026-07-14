@@ -2,7 +2,6 @@ use crate::shell::drag_drop::DragDropZone;
 use crate::shell::export::ExportButton;
 use crate::shell::layout::{CodePanel, HubToolHeader, ModeToggle, ToolBody, ToolPage, ToolToolbar, ToolWorkspace};
 use crate::shell::code_editor::CodeLanguage;
-use crate::shell::pipeline::SendToButton;
 use crate::shell::ui::{Button, ButtonVariant, SegmentedControl, TabGroup};
 use crate::shell::virtual_code_editor::VirtualCodeEditor;
 use crate::state::{use_app_state, use_primary_action, ToastKind};
@@ -309,22 +308,7 @@ pub fn JsonHub(initial_panel: Option<String>) -> Element {
     let mut import_url = use_signal(String::new);
     let mut import_loading = use_signal(|| false);
 
-    // "Send to JSON Toolkit" must land in the active editor tab. The editor reads
-    // from `tabs` (via get_active_content), not a side signal, so consume the
-    // pipeline payload here and write it into the active tab directly. Previously
-    // the payload was written to a standalone signal the editor never read.
-    let mut pipeline_state = state.clone();
-    use_effect(move || {
-        if let Some(payload) = pipeline_state.take_pipeline_payload() {
-            if payload.source_tool != "json-toolkit" {
-                set_active_content(payload.content.clone());
-                pipeline_state.toast(
-                    format!("Received from {}", payload.label),
-                    ToastKind::Info,
-                );
-            }
-        }
-    });
+
 
     let mut visit_state = state.clone();
     use_effect(move || {
@@ -510,10 +494,7 @@ pub fn JsonHub(initial_panel: Option<String>) -> Element {
                                     "From URL"
                                 }
                             }
-                            div { class: "zd-toolbar-group",
-                                span { class: "zd-toolbar-group-label", "Send" }
-                                SendToButton { source_tool_id: "json-toolkit", content: get_active_content(), json_only: true }
-                            }
+
                             if *indexing.read() {
                                 span { class: "text-xs text-[var(--zd-text-muted)] zd-mono-label ml-2", "Indexing…" }
                             }

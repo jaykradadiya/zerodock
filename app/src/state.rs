@@ -30,16 +30,10 @@ pub struct UiState {
     pub toasts: Vec<Toast>,
     pub primary_action_tick: u64,
     pub primary_action_registered: bool,
-    /// Pipeline payload passed between tools (tool_id -> content).
-    pub pipeline_payload: Option<PipelinePayload>,
+
 }
 
-#[derive(Debug, Clone)]
-pub struct PipelinePayload {
-    pub source_tool: String,
-    pub content: String,
-    pub label: String,
-}
+
 
 #[derive(Debug, Clone)]
 pub struct Toast {
@@ -155,17 +149,7 @@ impl AppState {
         self.tool_states.read().get(tool_id).cloned()
     }
 
-    pub fn set_pipeline_payload(&mut self, source: &str, content: String, label: &str) {
-        self.ui.write().pipeline_payload = Some(PipelinePayload {
-            source_tool: source.to_string(),
-            content,
-            label: label.to_string(),
-        });
-    }
 
-    pub fn take_pipeline_payload(&mut self) -> Option<PipelinePayload> {
-        self.ui.write().pipeline_payload.take()
-    }
 }
 
 pub fn use_app_state() -> AppState {

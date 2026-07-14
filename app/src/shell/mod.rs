@@ -8,7 +8,6 @@ pub mod keyboard;
 pub mod layout;
 pub mod mobile_swap;
 pub mod navbar;
-pub mod pipeline;
 pub mod share_link;
 pub mod skip_link;
 pub mod toast;

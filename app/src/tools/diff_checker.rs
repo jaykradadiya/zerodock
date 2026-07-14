@@ -1,6 +1,6 @@
 use crate::shell::export::ExportButton;
 use crate::shell::layout::{CodePanel, ResponsiveSplitPanels, StandaloneTool, ToolBody};
-use crate::shell::pipeline::SendToButton;
+
 use crate::shell::tool_actions::ToolStandardActions;
 use crate::shell::ui::CopyButton;
 use dioxus::prelude::*;
@@ -63,7 +63,6 @@ pub fn DiffCheckerContent() -> Element {
                         },
                         if *show_diff.read() { "Hide diff" } else { "Show diff" }
                     }
-                    SendToButton { source_tool_id: "diff-checker", content: left.read().clone() }
                 },
             }
             ResponsiveSplitPanels {

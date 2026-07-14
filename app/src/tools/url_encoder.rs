@@ -1,6 +1,6 @@
 use crate::shell::drag_drop::DragDropZone;
 use crate::shell::layout::{CodePanel, ResponsiveSplitPanels, StandaloneTool, ToolBody, ToolToolbar};
-use crate::shell::pipeline::{use_pipeline_input, SendToButton};
+
 use crate::shell::share_link::{state_json, ShareLinkButton, use_shared_state};
 use crate::shell::tool_actions::ToolStandardActions;
 use crate::shell::ui::SegmentedControl;
@@ -24,7 +24,7 @@ pub fn UrlEncoder() -> Element {
 pub fn UrlEncoderContent() -> Element {
     let mut input = use_signal(String::new);
     let mut mode_encode = use_signal(|| true);
-    use_pipeline_input("url-encoder", input);
+
     use_shared_state("url-encoder", input);
 
     let output = use_memo(move || {
@@ -57,7 +57,6 @@ pub fn UrlEncoderContent() -> Element {
                     on_sample: EventHandler::new(move |_| input.set(SAMPLE.to_string())),
                     extra: rsx! {
                         ShareLinkButton { tool_id: "url-encoder", state_json: state_json(&input.read()) }
-                        SendToButton { source_tool_id: "url-encoder", content: out_val.clone() }
                     },
                 }
             }

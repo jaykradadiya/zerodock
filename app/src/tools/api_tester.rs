@@ -1,6 +1,6 @@
 use crate::shell::export::ExportButton;
 use crate::shell::layout::{CodePanel, StandaloneTool, ToolBody, ToolToolbar};
-use crate::shell::pipeline::{use_pipeline_input, SendToButton};
+
 use crate::shell::ui::{Badge, BadgeVariant, Button, OutputPanel, Select, TabGroup, TabVariant};
 use crate::state::{use_app_state, use_primary_action, ToastKind};
 use dioxus::prelude::*;
@@ -38,7 +38,7 @@ pub fn ApiTesterContent() -> Element {
     let mut send_tick = use_signal(|| 0u64);
     let mut response_tab = use_signal(|| "body".to_string());
 
-    use_pipeline_input("api-tester", body);
+
 
     use_effect(move || {
         let tick = *send_tick.read();
@@ -161,9 +161,6 @@ pub fn ApiTesterContent() -> Element {
                             on_edit: Some(EventHandler::new(move |v: String| body.set(v))),
                             placeholder: "JSON body (optional)...",
                             language: crate::shell::code_editor::CodeLanguage::Json,
-                            header_actions: rsx! {
-                                SendToButton { source_tool_id: "api-tester", content: body.read().clone() }
-                            },
                         }
                     }
                 }
@@ -208,7 +205,6 @@ pub fn ApiTesterContent() -> Element {
                                         content: resp_body.clone(),
                                         label: "Download",
                                     }
-                                    SendToButton { source_tool_id: "api-tester", content: resp_body.clone() }
                                 },
                             }
                         },

@@ -1,6 +1,6 @@
 use crate::shell::export::ExportButton;
 use crate::shell::layout::{CodePanel, StandaloneTool, ToolBody, ToolToolbar};
-use crate::shell::pipeline::SendToButton;
+
 use crate::shell::ui::{Button, Select};
 use crate::state::{use_app_state, use_primary_action, ToastKind};
 use dioxus::prelude::*;
@@ -127,7 +127,6 @@ pub fn MockDataGeneratorContent() -> Element {
                         content: output.read().clone(),
                         label: "Download",
                     }
-                    SendToButton { source_tool_id: "mock-data-generator", content: output.read().clone() }
                 },
             }
         }

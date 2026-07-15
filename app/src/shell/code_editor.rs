@@ -196,6 +196,57 @@ fn textarea_by_id(id: &str) -> Option<web_sys::HtmlTextAreaElement> {
     wasm_bindgen::JsCast::dyn_into(el).ok()
 }
 
+/// Forward wheel/touchpad deltas from the overlay textarea to `.zd-code-scroll`.
+/// The textarea sits on top of the highlight layer and browsers often consume
+/// wheel events on it even with `overflow: hidden`, so scrolling must be applied
+/// to the real scroll parent explicitly.
+#[cfg(target_arch = "wasm32")]
+pub(crate) fn forward_wheel_to_code_scroll(textarea_id: &str, delta_x: f64, delta_y: f64) {
+    use wasm_bindgen::JsCast;
+    let Some(doc) = web_sys::window().and_then(|w| w.document()) else {
+        return;
+    };
+    // Prefer the explicit scroll container id used by both editors.
+    if let Some(el) = doc.get_element_by_id(&format!("{textarea_id}-scroll")) {
+        if let Ok(html) = el.dyn_into::<web_sys::HtmlElement>() {
+            html.set_scroll_top(html.scroll_top() + delta_y as i32);
+            html.set_scroll_left(html.scroll_left() + delta_x as i32);
+            return;
+        }
+    }
+    let Some(start) = doc.get_element_by_id(textarea_id) else {
+        return;
+    };
+    let mut current = start.parent_element();
+    while let Some(node) = current {
+        if let Ok(html) = node.clone().dyn_into::<web_sys::HtmlElement>() {
+            if html
+                .class_name()
+                .split_whitespace()
+                .any(|c| c == "zd-code-scroll")
+            {
+                html.set_scroll_top(html.scroll_top() + delta_y as i32);
+                html.set_scroll_left(html.scroll_left() + delta_x as i32);
+                return;
+            }
+        }
+        current = node.parent_element();
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn forward_wheel_to_code_scroll(_textarea_id: &str, _delta_x: f64, _delta_y: f64) {}
+
+pub(crate) fn wheel_delta_pixels(delta: dioxus::html::geometry::WheelDelta) -> (f64, f64) {
+    use dioxus::html::geometry::WheelDelta;
+    match delta {
+        WheelDelta::Pixels(v) => (v.x, v.y),
+        // Approximate a line as the editor's fixed 20px row height.
+        WheelDelta::Lines(v) => (v.x * 20.0, v.y * 20.0),
+        WheelDelta::Pages(v) => (v.x * 600.0, v.y * 600.0),
+    }
+}
+
 #[component]
 pub fn CodeEditor(
     value: String,
@@ -465,6 +516,7 @@ pub fn CodeEditor(
                 class: "zd-code-editor flex flex-1 min-h-0",
                 div {
                     class: "zd-code-scroll flex-1 min-h-0 overflow-auto relative",
+                    id: "{id_str}-scroll",
                     div {
                         class: "flex min-h-full",
                         div {
@@ -525,6 +577,15 @@ pub fn CodeEditor(
                             onclick: move |_| sync_caret(),
                             onkeyup: move |_| sync_caret(),
                             onselect: move |_| sync_caret(),
+                            onwheel: {
+                                let scroll_id = id_str.clone();
+                                move |e: Event<WheelData>| {
+                                    let (dx, dy) = wheel_delta_pixels(e.delta());
+                                    // Stop the textarea from eating the gesture; scroll the real parent.
+                                    e.prevent_default();
+                                    forward_wheel_to_code_scroll(&scroll_id, dx, dy);
+                                }
+                            },
                             onkeydown: move |e: Event<KeyboardData>| {
                                 let ctrl = e.modifiers().ctrl() || e.modifiers().meta();
                                 if ctrl && e.key() == Key::Character("f".into()) {

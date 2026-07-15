@@ -33,7 +33,7 @@ web-sys = { version = "0.3", features = ["Window", "Document", "Element", "DomTo
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 tracing-subscriber = { workspace = true }
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["time"] }
 arboard = "3"
 memmap2 = "0.9"
 anyhow = { workspace = true }

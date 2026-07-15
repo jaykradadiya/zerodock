@@ -45,6 +45,22 @@ impl JsonIndex {
         &data[start..end.min(data.len())]
     }
 
+    pub fn key_slice<'a>(&self, data: &'a [u8], node: &IndexNode) -> Option<&'a [u8]> {
+        let start = node.key_start? as usize;
+        let end = node.key_end? as usize;
+        if start <= end && end <= data.len() {
+            Some(&data[start..end])
+        } else {
+            None
+        }
+    }
+
+    pub fn key_str<'a>(&self, data: &'a [u8], node: &IndexNode) -> Option<&'a str> {
+        let slice = self.key_slice(data, node)?;
+        let text = std::str::from_utf8(slice).ok()?;
+        Some(text.trim_matches('"'))
+    }
+
     pub fn children(&self, parent_id: u32) -> Vec<&IndexNode> {
         self.nodes
             .iter()
@@ -65,7 +81,7 @@ pub fn build_index(data: &[u8]) -> anyhow::Result<Vec<IndexNode>> {
     }
     let mut nodes = Vec::new();
     let mut next_id = 1u32;
-    scan_value(trimmed, 0, trimmed.len(), 0, &mut nodes, &mut next_id)?;
+    scan_value(trimmed, 0, trimmed.len(), 0, &mut nodes, &mut next_id, None)?;
     Ok(nodes)
 }
 
@@ -76,6 +92,7 @@ fn scan_value(
     parent_id: u32,
     nodes: &mut Vec<IndexNode>,
     next_id: &mut u32,
+    key_range: Option<(usize, usize)>,
 ) -> anyhow::Result<u32> {
     let slice = &text[start..end];
     let trimmed = slice.trim();
@@ -108,8 +125,8 @@ fn scan_value(
         id,
         parent_id,
         node_type,
-        key_start: None,
-        key_end: None,
+        key_start: key_range.map(|(s, _)| s as u64),
+        key_end: key_range.map(|(_, e)| e as u64),
         value_start: abs_start as u64,
         value_end: abs_end as u64,
         child_count,
@@ -128,19 +145,7 @@ fn scan_object_children(
     let inner = &text[start + 1..end - 1];
     let mut count = 0u32;
     for (key_start, key_end, val_start, val_end) in parse_object_entries(inner, start + 1) {
-        let key_id = *next_id;
-        *next_id += 1;
-        nodes.push(IndexNode {
-            id: key_id,
-            parent_id,
-            node_type: NodeType::String,
-            key_start: Some(key_start as u64),
-            key_end: Some(key_end as u64),
-            value_start: key_start as u64,
-            value_end: key_end as u64,
-            child_count: 0,
-        });
-        scan_value(text, val_start, val_end, parent_id, nodes, next_id)?;
+        scan_value(text, val_start, val_end, parent_id, nodes, next_id, Some((key_start, key_end)))?;
         count += 1;
     }
     Ok(count)
@@ -157,7 +162,7 @@ fn scan_array_children(
     let inner = &text[start + 1..end - 1];
     let mut count = 0u32;
     for (s, e) in parse_array_elements(inner, start + 1) {
-        scan_value(text, s, e, parent_id, nodes, next_id)?;
+        scan_value(text, s, e, parent_id, nodes, next_id, None)?;
         count += 1;
     }
     Ok(count)

@@ -2,13 +2,13 @@ use crate::shell::drag_drop::DragDropZone;
 use crate::shell::export::ExportButton;
 use crate::shell::layout::{CodePanel, HubToolHeader, ModeToggle, ToolBody, ToolPage, ToolToolbar, ToolWorkspace};
 use crate::shell::code_editor::CodeLanguage;
-use crate::shell::ui::{Button, ButtonVariant, SegmentedControl, TabGroup};
+use crate::shell::ui::{Button, ButtonVariant, CopyButton, SegmentedControl, TabGroup};
 use crate::shell::virtual_code_editor::VirtualCodeEditor;
 use crate::state::{use_app_state, use_primary_action, ToastKind};
 use dioxus::prelude::*;
 use ropey::Rope;
 use std::collections::HashSet;
-use zerodock_core::{convert_json_to_types, format_json_opts, jmespath_query, json_to_yaml, repair_json, yaml_to_json, TargetLang};
+use zerodock_core::{convert_json_to_types, diff_lines, diff_json, format_json_opts, jmespath_query, json_to_yaml, repair_json, yaml_to_json, DiffLineKind, JsonChange, JsonChangeKind, TargetLang};
 use zerodock_indexer::JsonIndex;
 use zerodock_platform::{HttpRequest, PlatformServices};
 
@@ -665,7 +665,33 @@ pub fn JsonHub(initial_panel: Option<String>) -> Element {
                             }
                         } else if *view_mode.read() == "diff" {
                             DiffViewPanel {
-                                original_content: get_active_content(),
+                                tabs: tabs,
+                                active_tab_id: active_tab_id,
+                                on_update_tab: EventHandler::new({
+                                    let mut set_active_raw = set_active_content_raw.clone();
+                                    move |(id, new_content): (String, String)| {
+                                        let is_active = id == *active_tab_id.peek();
+                                        tabs.write().iter_mut().for_each(|t| {
+                                            if t.id == id {
+                                                t.content = new_content.clone();
+                                                t.is_modified = true;
+                                            }
+                                        });
+                                        if is_active {
+                                            set_active_raw(new_content);
+                                        }
+                                    }
+                                }),
+                                on_add_tab: EventHandler::new(move |initial_name: String| {
+                                    let new_id = format!("tab_{}", tabs.read().len() + 1);
+                                    let name = if initial_name.is_empty() { format!("Untitled {}", tabs.read().len() + 1) } else { initial_name };
+                                    tabs.write().push(FileTab {
+                                        id: new_id.clone(),
+                                        name,
+                                        content: "{\n  \n}".to_string(),
+                                        is_modified: false,
+                                    });
+                                }),
                             }
                         } else if *panel.read() == "yaml" {
                             YamlPanel {
@@ -784,12 +810,239 @@ struct TreeRow {
     has_children: bool,
 }
 
+fn matches_tree_filter(val: &serde_json::Value, path: &str, query: &str) -> bool {
+    if query.is_empty() {
+        return true;
+    }
+    let q = query.to_lowercase();
+    if path.to_lowercase().contains(&q) {
+        return true;
+    }
+    match val {
+        serde_json::Value::Object(m) => {
+            m.iter().any(|(k, v)| k.to_lowercase().contains(&q) || matches_tree_filter(v, &format!("{path}.{k}"), query))
+        }
+        serde_json::Value::Array(a) => {
+            a.iter().enumerate().any(|(i, v)| matches_tree_filter(v, &format!("{path}[{i}]"), query))
+        }
+        serde_json::Value::String(s) => s.to_lowercase().contains(&q),
+        serde_json::Value::Number(n) => n.to_string().contains(&q),
+        serde_json::Value::Bool(b) => b.to_string().contains(&q),
+        serde_json::Value::Null => "null".contains(&q),
+    }
+}
+
+fn render_single_tree_node(
+    val: &serde_json::Value,
+    path: String,
+    mut expanded_paths: Signal<HashSet<String>>,
+    filter_text: Signal<String>,
+) -> Element {
+    if !filter_text.read().is_empty() && !matches_tree_filter(val, &path, &filter_text.read()) {
+        return rsx! {};
+    }
+
+    let is_expanded = expanded_paths.read().contains(&path);
+    let key_label = if path == "$" {
+        "root".to_string()
+    } else if let Some(last_dot) = path.rfind('.') {
+        path[last_dot + 1..].to_string()
+    } else if let Some(last_bracket) = path.rfind('[') {
+        path[last_bracket..].to_string()
+    } else {
+        path.clone()
+    };
+
+    let is_array_idx = (path.rfind('[').is_some() && !path.ends_with(']')) || (key_label.starts_with('[') && key_label.ends_with(']'));
+
+    match val {
+        serde_json::Value::Object(map) => {
+            let mut keys: Vec<_> = map.keys().collect();
+            keys.sort();
+            rsx! {
+                div { class: "flex flex-col font-mono text-xs select-text",
+                    div {
+                        class: "flex items-center justify-between py-1 px-2 hover:bg-[var(--zd-surface-hover)] transition-colors cursor-pointer rounded",
+                        onclick: move |_| {
+                            let mut exp = expanded_paths.write();
+                            if exp.contains(&path) {
+                                exp.remove(&path);
+                            } else {
+                                exp.insert(path.clone());
+                            }
+                        },
+                        div { class: "flex items-center gap-1.5 min-w-0 truncate pr-2",
+                            span { class: "w-4 text-center text-[var(--zd-text-muted)] font-bold shrink-0 select-none",
+                                if is_expanded { "▼" } else { "▶" }
+                            }
+                            if key_label == "root" {
+                                span { class: "font-bold text-[var(--zd-accent)] shrink-0", "root:" }
+                            } else if is_array_idx {
+                                span { class: "font-semibold text-[var(--zd-primary)] shrink-0", "{key_label}:" }
+                            } else {
+                                span { class: "font-semibold text-[var(--zd-primary)] shrink-0", "\"{key_label}\":" }
+                            }
+                            span { class: "text-[var(--zd-text-muted)] text-[11px] opacity-75 shrink-0 select-none italic", "{{...}} ({map.len()} keys)" }
+                        }
+                    }
+                    if is_expanded {
+                        div { class: "pl-4 border-l border-[var(--zd-border)]/40 ml-2 flex flex-col",
+                            for key in keys {
+                                {
+                                    let next_path = if path == "$" { format!("$.{key}") } else { format!("{path}.{key}") };
+                                    if let Some(child_val) = map.get(key) {
+                                        render_single_tree_node(child_val, next_path, expanded_paths, filter_text)
+                                    } else {
+                                        rsx! {}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        serde_json::Value::Array(arr) => {
+            rsx! {
+                div { class: "flex flex-col font-mono text-xs select-text",
+                    div {
+                        class: "flex items-center justify-between py-1 px-2 hover:bg-[var(--zd-surface-hover)] transition-colors cursor-pointer rounded",
+                        onclick: move |_| {
+                            let mut exp = expanded_paths.write();
+                            if exp.contains(&path) {
+                                exp.remove(&path);
+                            } else {
+                                exp.insert(path.clone());
+                            }
+                        },
+                        div { class: "flex items-center gap-1.5 min-w-0 truncate pr-2",
+                            span { class: "w-4 text-center text-[var(--zd-text-muted)] font-bold shrink-0 select-none",
+                                if is_expanded { "▼" } else { "▶" }
+                            }
+                            if key_label == "root" {
+                                span { class: "font-bold text-[var(--zd-accent)] shrink-0", "root:" }
+                            } else if is_array_idx {
+                                span { class: "font-semibold text-[var(--zd-primary)] shrink-0", "{key_label}:" }
+                            } else {
+                                span { class: "font-semibold text-[var(--zd-primary)] shrink-0", "\"{key_label}\":" }
+                            }
+                            span { class: "text-[var(--zd-text-muted)] text-[11px] opacity-75 shrink-0 select-none italic", "[...] ({arr.len()} items)" }
+                        }
+                    }
+                    if is_expanded {
+                        div { class: "pl-4 border-l border-[var(--zd-border)]/40 ml-2 flex flex-col",
+                            for (i, child_val) in arr.iter().enumerate() {
+                                {
+                                    let next_path = format!("{path}[{i}]");
+                                    render_single_tree_node(child_val, next_path, expanded_paths, filter_text)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        _ => {
+            rsx! {
+                div {
+                    class: "flex items-center justify-between py-1 px-2 hover:bg-[var(--zd-surface-hover)] transition-colors rounded font-mono text-xs",
+                    div { class: "flex items-center gap-1.5 min-w-0 truncate pr-2",
+                        span { class: "w-4 shrink-0 select-none", " " }
+                        if key_label == "root" {
+                            span { class: "font-bold text-[var(--zd-accent)] shrink-0", "root:" }
+                        } else if is_array_idx {
+                            span { class: "font-semibold text-[var(--zd-primary)] shrink-0", "{key_label}:" }
+                        } else {
+                            span { class: "font-semibold text-[var(--zd-primary)] shrink-0", "\"{key_label}\":" }
+                        }
+                        span {
+                            class: match val {
+                                serde_json::Value::String(_) => "text-[var(--zd-syntax-string)] font-medium truncate",
+                                serde_json::Value::Number(_) => "text-[var(--zd-syntax-number)] font-medium",
+                                serde_json::Value::Bool(_) => "text-[var(--zd-syntax-bool)] font-medium",
+                                serde_json::Value::Null => "text-[var(--zd-syntax-null)] italic",
+                                _ => "",
+                            },
+                            "{format_val_short(val)}"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[component]
+fn SingleJsonTreeView(val: serde_json::Value) -> Element {
+    let mut expanded_paths = use_signal(|| {
+        let mut set = HashSet::new();
+        set.insert("$".to_string());
+        set
+    });
+    let mut filter_text = use_signal(String::new);
+
+    rsx! {
+        div { class: "zd-tool-fill flex flex-col min-h-0 bg-[var(--zd-bg)]",
+            // Toolbar
+            div { class: "flex flex-wrap items-center justify-between px-4 py-2 bg-[var(--zd-surface-raised)] border-b border-[var(--zd-border)] gap-3 text-xs font-mono shrink-0 shadow-2xs",
+                div { class: "flex items-center gap-2",
+                    button {
+                        class: "px-2.5 py-1 rounded bg-[var(--zd-surface)] border border-[var(--zd-border)] hover:bg-[var(--zd-surface-hover)] text-[var(--zd-text-primary)] font-semibold transition-colors flex items-center gap-1.5 shadow-2xs",
+                        title: "Expand all branches",
+                        onclick: move |_| {
+                            let mut exp = expanded_paths.write();
+                            collect_all_tree_paths(&val, "$", &mut exp);
+                        },
+                        "┼ Expand All"
+                    }
+                    button {
+                        class: "px-2.5 py-1 rounded bg-[var(--zd-surface)] border border-[var(--zd-border)] hover:bg-[var(--zd-surface-hover)] text-[var(--zd-text-primary)] font-semibold transition-colors flex items-center gap-1.5 shadow-2xs",
+                        title: "Collapse all branches to root",
+                        onclick: move |_| {
+                            let mut exp = expanded_paths.write();
+                            exp.clear();
+                            exp.insert("$".to_string());
+                        },
+                        "─ Collapse All"
+                    }
+                }
+                div { class: "flex items-center gap-2 flex-1 max-w-md",
+                    input {
+                        class: "w-full px-3 py-1 rounded border border-[var(--zd-border)] bg-[var(--zd-surface)] text-[var(--zd-text-primary)] placeholder-[var(--zd-text-muted)] focus:outline-none focus:border-[var(--zd-primary)] text-xs font-mono transition-colors",
+                        placeholder: "🔍 Filter keys or values in tree...",
+                        value: "{filter_text.read()}",
+                        oninput: move |e| filter_text.set(e.value())
+                    }
+                    if !filter_text.read().is_empty() {
+                        button {
+                            class: "px-2 py-1 rounded text-xs text-[var(--zd-text-muted)] hover:text-[var(--zd-text-primary)] font-bold",
+                            onclick: move |_| filter_text.set(String::new()),
+                            "✕"
+                        }
+                    }
+                }
+            }
+            // Tree content
+            div { class: "overflow-y-auto custom-scrollbar flex-1 min-h-0 p-3",
+                {render_single_tree_node(&val, "$".to_string(), expanded_paths, filter_text)}
+            }
+        }
+    }
+}
+
 #[component]
 fn VirtualTreeView(content: String, index: Option<JsonIndex>) -> Element {
+    if let Ok(val) = serde_json::from_str::<serde_json::Value>(&content) {
+        return rsx! {
+            SingleJsonTreeView { val }
+        };
+    }
+
     let mut scroll_top = use_signal(|| 0usize);
     let mut expanded_nodes = use_signal(|| {
         let mut set = HashSet::new();
         set.insert(0);
+        set.insert(1);
         set
     });
 
@@ -895,15 +1148,20 @@ fn flatten_tree_interactive(
         return rows;
     }
     for node in index.children(parent_id) {
-        let slice = std::str::from_utf8(index.slice(content.as_bytes(), node)).unwrap_or("?");
-        let (key_opt, val_preview) = if let Some(colon_idx) = slice.find(':') {
-            let k = slice[..colon_idx].trim().trim_matches('"').to_string();
-            let v = slice[colon_idx + 1..].trim();
-            let preview = if v.len() > 80 { format!("{}...", &v[..80]) } else { v.to_string() };
-            (Some(k), preview)
-        } else {
-            let preview = if slice.len() > 80 { format!("{}...", &slice[..80]) } else { slice.to_string() };
-            (None, preview)
+        let val_slice = std::str::from_utf8(index.slice(content.as_bytes(), node)).unwrap_or("?");
+        let key_opt = index.key_str(content.as_bytes(), node).map(|k| k.to_string());
+
+        let val_preview = match node.node_type {
+            zerodock_indexer::NodeType::Object => format!("{{...}} ({} keys)", node.child_count),
+            zerodock_indexer::NodeType::Array => format!("[...] ({} items)", node.child_count),
+            _ => {
+                let trimmed = val_slice.trim();
+                if trimmed.len() > 80 {
+                    format!("{}...", &trimmed[..80])
+                } else {
+                    trimmed.to_string()
+                }
+            }
         };
 
         let has_children = node.child_count > 0;
@@ -979,7 +1237,7 @@ fn VirtualTableView(content: String) -> Element {
                     }
                 }
                 table { class: "w-full text-left border-collapse font-mono text-xs",
-                    thead { class: "bg-[var(--zd-surface-raised)] sticky top-0 z-10 border-b-2 border-[var(--zd-border)] select-none",
+                    thead { class: "bg-[var(--zd-surface-raised)] sticky top-0 z-10 border-b border-[var(--zd-border)] select-none",
                         tr {
                             for header in headers.iter() {
                                 {
@@ -1038,7 +1296,7 @@ fn VirtualTableView(content: String) -> Element {
                         for (r_idx, row) in rows.iter().enumerate() {
                             tr {
                                 key: "{r_idx}",
-                                class: "border-b border-[var(--zd-border)] hover:bg-[var(--zd-surface-raised)]/50 transition-colors duration-150",
+                                class: "border-b border-[var(--zd-border)] hover:bg-[var(--zd-surface-hover)] transition-colors duration-150",
                                 for (c_idx, cell) in row.iter().enumerate() {
                                     {
                                         let is_null = cell == "null" || cell.is_empty();
@@ -1244,73 +1502,860 @@ fn PathPanel(content: String) -> Element {
     }
 }
 
-#[component]
-fn DiffViewPanel(original_content: String) -> Element {
-    let mut modified_content = use_signal(|| original_content.clone());
-    let mut show_diff = use_signal(|| true);
-
-    // Compute directly so the diff refreshes when `original_content` changes
-    // (a `use_memo` over an owned prop clone would freeze on the first value).
-    let diff_lines = {
-        let orig = original_content.lines().collect::<Vec<_>>();
-        let modif = modified_content.read().lines().map(|s| s.to_string()).collect::<Vec<_>>();
-        let mut out = Vec::new();
-
-        let max_len = orig.len().max(modif.len());
-        for i in 0..max_len {
-            let o = orig.get(i).copied().unwrap_or("");
-            let m = modif.get(i).map(|s| s.as_str()).unwrap_or("");
-            if o == m {
-                out.push(("same", o.to_string()));
-            } else {
-                if !o.is_empty() {
-                    out.push(("removed", format!("- {o}")));
+fn get_ancestor_paths(path: &str) -> Vec<String> {
+    let mut ancestors = Vec::new();
+    ancestors.push("$".to_string());
+    if path == "$" { return ancestors; }
+    let trimmed = path.strip_prefix("$.").unwrap_or(path.strip_prefix('$').unwrap_or(path));
+    let mut current = "$".to_string();
+    let mut token = String::new();
+    for ch in trimmed.chars() {
+        if ch == '.' || ch == '[' {
+            if !token.is_empty() {
+                if current == "$" {
+                    current = format!("$.{token}");
+                } else {
+                    current = format!("{current}.{token}");
                 }
-                if !m.is_empty() {
-                    out.push(("added", format!("+ {m}")));
-                }
+                ancestors.push(current.clone());
+                token.clear();
+            }
+            if ch == '[' {
+                token.push(ch);
+            }
+        } else if ch == ']' {
+            token.push(ch);
+            current = format!("{current}{token}");
+            ancestors.push(current.clone());
+            token.clear();
+        } else {
+            token.push(ch);
+        }
+    }
+    ancestors
+}
+
+fn collect_all_tree_paths(val: &serde_json::Value, path: &str, out: &mut HashSet<String>) {
+    out.insert(path.to_string());
+    match val {
+        serde_json::Value::Object(map) => {
+            for (key, child) in map {
+                let next_path = if path == "$" { format!("$.{key}") } else { format!("{path}.{key}") };
+                collect_all_tree_paths(child, &next_path, out);
             }
         }
-        out
+        serde_json::Value::Array(arr) => {
+            for (i, child) in arr.iter().enumerate() {
+                let next_path = format!("{path}[{i}]");
+                collect_all_tree_paths(child, &next_path, out);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn format_val_short(v: &serde_json::Value) -> String {
+    match v {
+        serde_json::Value::String(s) => format!("\"{s}\""),
+        serde_json::Value::Null => "null".to_string(),
+        serde_json::Value::Bool(b) => b.to_string(),
+        serde_json::Value::Number(n) => n.to_string(),
+        serde_json::Value::Array(a) => format!("[Array ({})]", a.len()),
+        serde_json::Value::Object(o) => format!("[Object ({})]", o.len()),
+    }
+}
+
+#[derive(Clone, PartialEq)]
+struct AlignedTreeNode {
+    path: String,
+    depth: usize,
+    key_label: String,
+    left_val: Option<serde_json::Value>,
+    right_val: Option<serde_json::Value>,
+    status: AlignedNodeStatus,
+    has_children: bool,
+    is_expanded: bool,
+}
+
+#[derive(Clone, Copy, PartialEq)]
+enum AlignedNodeStatus {
+    Equal,
+    Added,
+    Deleted,
+    Modified,
+}
+
+fn collect_aligned_tree_nodes(
+    l_opt: Option<&serde_json::Value>,
+    r_opt: Option<&serde_json::Value>,
+    path: &str,
+    depth: usize,
+    changes: &[JsonChange],
+    expanded_paths: &HashSet<String>,
+    only_show_changes: bool,
+    out: &mut Vec<AlignedTreeNode>,
+) -> bool {
+    let direct_change = changes.iter().find(|c| c.path == path);
+    let has_descendant_changes = changes.iter().any(|c| {
+        c.path.starts_with(&format!("{path}.")) || c.path.starts_with(&format!("{path}["))
+    });
+
+    let status = match (l_opt, r_opt) {
+        (Some(_), None) => AlignedNodeStatus::Deleted,
+        (None, Some(_)) => AlignedNodeStatus::Added,
+        (Some(lv), Some(rv)) => {
+            if let Some(c) = direct_change {
+                match c.kind {
+                    JsonChangeKind::Added => AlignedNodeStatus::Added,
+                    JsonChangeKind::Deleted => AlignedNodeStatus::Deleted,
+                    JsonChangeKind::Modified => AlignedNodeStatus::Modified,
+                }
+            } else if lv != rv {
+                AlignedNodeStatus::Modified
+            } else {
+                AlignedNodeStatus::Equal
+            }
+        }
+        (None, None) => AlignedNodeStatus::Equal,
+    };
+
+    let has_any_change = status != AlignedNodeStatus::Equal || has_descendant_changes;
+    if only_show_changes && !has_any_change && path != "$" {
+        return false;
+    }
+
+    let is_expanded = expanded_paths.contains(path);
+    let key_label = if path == "$" {
+        "root".to_string()
+    } else if let Some(last_dot) = path.rfind('.') {
+        path[last_dot + 1..].to_string()
+    } else if let Some(last_bracket) = path.rfind('[') {
+        path[last_bracket..].to_string()
+    } else {
+        path.to_string()
+    };
+
+    let has_children = match (l_opt, r_opt) {
+        (Some(serde_json::Value::Object(m)), _) | (_, Some(serde_json::Value::Object(m))) => !m.is_empty(),
+        (Some(serde_json::Value::Array(a)), _) | (_, Some(serde_json::Value::Array(a))) => !a.is_empty(),
+        _ => false,
+    };
+
+    out.push(AlignedTreeNode {
+        path: path.to_string(),
+        depth,
+        key_label,
+        left_val: l_opt.cloned(),
+        right_val: r_opt.cloned(),
+        status,
+        has_children,
+        is_expanded,
+    });
+
+    if has_children && is_expanded {
+        let mut keys_set = std::collections::BTreeSet::new();
+        if let Some(serde_json::Value::Object(m)) = l_opt {
+            for k in m.keys() { keys_set.insert(k.clone()); }
+        }
+        if let Some(serde_json::Value::Object(m)) = r_opt {
+            for k in m.keys() { keys_set.insert(k.clone()); }
+        }
+        if !keys_set.is_empty() {
+            for k in keys_set {
+                let next_path = if path == "$" { format!("$.{k}") } else { format!("{path}.{k}") };
+                let lv = l_opt.and_then(|v| v.as_object()).and_then(|m| m.get(&k));
+                let rv = r_opt.and_then(|v| v.as_object()).and_then(|m| m.get(&k));
+                collect_aligned_tree_nodes(lv, rv, &next_path, depth + 1, changes, expanded_paths, only_show_changes, out);
+            }
+        } else {
+            let l_arr = l_opt.and_then(|v| v.as_array());
+            let r_arr = r_opt.and_then(|v| v.as_array());
+            let aligned = match (l_arr, r_arr) {
+                (Some(la), Some(ra)) => zerodock_core::align_arrays(la, ra),
+                (Some(la), None) => (0..la.len()).map(|i| (Some(i), None)).collect(),
+                (None, Some(ra)) => (0..ra.len()).map(|j| (None, Some(j))).collect(),
+                (None, None) => Vec::new(),
+            };
+            for (idx, (opt_l, opt_r)) in aligned.into_iter().enumerate() {
+                let next_path = format!("{path}[{idx}]");
+                let lv = opt_l.and_then(|i| l_arr.map(|a| &a[i]));
+                let rv = opt_r.and_then(|j| r_arr.map(|a| &a[j]));
+                collect_aligned_tree_nodes(lv, rv, &next_path, depth + 1, changes, expanded_paths, only_show_changes, out);
+            }
+        }
+    }
+
+    has_any_change
+}
+
+fn render_aligned_tree_cell(
+    val_opt: &Option<serde_json::Value>,
+    node: &AlignedTreeNode,
+    side: &'static str,
+    mut expanded_paths: Signal<HashSet<String>>,
+) -> Element {
+    let Some(val) = val_opt else {
+        return rsx! {
+            div { class: "py-1 px-3 flex items-center justify-center bg-[var(--zd-surface-sunken)] border border-dashed border-[var(--zd-border)] rounded my-0.5 mx-2 text-[11px] italic text-[var(--zd-text-muted)] select-none h-full min-h-[28px]",
+                "(empty)"
+            }
+        };
+    };
+
+    let is_expanded = node.is_expanded;
+    let has_children = node.has_children;
+    let path_clone = node.path.clone();
+    let row_bg = match (node.status, side) {
+        (AlignedNodeStatus::Added, "right") => "bg-[var(--zd-accent)]/15 border-l-4 border-[var(--zd-accent)]",
+        (AlignedNodeStatus::Deleted, "left") => "bg-[var(--zd-error)]/15 border-l-4 border-[var(--zd-error)]",
+        (AlignedNodeStatus::Modified, _) => "bg-[var(--zd-primary)]/15 border-l-4 border-[var(--zd-primary)]",
+        _ => "transparent",
+    };
+    let badge = match (node.status, side) {
+        (AlignedNodeStatus::Added, "right") => Some(("+ added", "bg-[var(--zd-accent)]/20 text-[var(--zd-accent)] border border-[var(--zd-accent)]/30")),
+        (AlignedNodeStatus::Deleted, "left") => Some(("- removed", "bg-[var(--zd-error)]/20 text-[var(--zd-error)] border border-[var(--zd-error)]/30")),
+        (AlignedNodeStatus::Modified, _) => Some(("~ changed", "bg-[var(--zd-primary)]/20 text-[var(--zd-primary)] border border-[var(--zd-primary)]/30")),
+        _ => None,
     };
 
     rsx! {
-        div { class: "zd-tool-fill flex flex-col min-h-0",
-            div { class: "px-3 py-2 border-b border-[var(--zd-border)] bg-[var(--zd-surface-raised)] flex items-center justify-between shrink-0",
-                span { class: "text-xs font-mono text-[var(--zd-text-secondary)]", "Side-by-Side Diff Comparison" }
-                Button {
-                    variant: ButtonVariant::Ghost,
-                    class: "px-2 py-1 text-xs",
-                    onclick: move |_| {
-                        let next = !*show_diff.read();
-                        show_diff.set(next);
-                    },
-                    if *show_diff.read() { "Edit Modified JSON" } else { "Show Line Diffs" }
+        div {
+            style: "padding-left: {node.depth * 16 + 12}px;",
+            class: "flex items-center justify-between py-1 px-2.5 h-full min-h-[28px] transition-colors font-mono text-xs select-text {row_bg}",
+            onclick: move |_| {
+                if has_children {
+                    let mut exp = expanded_paths.write();
+                    if exp.contains(&path_clone) {
+                        exp.remove(&path_clone);
+                    } else {
+                        exp.insert(path_clone.clone());
+                    }
                 }
-            }
-            if *show_diff.read() {
-                div { class: "zd-tool-fill overflow-auto custom-scrollbar font-mono text-xs p-4 bg-[var(--zd-bg)]",
-                    for (kind, line) in diff_lines.iter() {
+            },
+            div { class: "flex items-center gap-1.5 min-w-0 truncate pr-2",
+                if has_children {
+                    span { class: "w-4 text-center text-[var(--zd-text-muted)] font-bold shrink-0 select-none cursor-pointer",
+                        if is_expanded { "▼" } else { "▶" }
+                    }
+                } else {
+                    span { class: "w-4 shrink-0 select-none", " " }
+                }
+                {
+                    let is_array_idx = (node.path.rfind('[').is_some() && !node.path.ends_with(']')) || (node.key_label.starts_with('[') && node.key_label.ends_with(']'));
+                    if node.key_label == "root" {
+                        rsx! { span { class: "font-bold text-[var(--zd-accent)] shrink-0", "root:" } }
+                    } else if is_array_idx {
+                        rsx! { span { class: "font-semibold text-[var(--zd-primary)] shrink-0", "{node.key_label}:" } }
+                    } else {
+                        rsx! { span { class: "font-semibold text-[var(--zd-primary)] shrink-0", "\"{node.key_label}\":" } }
+                    }
+                }
+                if has_children {
+                    span { class: "text-[var(--zd-text-muted)] text-[11px] opacity-75 shrink-0 select-none italic",
                         {
-                            let row_class = match *kind {
-                                "added" => "bg-emerald-950/40 text-emerald-300 border-l-2 border-emerald-500 pl-2 py-0.5",
-                                "removed" => "bg-rose-950/40 text-rose-300 border-l-2 border-rose-500 pl-2 py-0.5",
-                                _ => "text-[var(--zd-text-muted)] pl-2.5 py-0.5",
-                            };
-                            rsx! {
-                                div { class: "{row_class}", "{line}" }
+                            if let serde_json::Value::Object(m) = val {
+                                format!("{{...}} ({})", m.len())
+                            } else if let serde_json::Value::Array(a) = val {
+                                format!("[...] ({})", a.len())
+                            } else {
+                                "".to_string()
                             }
                         }
                     }
+                } else {
+                    span {
+                        class: match val {
+                            serde_json::Value::String(_) => "text-[var(--zd-syntax-string)] font-medium truncate",
+                            serde_json::Value::Number(_) => "text-[var(--zd-syntax-number)] font-medium",
+                            serde_json::Value::Bool(_) => "text-[var(--zd-syntax-bool)] font-medium",
+                            serde_json::Value::Null => "text-[var(--zd-syntax-null)] italic",
+                            _ => "",
+                        },
+                        "{format_val_short(val)}"
+                    }
+                }
+            }
+            if let Some((txt, bclass)) = badge {
+                span { class: "px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wider shrink-0 select-none {bclass}", "{txt}" }
+            }
+        }
+    }
+}
+
+#[derive(Clone, Copy, PartialEq)]
+enum JsonDiffMode {
+    TreeDiff,
+    CodeDiff,
+}
+
+#[derive(Clone, PartialEq)]
+enum DiffTarget {
+    OtherTab(String),
+    CustomText,
+}
+
+#[component]
+fn DiffViewPanel(
+    tabs: Signal<Vec<FileTab>>,
+    active_tab_id: Signal<String>,
+    on_update_tab: EventHandler<(String, String)>,
+    on_add_tab: EventHandler<String>,
+) -> Element {
+    let mut custom_modified_content = use_signal(|| "{\n  \n}".to_string());
+    let mut selected_target = use_signal(|| {
+        let active = active_tab_id.read();
+        if let Some(first_other) = tabs.read().iter().find(|t| t.id != *active) {
+            DiffTarget::OtherTab(first_other.id.clone())
+        } else {
+            DiffTarget::CustomText
+        }
+    });
+    let mut diff_mode = use_signal(|| JsonDiffMode::TreeDiff);
+    let mut expanded_paths = use_signal(|| {
+        let mut s = HashSet::new();
+        s.insert("$".to_string());
+        s
+    });
+    let mut active_diff_idx = use_signal(|| 0usize);
+    let mut only_show_changes = use_signal(|| false);
+
+    // Auto-scroll to active diff row when navigating
+    use_effect(move || {
+        let _idx = *active_diff_idx.read();
+        let js = r#"
+            setTimeout(() => {
+                let el = document.getElementById("active-diff-row");
+                if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); }
+            }, 50);
+        "#;
+        let _ = dioxus::document::eval(js);
+    });
+
+    // Auto-correct selected_target when tabs change
+    use_effect(move || {
+        let active = active_tab_id.read().clone();
+        let current_tabs = tabs.read();
+        let target = selected_target.peek().clone();
+        match target {
+            DiffTarget::OtherTab(ref id) => {
+                if *id == active || !current_tabs.iter().any(|t| t.id == *id) {
+                    if let Some(first_other) = current_tabs.iter().find(|t| t.id != active) {
+                        selected_target.set(DiffTarget::OtherTab(first_other.id.clone()));
+                    } else {
+                        selected_target.set(DiffTarget::CustomText);
+                    }
+                }
+            }
+            DiffTarget::CustomText => {}
+        }
+    });
+
+    // ─── Resolve content from tabs ─────────────────────────────────────
+    let (left_id, left_name, left_content) = {
+        let active = active_tab_id.read().clone();
+        if let Some(t) = tabs.read().iter().find(|t| t.id == active) {
+            (t.id.clone(), t.name.clone(), t.content.clone())
+        } else {
+            ("".to_string(), "Base".to_string(), "".to_string())
+        }
+    };
+
+    let (right_id_opt, right_name, right_content) = match selected_target.read().clone() {
+        DiffTarget::OtherTab(ref id) => {
+            if let Some(t) = tabs.read().iter().find(|t| t.id == *id && t.id != *active_tab_id.read()) {
+                (Some(t.id.clone()), t.name.clone(), t.content.clone())
+            } else if let Some(first_other) = tabs.read().iter().find(|t| t.id != *active_tab_id.read()) {
+                (Some(first_other.id.clone()), first_other.name.clone(), first_other.content.clone())
+            } else {
+                (None, "Custom JSON".to_string(), custom_modified_content.read().clone())
+            }
+        }
+        DiffTarget::CustomText => (None, "Custom JSON".to_string(), custom_modified_content.read().clone()),
+    };
+
+    let other_tabs: Vec<(String, String)> = tabs.read()
+        .iter()
+        .filter(|t| t.id != *active_tab_id.read())
+        .map(|t| (t.id.clone(), t.name.clone()))
+        .collect();
+
+    // ─── Semantic diff (for counts + tree data) ─────────────────────────
+    let semantic_result = diff_json(&left_content, &right_content).map_err(|e| e.to_string());
+
+    let (s_add, s_del, s_mod, changes_for_nav) = match semantic_result.as_ref() {
+        Ok(changes) => {
+            let a = changes.iter().filter(|c| c.kind == JsonChangeKind::Added).count();
+            let d = changes.iter().filter(|c| c.kind == JsonChangeKind::Deleted).count();
+            let m = changes.iter().filter(|c| c.kind == JsonChangeKind::Modified).count();
+            (a, d, m, changes.clone())
+        }
+        Err(_) => (0, 0, 0, vec![]),
+    };
+    let total_diffs = s_add + s_del + s_mod;
+
+    rsx! {
+        div { class: "zd-tool-fill flex flex-col min-h-0 bg-[var(--zd-bg)]",
+
+            // ═══════════════════════════════════════════════════════════════
+            // HEADER — Target selector + Stats + Mode toggle
+            // ═══════════════════════════════════════════════════════════════
+            div {
+                class: "flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 border-b border-[var(--zd-border)] bg-[var(--zd-surface)] shrink-0 shadow-sm",
+
+                // Left group: Base ⇄ Target selectors
+                div { class: "flex items-center gap-2 flex-wrap text-xs font-mono",
+
+                    // Base label
+                    div {
+                        class: "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] shadow-sm max-w-[180px]",
+                        span { class: "text-[9px] font-black uppercase tracking-widest text-[var(--zd-error)] shrink-0", "BASE" }
+                        span { class: "text-[var(--zd-border)] shrink-0 opacity-50", "│" }
+                        span { class: "truncate font-semibold text-[var(--zd-text-primary)]", title: "{left_name}", "{left_name}" }
+                    }
+
+                    span { class: "text-[var(--zd-text-muted)] font-bold text-sm select-none", "⇄" }
+
+                    // Target selector dropdown
+                    div {
+                        class: "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] focus-within:border-[var(--zd-primary)] transition-colors shadow-sm max-w-[220px]",
+                        span { class: "text-[9px] font-black uppercase tracking-widest text-[var(--zd-accent)] shrink-0", "TARGET" }
+                        span { class: "text-[var(--zd-border)] shrink-0 opacity-50", "│" }
+                        select {
+                            class: "bg-transparent text-[var(--zd-text-primary)] font-semibold focus:outline-none text-xs font-mono cursor-pointer pr-1 min-w-0",
+                            value: match selected_target.read().clone() {
+                                DiffTarget::OtherTab(ref id) => format!("tab:{id}"),
+                                DiffTarget::CustomText => "custom".to_string(),
+                            },
+                            onchange: move |e: Event<FormData>| {
+                                let val = e.value();
+                                if let Some(id) = val.strip_prefix("tab:") {
+                                    selected_target.set(DiffTarget::OtherTab(id.to_string()));
+                                } else {
+                                    selected_target.set(DiffTarget::CustomText);
+                                }
+                            },
+                            for (t_id, t_name) in other_tabs.iter() {
+                                option { key: "{t_id}", value: "tab:{t_id}", "Tab: {t_name}" }
+                            }
+                            option { value: "custom", "Custom JSON" }
+                        }
+                    }
+
+                    if other_tabs.is_empty() {
+                        button {
+                            class: "text-[11px] px-2.5 py-1.5 rounded-lg bg-[var(--zd-primary)]/10 text-[var(--zd-primary)] font-semibold border border-[var(--zd-primary)]/30 hover:bg-[var(--zd-primary)] hover:text-[var(--zd-primary-fg)] transition-all shadow-sm shrink-0",
+                            onclick: move |_| {
+                                on_add_tab.call("Diff Target".to_string());
+                            },
+                            "+ Add Tab"
+                        }
+                    }
+                }
+
+                // Center group: Diff navigation + stats
+                div { class: "flex items-center gap-2",
+
+                    if total_diffs > 0 {
+                        // Prev / Next navigation
+                        div {
+                            class: "flex items-center bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] rounded-lg shadow-sm overflow-hidden text-xs font-mono",
+                            button {
+                                class: "px-2.5 py-1.5 hover:bg-[var(--zd-surface-hover)] text-[var(--zd-text-primary)] font-bold transition-colors border-r border-[var(--zd-border)] disabled:opacity-30",
+                                disabled: total_diffs == 0,
+                                title: "Previous Difference",
+                                onclick: {
+                                    let changes = changes_for_nav.clone();
+                                    move |_| {
+                                        let total = changes.len();
+                                        if total > 0 {
+                                            let curr = *active_diff_idx.read();
+                                            let prev = if curr == 0 { total - 1 } else { curr - 1 };
+                                            active_diff_idx.set(prev);
+                                            let mut exp = expanded_paths.write();
+                                            for anc in get_ancestor_paths(&changes[prev].path) {
+                                                exp.insert(anc);
+                                            }
+                                        }
+                                    }
+                                },
+                                "◀"
+                            }
+                            div { class: "px-3 py-1.5 text-[var(--zd-primary)] font-bold select-none",
+                                if *active_diff_idx.read() < total_diffs {
+                                    "{*active_diff_idx.read() + 1} / {total_diffs}"
+                                } else {
+                                    "1 / {total_diffs}"
+                                }
+                            }
+                            button {
+                                class: "px-2.5 py-1.5 hover:bg-[var(--zd-surface-hover)] text-[var(--zd-text-primary)] font-bold transition-colors border-l border-[var(--zd-border)] disabled:opacity-30",
+                                disabled: total_diffs == 0,
+                                title: "Next Difference",
+                                onclick: {
+                                    let changes = changes_for_nav.clone();
+                                    move |_| {
+                                        let total = changes.len();
+                                        if total > 0 {
+                                            let curr = *active_diff_idx.read();
+                                            let next = if curr + 1 >= total { 0 } else { curr + 1 };
+                                            active_diff_idx.set(next);
+                                            let mut exp = expanded_paths.write();
+                                            for anc in get_ancestor_paths(&changes[next].path) {
+                                                exp.insert(anc);
+                                            }
+                                        }
+                                    }
+                                },
+                                "▶"
+                            }
+                        }
+
+                        // Stat badges
+                        div { class: "flex items-center gap-1.5 text-[11px] font-mono font-bold",
+                            if s_add > 0 {
+                                span { class: "px-2 py-0.5 rounded-md bg-[var(--zd-accent)]/15 text-[var(--zd-accent)] border border-[var(--zd-accent)]/25", "+{s_add}" }
+                            }
+                            if s_del > 0 {
+                                span { class: "px-2 py-0.5 rounded-md bg-[var(--zd-error)]/15 text-[var(--zd-error)] border border-[var(--zd-error)]/25", "-{s_del}" }
+                            }
+                            if s_mod > 0 {
+                                span { class: "px-2 py-0.5 rounded-md bg-[var(--zd-primary)]/15 text-[var(--zd-primary)] border border-[var(--zd-primary)]/25", "~{s_mod}" }
+                            }
+                        }
+                    } else if semantic_result.is_ok() {
+                        span {
+                            class: "flex items-center gap-1.5 text-xs font-mono text-[var(--zd-accent)] font-semibold px-2.5 py-1.5 rounded-lg bg-[var(--zd-accent)]/10 border border-[var(--zd-accent)]/20",
+                            "✓  No Differences"
+                        }
+                    }
+                }
+
+                // Right group: Mode toggle + Normalize action
+                div { class: "flex items-center gap-2 shrink-0",
+
+                    // Normalize shortcut
+                    {
+                        let l_content = left_content.clone();
+                        let l_id = left_id.clone();
+                        let r_content = right_content.clone();
+                        rsx! {
+                            button {
+                                class: "text-xs px-2.5 py-1.5 rounded-lg bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] hover:bg-[var(--zd-surface-hover)] text-[var(--zd-text-secondary)] hover:text-[var(--zd-text-primary)] font-semibold transition-colors shadow-sm font-mono",
+                                title: "Sort keys and reformat both tabs",
+                                onclick: move |_| {
+                                    if let Ok(fmt) = format_json_opts(&l_content, 2, true) {
+                                        if !l_id.is_empty() {
+                                            on_update_tab.call((l_id.clone(), fmt));
+                                        }
+                                    }
+                                    match selected_target.read().clone() {
+                                        DiffTarget::OtherTab(ref r_id) => {
+                                            if let Ok(fmt) = format_json_opts(&r_content, 2, true) {
+                                                on_update_tab.call((r_id.clone(), fmt));
+                                            }
+                                        }
+                                        DiffTarget::CustomText => {
+                                            if let Ok(fmt) = format_json_opts(&r_content, 2, true) {
+                                                custom_modified_content.set(fmt);
+                                            }
+                                        }
+                                    }
+                                },
+                                "⚡ Normalize"
+                            }
+                        }
+                    }
+
+                    // Mode Segment Toggle
+                    div {
+                        class: "flex items-center bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] rounded-lg overflow-hidden text-xs font-mono shadow-sm",
+                        button {
+                            class: if *diff_mode.read() == JsonDiffMode::TreeDiff {
+                                "px-3 py-1.5 bg-[var(--zd-primary)] text-[var(--zd-primary-fg)] font-bold transition-colors"
+                            } else {
+                                "px-3 py-1.5 text-[var(--zd-text-secondary)] hover:bg-[var(--zd-surface-hover)] hover:text-[var(--zd-text-primary)] transition-colors"
+                            },
+                            onclick: move |_| diff_mode.set(JsonDiffMode::TreeDiff),
+                            "Tree Diff"
+                        }
+                        button {
+                            class: if *diff_mode.read() == JsonDiffMode::CodeDiff {
+                                "px-3 py-1.5 bg-[var(--zd-primary)] text-[var(--zd-primary-fg)] font-bold transition-colors border-l border-[var(--zd-primary)]/40"
+                            } else {
+                                "px-3 py-1.5 text-[var(--zd-text-secondary)] hover:bg-[var(--zd-surface-hover)] hover:text-[var(--zd-text-primary)] transition-colors border-l border-[var(--zd-border)]"
+                            },
+                            onclick: move |_| diff_mode.set(JsonDiffMode::CodeDiff),
+                            "Code Diff"
+                        }
+                    }
+                }
+            }
+
+            // ═══════════════════════════════════════════════════════════════
+            // BODY — View switching
+            // ═══════════════════════════════════════════════════════════════
+            if *diff_mode.read() == JsonDiffMode::TreeDiff {
+                {
+                    let l_val_opt = serde_json::from_str::<serde_json::Value>(&left_content);
+                    let r_val_opt = serde_json::from_str::<serde_json::Value>(&right_content);
+
+                    match (l_val_opt, r_val_opt, semantic_result.clone()) {
+                        (Ok(l_val), Ok(r_val), Ok(changes)) => {
+                            rsx! {
+                                div { class: "flex flex-col flex-1 min-h-0",
+                                    // Tree-diff toolbar
+                                    div {
+                                        class: "flex items-center justify-between px-4 py-2 bg-[var(--zd-surface-raised)] border-b border-[var(--zd-border)] gap-3 text-xs font-mono shrink-0",
+                                        div { class: "flex items-center gap-2",
+                                            button {
+                                                class: "px-2.5 py-1 rounded-lg bg-[var(--zd-surface)] border border-[var(--zd-border)] hover:bg-[var(--zd-surface-hover)] text-[var(--zd-text-primary)] font-semibold transition-colors shadow-sm",
+                                                title: "Expand all",
+                                                onclick: move |_| {
+                                                    let mut exp = expanded_paths.write();
+                                                    collect_all_tree_paths(&l_val, "$", &mut exp);
+                                                    collect_all_tree_paths(&r_val, "$", &mut exp);
+                                                },
+                                                "┼ Expand All"
+                                            }
+                                            button {
+                                                class: "px-2.5 py-1 rounded-lg bg-[var(--zd-surface)] border border-[var(--zd-border)] hover:bg-[var(--zd-surface-hover)] text-[var(--zd-text-primary)] font-semibold transition-colors shadow-sm",
+                                                title: "Collapse to root",
+                                                onclick: move |_| {
+                                                    let mut exp = expanded_paths.write();
+                                                    exp.clear();
+                                                    exp.insert("$".to_string());
+                                                },
+                                                "─ Collapse All"
+                                            }
+                                            button {
+                                                class: if *only_show_changes.read() {
+                                                    "px-2.5 py-1 rounded-lg bg-[var(--zd-primary)] text-[var(--zd-primary-fg)] font-semibold border border-[var(--zd-primary)] transition-all shadow-sm"
+                                                } else {
+                                                    "px-2.5 py-1 rounded-lg bg-[var(--zd-surface)] border border-[var(--zd-border)] hover:bg-[var(--zd-surface-hover)] text-[var(--zd-text-secondary)] font-semibold transition-all shadow-sm"
+                                                },
+                                                title: "Show only changed paths",
+                                                onclick: move |_| {
+                                                    let next = !*only_show_changes.read();
+                                                    only_show_changes.set(next);
+                                                },
+                                                if *only_show_changes.read() { "⚡ Only Changes" } else { "All Paths" }
+                                            }
+                                        }
+
+                                        // Column headers inside toolbar
+                                        div { class: "flex items-center gap-2 text-[10px] font-mono font-bold text-[var(--zd-text-muted)] tracking-wide",
+                                            span { class: "px-2 py-0.5 rounded bg-[var(--zd-error)]/10 text-[var(--zd-error)] border border-[var(--zd-error)]/20 text-[9px] uppercase tracking-widest", "BASE: {left_name}" }
+                                            span { class: "opacity-40", "←→" }
+                                            span { class: "px-2 py-0.5 rounded bg-[var(--zd-accent)]/10 text-[var(--zd-accent)] border border-[var(--zd-accent)]/20 text-[9px] uppercase tracking-widest", "TARGET: {right_name}" }
+                                        }
+                                    }
+
+                                    // Tree aligned grid
+                                    {
+                                        let only_changes_flag = *only_show_changes.read();
+                                        let active_idx = *active_diff_idx.read();
+                                        let active_path = changes_for_nav.get(active_idx).map(|c| c.path.clone()).unwrap_or_default();
+                                        let mut node_buf: Vec<AlignedTreeNode> = Vec::new();
+                                        collect_aligned_tree_nodes(
+                                            Some(&l_val), Some(&r_val), "$", 0, &changes, &expanded_paths.read(), only_changes_flag, &mut node_buf
+                                        );
+
+                                        rsx! {
+                                            div { class: "grid grid-cols-2 divide-x divide-[var(--zd-border)] border-b border-[var(--zd-border)] bg-[var(--zd-surface)] text-[10px] font-mono font-bold tracking-wide shrink-0 select-none",
+                                                div { class: "px-4 py-1 text-[var(--zd-error)]/70", "Base" }
+                                                div { class: "px-4 py-1 text-[var(--zd-accent)]/70", "Target" }
+                                            }
+                                            div {
+                                                class: "overflow-y-auto custom-scrollbar flex-1 min-h-0 font-mono text-xs select-text",
+                                                for (node_idx, node) in node_buf.iter().enumerate() {
+                                                    {
+                                                        let is_active = node.path == active_path;
+                                                        let row_id = if is_active { "active-diff-row".to_string() } else { format!("tree-row-{node_idx}") };
+                                                        let (row_bg, left_accent, right_accent) = match node.status {
+                                                            AlignedNodeStatus::Added => (
+                                                                if is_active { "bg-[var(--zd-accent)]/20" } else { "hover:bg-[var(--zd-accent)]/8" },
+                                                                "opacity-30 text-[var(--zd-text-muted)]",
+                                                                "text-[var(--zd-accent)] font-semibold",
+                                                            ),
+                                                            AlignedNodeStatus::Deleted => (
+                                                                if is_active { "bg-[var(--zd-error)]/20" } else { "hover:bg-[var(--zd-error)]/8" },
+                                                                "text-[var(--zd-error)] font-semibold",
+                                                                "opacity-30 text-[var(--zd-text-muted)]",
+                                                            ),
+                                                            AlignedNodeStatus::Modified => (
+                                                                if is_active { "bg-[var(--zd-primary)]/15" } else { "hover:bg-[var(--zd-primary)]/8" },
+                                                                "text-[var(--zd-error)]",
+                                                                "text-[var(--zd-accent)]",
+                                                            ),
+                                                            AlignedNodeStatus::Equal => (
+                                                                if is_active { "bg-[var(--zd-surface-raised)]" } else { "hover:bg-[var(--zd-surface-raised)]/60" },
+                                                                "text-[var(--zd-text-secondary)]",
+                                                                "text-[var(--zd-text-secondary)]",
+                                                            ),
+                                                        };
+                                                        let path = node.path.clone();
+                                                        rsx! {
+                                                            div {
+                                                                id: "{row_id}",
+                                                                key: "{node_idx}",
+                                                                class: "grid grid-cols-2 divide-x divide-[var(--zd-border)]/30 border-b border-[var(--zd-border)]/15 transition-colors {row_bg}",
+                                                                // Base cell
+                                                                div {
+                                                                    class: "flex items-center overflow-hidden min-h-[28px] px-2 py-0.5 {left_accent}",
+                                                                    onclick: move |_| {
+                                                                        let mut exp = expanded_paths.write();
+                                                                        if exp.contains(&path) { exp.remove(&path); } else { exp.insert(path.clone()); }
+                                                                    },
+                                                                    {render_aligned_tree_cell(&node.left_val, node, "left", expanded_paths)}
+                                                                }
+                                                                // Target cell
+                                                                div {
+                                                                    class: "flex items-center overflow-hidden min-h-[28px] px-2 py-0.5 {right_accent}",
+                                                                    {render_aligned_tree_cell(&node.right_val, node, "right", expanded_paths)}
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                if node_buf.is_empty() {
+                                                    div { class: "p-12 flex flex-col items-center justify-center text-[var(--zd-text-muted)] gap-3",
+                                                        div { class: "w-12 h-12 rounded-full bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] flex items-center justify-center text-xl text-[var(--zd-accent)] font-bold", "✓" }
+                                                        span { class: "text-sm font-semibold text-[var(--zd-text-primary)]", "No Differences" }
+                                                        span { class: "text-xs opacity-70 font-mono", "Both JSON documents are identical." }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        _ => rsx! {
+                            div { class: "flex-1 flex flex-col items-center justify-center gap-4 text-[var(--zd-text-muted)] p-12",
+                                div { class: "w-14 h-14 rounded-full bg-[var(--zd-error)]/10 border border-[var(--zd-error)]/20 flex items-center justify-center text-2xl text-[var(--zd-error)] font-black", "!" }
+                                span { class: "text-base font-semibold text-[var(--zd-text-primary)]", "Tree Diff Requires Valid JSON" }
+                                span { class: "text-xs font-mono text-[var(--zd-error)] text-center max-w-sm",
+                                    {
+                                        match semantic_result.as_ref() {
+                                            Err(e) => e.clone(),
+                                            _ => "Unable to parse one or both JSON inputs.".to_string(),
+                                        }
+                                    }
+                                }
+                                button {
+                                    class: "mt-2 px-3 py-1.5 text-xs rounded-lg bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] hover:bg-[var(--zd-surface-hover)] font-mono font-semibold transition-colors",
+                                    onclick: move |_| diff_mode.set(JsonDiffMode::CodeDiff),
+                                    "Switch to Code Diff to Edit →"
+                                }
+                            }
+                        },
+                    }
                 }
             } else {
-                CodePanel {
-                    title: "Modified JSON for Comparison".to_string(),
-                    value: modified_content.read().clone(),
-                    oninput: Some(EventHandler::new(move |e: Event<FormData>| modified_content.set(e.value()))),
-                    on_edit: Some(EventHandler::new(move |v: String| modified_content.set(v))),
-                    placeholder: "Paste modified JSON here...",
-                    language: CodeLanguage::Json,
+                // ──────────────────────────────────────────────────────────
+                // CODE DIFF — Two live, fully editable side-by-side editors
+                // ──────────────────────────────────────────────────────────
+                div { class: "zd-tool-fill grid grid-cols-1 md:grid-cols-2 min-h-0 flex-1 divide-y md:divide-y-0 md:divide-x divide-[var(--zd-border)]",
+
+                    // Left / Base editor
+                    div { class: "flex flex-col min-h-0 flex-1",
+                        div { class: "flex items-center justify-between px-3 py-2 border-b border-[var(--zd-border)] bg-[var(--zd-surface-raised)] shrink-0",
+                            div { class: "flex items-center gap-2",
+                                span { class: "text-[9px] font-black uppercase tracking-widest text-[var(--zd-error)] px-1.5 py-0.5 rounded bg-[var(--zd-error)]/10 border border-[var(--zd-error)]/20", "BASE" }
+                                span { class: "text-xs font-mono font-semibold text-[var(--zd-text-primary)] truncate", "{left_name}" }
+                            }
+                            // Left parse indicator
+                            {
+                                let is_valid = serde_json::from_str::<serde_json::Value>(&left_content).is_ok();
+                                rsx! {
+                                    span {
+                                        class: if is_valid {
+                                            "text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--zd-accent)]/10 text-[var(--zd-accent)] border border-[var(--zd-accent)]/20"
+                                        } else {
+                                            "text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--zd-error)]/10 text-[var(--zd-error)] border border-[var(--zd-error)]/20"
+                                        },
+                                        if is_valid { "✓ Valid JSON" } else { "✗ Invalid JSON" }
+                                    }
+                                }
+                            }
+                        }
+                        CodePanel {
+                            title: "".to_string(),
+                            value: left_content.clone(),
+                            oninput: Some(EventHandler::new({
+                                let id = left_id.clone();
+                                let on_update = on_update_tab.clone();
+                                move |e: Event<FormData>| {
+                                    if !id.is_empty() {
+                                        on_update.call((id.clone(), e.value()));
+                                    }
+                                }
+                            })),
+                            on_edit: Some(EventHandler::new({
+                                let id = left_id.clone();
+                                let on_update = on_update_tab.clone();
+                                move |v: String| {
+                                    if !id.is_empty() {
+                                        on_update.call((id.clone(), v));
+                                    }
+                                }
+                            })),
+                            placeholder: "Paste base JSON here...",
+                            language: CodeLanguage::Json,
+                        }
+                    }
+
+                    // Right / Target editor
+                    div { class: "flex flex-col min-h-0 flex-1",
+                        div { class: "flex items-center justify-between px-3 py-2 border-b border-[var(--zd-border)] bg-[var(--zd-surface-raised)] shrink-0",
+                            div { class: "flex items-center gap-2",
+                                span { class: "text-[9px] font-black uppercase tracking-widest text-[var(--zd-accent)] px-1.5 py-0.5 rounded bg-[var(--zd-accent)]/10 border border-[var(--zd-accent)]/20", "TARGET" }
+                                span { class: "text-xs font-mono font-semibold text-[var(--zd-text-primary)] truncate", "{right_name}" }
+                            }
+                            // Right parse indicator
+                            {
+                                let is_valid = serde_json::from_str::<serde_json::Value>(&right_content).is_ok();
+                                rsx! {
+                                    span {
+                                        class: if is_valid {
+                                            "text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--zd-accent)]/10 text-[var(--zd-accent)] border border-[var(--zd-accent)]/20"
+                                        } else {
+                                            "text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--zd-error)]/10 text-[var(--zd-error)] border border-[var(--zd-error)]/20"
+                                        },
+                                        if is_valid { "✓ Valid JSON" } else { "✗ Invalid JSON" }
+                                    }
+                                }
+                            }
+                        }
+                        CodePanel {
+                            title: "".to_string(),
+                            value: right_content.clone(),
+                            oninput: Some(EventHandler::new({
+                                let r_id = right_id_opt.clone();
+                                let on_update = on_update_tab.clone();
+                                move |e: Event<FormData>| {
+                                    if let Some(ref id) = r_id {
+                                        on_update.call((id.clone(), e.value()));
+                                    } else {
+                                        custom_modified_content.set(e.value());
+                                    }
+                                }
+                            })),
+                            on_edit: Some(EventHandler::new({
+                                let r_id = right_id_opt.clone();
+                                let on_update = on_update_tab.clone();
+                                move |v: String| {
+                                    if let Some(ref id) = r_id {
+                                        on_update.call((id.clone(), v));
+                                    } else {
+                                        custom_modified_content.set(v);
+                                    }
+                                }
+                            })),
+                            placeholder: "Paste target JSON here...",
+                            language: CodeLanguage::Json,
+                        }
+                    }
                 }
             }
         }

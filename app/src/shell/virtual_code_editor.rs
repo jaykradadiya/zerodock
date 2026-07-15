@@ -15,7 +15,9 @@ use std::collections::HashSet;
 use std::sync::atomic::{AtomicU64, Ordering};
 use zerodock_core::highlight_to_html;
 
-use crate::shell::code_editor::CodeLanguage;
+use crate::shell::code_editor::{
+    forward_wheel_to_code_scroll, wheel_delta_pixels, CodeLanguage,
+};
 
 static VEDITOR_ID_COUNTER: AtomicU64 = AtomicU64::new(0);
 
@@ -656,6 +658,14 @@ pub fn VirtualCodeEditor(
                                     onclick: move |_| sync_caret(),
                                     onkeyup: move |_| sync_caret(),
                                     onselect: move |_| sync_caret(),
+                                    onwheel: {
+                                        let scroll_id = id_str.clone();
+                                        move |e: Event<WheelData>| {
+                                            let (dx, dy) = wheel_delta_pixels(e.delta());
+                                            e.prevent_default();
+                                            forward_wheel_to_code_scroll(&scroll_id, dx, dy);
+                                        }
+                                    },
                                     onkeydown: move |e: Event<KeyboardData>| {
                                         let ctrl = e.modifiers().ctrl() || e.modifiers().meta();
                                         if ctrl && e.key() == Key::Character("f".into()) {

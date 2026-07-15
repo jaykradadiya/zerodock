@@ -1,3 +1,4 @@
+use crate::shell::ui::{IconClose, Kbd, Modal, Overlay};
 use crate::state::{use_app_state, ToastKind};
 use dioxus::prelude::*;
 
@@ -12,7 +13,8 @@ pub fn ToastContainer() -> Element {
     }
     rsx! {
         div {
-            class: "fixed bottom-4 left-1/2 -translate-x-1/2 md:left-auto md:translate-x-0 md:right-4 z-[var(--zd-z-toast)] flex flex-col gap-2 max-w-sm w-[calc(100%-2rem)] md:w-auto pb-[env(safe-area-inset-bottom)]",
+            class: "fixed bottom-5 right-4 z-[var(--zd-z-toast)] flex flex-col-reverse gap-2 max-w-xs w-full",
+            style: "left: auto;",
             role: "status",
             aria_live: "polite",
             aria_atomic: "true",
@@ -38,13 +40,13 @@ pub fn ToastContainer() -> Element {
 #[component]
 fn ToastItem(id: u64, message: String, kind: ToastKind) -> Element {
     let state = use_app_state();
-    let (border, icon) = match kind {
-        ToastKind::Info => ("border-[var(--zd-border)]", "i"),
-        ToastKind::Success => ("border-[var(--zd-accent)]", "ok"),
-        ToastKind::Error => ("border-[var(--zd-error)]/50", "x"),
+
+    let (accent_color, icon) = match kind {
+        ToastKind::Info    => ("var(--zd-info)",      "i"),
+        ToastKind::Success => ("var(--zd-success)",   "✓"),
+        ToastKind::Error   => ("var(--zd-error)",     "×"),
     };
 
-    // Auto-dismiss only on web
     #[cfg(target_arch = "wasm32")]
     {
         let state_for_timeout = state.clone();
@@ -58,30 +60,26 @@ fn ToastItem(id: u64, message: String, kind: ToastKind) -> Element {
         });
     }
 
-    // Separate clone for the manual dismiss button
     let mut state_for_dismiss = state.clone();
 
     rsx! {
         div {
-            class: "flex items-start gap-3 px-4 py-3 rounded-md border bg-[var(--zd-surface-raised)]/95 backdrop-blur-md shadow-[var(--zd-shadow-md)] text-sm text-[var(--zd-text-primary)] {border}",
-            span { class: "sr-only", "{kind_label(kind)}" }
-            span { class: "text-[var(--zd-text-muted)] shrink-0 zd-mono-label", "{icon}" }
-            span { class: "flex-1", "{message}" }
+            class: "zd-animate-slide-up flex items-start gap-3 px-4 py-3 rounded-lg border border-[var(--zd-border)] bg-[var(--zd-surface-raised)] shadow-[var(--zd-shadow-lg)] text-sm text-[var(--zd-text-primary)]",
+            style: "border-left: 3px solid {accent_color};",
+
+            span {
+                class: "text-xs font-mono font-bold shrink-0 mt-0.5 w-4 text-center",
+                style: "color: {accent_color};",
+                "{icon}"
+            }
+            span { class: "flex-1 text-sm leading-relaxed", "{message}" }
             button {
-                class: "text-[var(--zd-text-muted)] hover:text-[var(--zd-text-primary)] shrink-0 focus-ring rounded px-1",
-                aria_label: "Dismiss notification",
+                class: "text-[var(--zd-text-muted)] hover:text-[var(--zd-text-primary)] shrink-0 transition-colors focus-ring rounded",
+                aria_label: "Dismiss",
                 onclick: move |_| state_for_dismiss.dismiss_toast(id),
-                "×"
+                IconClose {}
             }
         }
-    }
-}
-
-fn kind_label(kind: ToastKind) -> &'static str {
-    match kind {
-        ToastKind::Info => "Information",
-        ToastKind::Success => "Success",
-        ToastKind::Error => "Error",
     }
 }
 
@@ -92,41 +90,39 @@ pub fn KeyboardShortcutsHelp() -> Element {
         return VNode::empty();
     }
     rsx! {
-        div {
-            class: "fixed inset-0 z-[var(--zd-z-modal)] flex items-center justify-center px-4",
-            onclick: move |_| state.ui.write().shortcuts_help_open = false,
-            div { class: "absolute inset-0 bg-black/60 backdrop-blur-sm" }
-            div {
-                class: "relative max-w-md w-full rounded-lg border border-[var(--zd-border)] bg-[var(--zd-surface-raised)] p-6 shadow-[var(--zd-shadow-lg)]",
-                role: "dialog",
-                aria_modal: "true",
-                aria_labelledby: "shortcuts-title",
-                onclick: move |e| e.stop_propagation(),
-                h2 {
-                    id: "shortcuts-title",
-                    class: "text-lg font-semibold text-[var(--zd-text-primary)] mb-1",
-                    "Keyboard Shortcuts"
+        Overlay {
+            on_close: move |_| state.ui.write().shortcuts_help_open = false,
+            z: "--zd-z-modal",
+            Modal {
+                max_width: "max-w-sm",
+                class: "p-6",
+                aria_label: Some("Keyboard shortcuts".to_string()),
+
+                div {
+                    class: "flex items-start justify-between mb-4",
+                    div {
+                        h2 {
+                            id: "shortcuts-title",
+                            class: "text-base font-semibold text-[var(--zd-text-primary)]",
+                            style: "letter-spacing: -0.01em;",
+                            "Keyboard Shortcuts"
+                        }
+                        p { class: "text-xs text-[var(--zd-text-muted)] mt-0.5", "Work faster" }
+                    }
                 }
-                p {
-                    class: "text-xs text-[var(--zd-text-muted)] mb-4",
-                    "Work faster with these shortcuts"
-                }
-                ul {
-                    class: "space-y-3 text-sm",
+
+                ul { class: "space-y-2.5",
                     for (keys, desc) in [
-                        ("Cmd/Ctrl + K", "Open command palette"),
-                        ("Cmd/Ctrl + Enter", "Run primary action"),
-                        ("Cmd/Ctrl + .", "Toggle zen mode"),
-                        ("?", "Show this help"),
-                        ("Escape", "Close dialogs"),
+                        ("⌘ K",         "Open command palette"),
+                        ("⌘ ↵",         "Run primary action"),
+                        ("⌘ .",         "Toggle zen mode"),
+                        ("?",            "Show this help"),
+                        ("Escape",       "Close dialogs"),
                     ] {
                         li {
                             class: "flex items-center justify-between gap-4",
-                            span { class: "text-[var(--zd-text-secondary)]", "{desc}" }
-                            kbd {
-                                class: "zd-mono-label px-2 py-1 rounded-md border border-[var(--zd-border)] bg-[var(--zd-surface)] text-[var(--zd-text-muted)]",
-                                "{keys}"
-                            }
+                            span { class: "text-sm text-[var(--zd-text-secondary)]", "{desc}" }
+                            Kbd { "{keys}" }
                         }
                     }
                 }

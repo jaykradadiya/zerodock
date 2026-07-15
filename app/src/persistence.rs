@@ -17,8 +17,6 @@ pub fn use_persistence(mut app_state: AppState, platform: PlatformServices) {
                     if let Ok(prefs) = serde_json::from_str::<Preferences>(&json) {
                         *app_state.preferences.write() = prefs;
                     }
-                } else {
-                    apply_system_theme_if_unset(&mut app_state);
                 }
                 loaded.set(true);
             });
@@ -39,21 +37,6 @@ pub fn use_persistence(mut app_state: AppState, platform: PlatformServices) {
                 });
             }
         });
-    }
-}
-
-fn apply_system_theme_if_unset(app_state: &mut AppState) {
-    #[cfg(target_arch = "wasm32")]
-    {
-        if app_state.preferences.read().theme_user_set {
-            return;
-        }
-        if let Some(window) = web_sys::window() {
-            if let Ok(Some(media)) = window.match_media("(prefers-color-scheme: dark)") {
-                let theme = if media.matches() { "dark" } else { "light" };
-                app_state.preferences.write().theme = theme.to_string();
-            }
-        }
     }
 }
 

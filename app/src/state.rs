@@ -35,6 +35,7 @@ pub struct UiState {
     pub command_palette_open: bool,
     pub preferences_open: bool,
     pub zen_mode: bool,
+    pub sidebar_collapsed: bool,
     pub shortcuts_help_open: bool,
     pub toasts: Vec<Toast>,
     pub primary_action_tick: u64,
@@ -77,9 +78,14 @@ impl AppState {
         }
     }
 
+    pub fn is_dark(&self) -> bool {
+        self.preferences.read().theme == "dark"
+    }
+
     pub fn toggle_theme(&mut self) {
+        let is_dark = self.is_dark();
         let mut prefs = self.preferences.write();
-        prefs.theme = if prefs.is_dark() {
+        prefs.theme = if is_dark {
             "light".into()
         } else {
             "dark".into()

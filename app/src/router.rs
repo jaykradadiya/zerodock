@@ -60,7 +60,7 @@ pub fn App() -> Element {
 
     persistence::use_persistence(app_state.clone(), platform.clone());
 
-    let is_dark = app_state.preferences.read().is_dark();
+    let is_dark = app_state.is_dark();
 
     rsx! {
         document::Title { "ZeroDock" }
@@ -78,7 +78,7 @@ pub fn App() -> Element {
 fn ThemeSync() -> Element {
     let app_state = use_app_state();
     use_effect(move || {
-        let is_dark = app_state.preferences.read().is_dark();
+        let is_dark = app_state.is_dark();
         #[cfg(target_arch = "wasm32")]
         {
             if let Some(html) = web_sys::window()

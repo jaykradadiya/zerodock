@@ -1,6 +1,7 @@
 use crate::registry::{all_tools, find_tool, ToolDef};
 use crate::router::route_for_path;
 use crate::shell::empty_state::EmptyState;
+use crate::shell::ui::{Badge, BadgeVariant, IconSearch, Kbd, Modal, Overlay};
 use crate::state::use_app_state;
 use dioxus::prelude::*;
 use dioxus_router::Link;
@@ -24,15 +25,11 @@ pub fn CommandPalette() -> Element {
     let mut all_items: Vec<&'static ToolDef> = Vec::new();
     if q.is_empty() {
         for id in &favorites {
-            if let Some(t) = find_tool(id) {
-                all_items.push(t);
-            }
+            if let Some(t) = find_tool(id) { all_items.push(t); }
         }
         for id in &recent {
             if let Some(t) = find_tool(id) {
-                if !favorites.contains(id) {
-                    all_items.push(t);
-                }
+                if !favorites.contains(id) { all_items.push(t); }
             }
         }
         all_items.extend(all_tools());
@@ -41,37 +38,42 @@ pub fn CommandPalette() -> Element {
             t.name.to_lowercase().contains(&q)
                 || t.id.contains(&q)
                 || t.category.to_lowercase().contains(&q)
+                || t.description.to_lowercase().contains(&q)
         }));
     }
+
+    // Deduplicate (favorites+recent may re-appear in all_tools)
+    all_items.dedup_by_key(|t| t.id);
 
     let total_items = all_items.len();
     if total_items > 0 && *selected.read() >= total_items {
         selected.set(0);
     }
 
-    // Clones for move closures inside the rsx tree (root handlers)
     let mut state_for_close = state.clone();
     let platform_for_close = platform.clone();
     let mut state_for_keys = state.clone();
     let platform_for_keys = platform.clone();
 
     rsx! {
-        div {
-            class: "fixed inset-0 z-[var(--zd-z-overlay)] flex items-start justify-center pt-[15vh] px-4",
-            onclick: move |_| state_for_close.ui.write().command_palette_open = false,
-            div { class: "absolute inset-0 bg-black/60 backdrop-blur-sm" }
-            div {
-                class: "relative w-full max-w-lg rounded-lg border border-[var(--zd-border)] bg-[var(--zd-surface-raised)] shadow-[var(--zd-shadow-lg)] overflow-hidden",
-                role: "dialog",
-                aria_modal: "true",
-                aria_label: "Command palette",
-                onclick: move |e| e.stop_propagation(),
+        Overlay {
+            on_close: move |_| state_for_close.ui.write().command_palette_open = false,
+            align: crate::shell::ui::OverlayAlign::Top,
+            z: "--zd-z-overlay",
+            Modal {
+                max_width: "max-w-xl",
+                aria_label: Some("Command palette".to_string()),
+
+                // Search input row
                 div {
-                    class: "flex items-center gap-2 px-4 py-3 border-b border-[var(--zd-border)]",
-                    crate::shell::ui::IconSearch {}
+                    class: "flex items-center gap-3 px-4 py-3 border-b border-[var(--zd-border)]",
+                    // Search icon
+                    span { class: "text-[var(--zd-text-muted)] shrink-0",
+                        IconSearch {}
+                    }
                     input {
-                        class: "flex-1 bg-transparent text-[var(--zd-text-primary)] focus:outline-none text-sm",
-                        placeholder: "Search tools...",
+                        class: "flex-1 bg-transparent text-[var(--zd-text-primary)] text-sm focus:outline-none placeholder:text-[var(--zd-text-muted)]",
+                        placeholder: "Search tools…",
                         aria_label: "Search tools",
                         autofocus: true,
                         value: "{query}",
@@ -117,15 +119,20 @@ pub fn CommandPalette() -> Element {
                             }
                         },
                     }
-                    span { class: "zd-mono-label text-[var(--zd-text-muted)]", "esc" }
+                    Kbd { "esc" }
                 }
+
+                // Results list
                 div {
-                    class: "max-h-80 overflow-y-auto custom-scrollbar",
+                    class: "max-h-[min(340px,60vh)] overflow-y-auto custom-scrollbar",
                     if total_items == 0 {
-                        EmptyState {
-                            icon: "?",
-                            title: "No tools found",
-                            hint: "Try a different search term.",
+                        div {
+                            class: "py-12 flex flex-col items-center gap-2.5",
+                            span {
+                                class: "zd-icon-ring w-9 h-9 flex items-center justify-center text-sm font-mono",
+                                "?"
+                            }
+                            p { class: "text-sm text-[var(--zd-text-secondary)]", "No tools match your search" }
                         }
                     }
                     for (i, tool) in all_items.iter().enumerate() {
@@ -135,39 +142,67 @@ pub fn CommandPalette() -> Element {
                             let tool_id = tool.id;
                             let row_state = state.clone();
                             let row_platform = platform.clone();
+                            let is_fav = favorites.contains(&tool_id.to_string());
+                            let is_recent = !is_fav && recent.contains(&tool_id.to_string());
                             rsx! {
                                 Link {
                                     to: route,
                                     class: if is_selected {
-                                        "block px-4 py-3 bg-[var(--zd-primary-soft)] border-b border-[var(--zd-border)] last:border-0 transition-colors"
+                                        "flex items-center gap-3 px-4 py-3 bg-[var(--zd-primary-soft)] border-b border-[var(--zd-border)] last:border-0 transition-colors"
                                     } else {
-                                        "block px-4 py-3 hover:bg-[var(--zd-primary-soft)] border-b border-[var(--zd-border)] last:border-0 transition-colors"
+                                        "flex items-center gap-3 px-4 py-3 hover:bg-[var(--zd-surface-raised)] border-b border-[var(--zd-border)] last:border-0 transition-colors"
                                     },
                                     onclick: move |_| record_visit_and_close(row_state.clone(), row_platform.clone(), tool_id),
+
+                                    // Left accent indicator
                                     div {
-                                        class: "flex items-center justify-between gap-2",
+                                        class: "w-1 h-6 rounded-full shrink-0",
+                                        style: if is_selected { "background: var(--zd-primary);" } else { "background: var(--zd-border);" }
+                                    }
+
+                                    // Content
+                                    div { class: "flex-1 min-w-0",
                                         div {
-                                            class: "font-medium text-[var(--zd-text-primary)]",
-                                            "{tool.name}"
+                                            class: "flex items-center gap-2",
+                                            span {
+                                                class: "text-sm font-medium text-[var(--zd-text-primary)] truncate",
+                                                style: if is_selected { "color: var(--zd-primary);" } else { "" },
+                                                "{tool.name}"
+                                            }
+                                            if is_fav {
+                                                Badge { variant: BadgeVariant::Accent, "fav" }
+                                            }
+                                            if is_recent {
+                                                Badge { variant: BadgeVariant::Muted, "recent" }
+                                            }
                                         }
-                                        span {
-                                            class: "zd-mono-label text-[var(--zd-text-muted)]",
-                                            "{tool.category}"
+                                        p {
+                                            class: "text-xs text-[var(--zd-text-muted)] truncate mt-0.5",
+                                            "{tool.description}"
                                         }
                                     }
-                                    div {
-                                        class: "text-xs text-[var(--zd-text-muted)] mt-0.5",
-                                        "{tool.description}"
-                                    }
+
+                                    // Category badge
+                                    Badge { variant: BadgeVariant::Muted, "{tool.category}" }
                                 }
                             }
                         }
                     }
                 }
+
+                // Footer
                 if total_items > 0 {
-                    p {
-                        class: "px-4 py-2 text-xs text-[var(--zd-text-muted)] border-t border-[var(--zd-border)] zd-mono-label",
-                        "{total_items} tools · ↑↓ navigate · Enter open"
+                    div {
+                        class: "flex items-center justify-between px-4 py-2 border-t border-[var(--zd-border)] bg-[var(--zd-surface-raised)]",
+                        p {
+                            class: "text-[10px] font-mono text-[var(--zd-text-muted)]",
+                            "{total_items} tools"
+                        }
+                        div {
+                            class: "flex items-center gap-3 text-[10px] font-mono text-[var(--zd-text-muted)]",
+                            span { "↑↓ navigate" }
+                            span { "↵ open" }
+                        }
                     }
                 }
             }

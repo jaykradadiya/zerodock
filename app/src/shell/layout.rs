@@ -14,7 +14,7 @@ pub fn ToolPage(children: Element) -> Element {
         main {
             id: "main-content",
             class: if zen {
-                "zd-tool-fill flex flex-col min-h-0 p-2 overflow-hidden"
+                "zd-tool-fill flex flex-col min-h-0 p-0 overflow-hidden"
             } else {
                 "zd-tool-fill flex flex-col min-h-0 w-full p-2.5 sm:p-4 md:p-6 overflow-hidden"
             },
@@ -181,6 +181,8 @@ pub fn CodePanel(
     value: String,
     oninput: Option<EventHandler<Event<FormData>>>,
     #[props(default)] on_edit: Option<EventHandler<String>>,
+    #[props(default)] onblur: Option<EventHandler<Event<FocusData>>>,
+    #[props(default)] error_line: Option<usize>,
     #[props(default)] read_only: bool,
     #[props(default)] placeholder: &'static str,
     #[props(default)] error: Option<String>,
@@ -188,6 +190,8 @@ pub fn CodePanel(
     #[props(default)] header_actions: Option<Element>,
     #[props(default)] language: CodeLanguage,
     #[props(default)] tab_size: usize,
+    #[props(default)] indent_with_tabs: bool,
+    #[props(default = 14)] font_size: usize,
     #[props(default)] aria_label: &'static str,
 ) -> Element {
     let is_empty = value.trim().is_empty();
@@ -227,10 +231,14 @@ pub fn CodePanel(
                         value: value.clone(),
                         oninput: oninput,
                         on_edit: on_edit,
+                        onblur: onblur,
+                        error_line: error_line,
                         read_only: read_only,
                         placeholder: placeholder,
                         language: language,
                         tab_size: tab_size,
+                        indent_with_tabs: indent_with_tabs,
+                        font_size: font_size,
                         aria_label: aria_label,
                     }
                 }

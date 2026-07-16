@@ -1,4 +1,4 @@
-use crate::shell::ui::{IconButton, IconSearch, Kbd};
+use crate::shell::ui::{IconButton, IconSearch, Kbd, IconSun, IconMoon};
 use crate::state::use_app_state;
 use dioxus::prelude::*;
 use dioxus_router::Link;
@@ -6,6 +6,7 @@ use dioxus_router::Link;
 #[component]
 pub fn Navbar() -> Element {
     let mut state = use_app_state();
+    let platform = use_context::<zerodock_platform::PlatformServices>();
     if state.ui.read().zen_mode {
         return VNode::empty();
     }
@@ -64,6 +65,33 @@ pub fn Navbar() -> Element {
                         },
                         class: "sm:hidden",
                         IconSearch {}
+                    }
+
+                    // Theme Toggle
+                    IconButton {
+                        label: if state.is_dark() { "Switch to Light Mode".to_string() } else { "Switch to Dark Mode".to_string() },
+                        onclick: {
+                            let mut state = state.clone();
+                            let platform = platform.clone();
+                            Some(EventHandler::new(move |_| {
+                                {
+                                    let is_dark = state.is_dark();
+                                    let mut prefs = state.preferences.write();
+                                    prefs.theme = if is_dark { "light".into() } else { "dark".into() };
+                                    prefs.theme_user_set = true;
+                                }
+                                let prefs = state.preferences.read().clone();
+                                let platform = platform.clone();
+                                spawn(async move {
+                                    crate::persistence::save_preferences(&platform, &prefs).await;
+                                });
+                            }))
+                        },
+                        if state.is_dark() {
+                            IconSun {}
+                        } else {
+                            IconMoon {}
+                        }
                     }
 
                     // Settings (theme toggle lives inside Preferences)

@@ -255,14 +255,23 @@ pub fn CodeEditor(
     value: String,
     #[props(default)] oninput: Option<EventHandler<Event<FormData>>>,
     #[props(default)] on_edit: Option<EventHandler<String>>,
+    #[props(default)] onblur: Option<EventHandler<Event<FocusData>>>,
+    #[props(default)] error_line: Option<usize>,
     #[props(default)] read_only: bool,
     #[props(default)] placeholder: &'static str,
     #[props(default)] language: CodeLanguage,
     #[props(default)] tab_size: usize,
+    /// Use literal tab characters for indentation instead of spaces.
+    #[props(default)] indent_with_tabs: bool,
+    #[props(default = 14)] font_size: usize,
     #[props(default)] aria_label: &'static str,
 ) -> Element {
     let tab_size = if tab_size == 0 { 2 } else { tab_size };
-    let indent_unit = " ".repeat(tab_size);
+    let indent_unit = if indent_with_tabs {
+        "\t".to_string()
+    } else {
+        " ".repeat(tab_size)
+    };
 
     let mut find_open = use_signal(|| false);
     let mut find_query = use_signal(String::new);
@@ -526,29 +535,37 @@ pub fn CodeEditor(
                             class: "zd-code-gutter shrink-0 flex flex-col",
                             if visible_line_nums.len() <= 50_000 {
                                 for &num in &visible_line_nums {
-                                    div {
-                                        class: "flex items-center justify-end gap-1.5 h-[20px] leading-[20px] font-mono text-xs text-[var(--zd-text-muted)] select-none",
-                                        if blocks.contains_key(&num) {
-                                            button {
-                                                class: "hover:text-[var(--zd-text-primary)] cursor-pointer text-[10px]",
-                                                title: if collapsed_blocks.read().contains(&num) { "Expand block" } else { "Collapse block" },
-                                                onclick: move |_| {
-                                                    let mut cb = collapsed_blocks.write();
-                                                    if cb.contains(&num) {
-                                                        cb.remove(&num);
-                                                    } else {
-                                                        cb.insert(num);
+                                    {
+                                        let is_err = Some(num) == error_line;
+                                        let err_class = if is_err { "bg-[var(--zd-error)]/20 text-[var(--zd-error)] font-bold px-1 rounded-sm border-r-2 border-[var(--zd-error)]" } else { "" };
+                                        rsx! {
+                                            div {
+                                                class: "flex items-center justify-end gap-1.5 h-[20px] leading-[20px] font-mono text-[var(--zd-text-muted)] select-none {err_class}",
+                                                style: "font-size: {font_size}px;",
+                                                if blocks.contains_key(&num) {
+                                                    button {
+                                                        class: "hover:text-[var(--zd-text-primary)] cursor-pointer text-[10px]",
+                                                        title: if collapsed_blocks.read().contains(&num) { "Expand block" } else { "Collapse block" },
+                                                        onclick: move |_| {
+                                                            let mut cb = collapsed_blocks.write();
+                                                            if cb.contains(&num) {
+                                                                cb.remove(&num);
+                                                            } else {
+                                                                cb.insert(num);
+                                                            }
+                                                        },
+                                                        if collapsed_blocks.read().contains(&num) { "▶" } else { "▼" }
                                                     }
-                                                },
-                                                if collapsed_blocks.read().contains(&num) { "▶" } else { "▼" }
+                                                }
+                                                span { "{num}" }
                                             }
                                         }
-                                        span { "{num}" }
                                     }
                                 }
                             } else {
                                 pre {
                                     class: "zd-code-gutter-lines",
+                                    style: "font-size: {font_size}px;",
                                     aria_hidden: "true",
                                     "{gutter}"
                                 }
@@ -557,11 +574,13 @@ pub fn CodeEditor(
                         div {
                             class: "zd-code-stack relative flex-1 min-h-full {wrap_class}",
                         pre {
-                            class: "zd-code-highlight font-mono text-sm",
+                            class: "zd-code-highlight font-mono",
+                            style: "font-size: {font_size}px;",
                             dangerous_inner_html: "{highlight_html}",
                         }
                         textarea {
-                            class: "zd-code-input font-mono text-sm",
+                            class: "zd-code-input font-mono",
+                            style: "font-size: {font_size}px;",
                             id: "{id_str}",
                             aria_label: if aria_label.is_empty() { "Code editor" } else { aria_label },
                             value: "{display_value}",
@@ -576,6 +595,11 @@ pub fn CodeEditor(
                                     oninput.call(e);
                                 }
                                 sync_caret();
+                            },
+                            onblur: move |e| {
+                                if let Some(onblur) = onblur.as_ref() {
+                                    onblur.call(e);
+                                }
                             },
                             onclick: move |_| sync_caret(),
                             onkeyup: move |_| sync_caret(),

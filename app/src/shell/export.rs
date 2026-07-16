@@ -43,6 +43,7 @@ pub fn ExportButton(
     content: String,
     #[props(default)] mime: &'static str,
     #[props(default)] label: &'static str,
+    children: Element,
 ) -> Element {
     let state = use_app_state();
     rsx! {
@@ -60,7 +61,11 @@ pub fn ExportButton(
                     }
                 }
             },
-            "{label}"
+            if label.is_empty() {
+                {children}
+            } else {
+                "{label}"
+            }
         }
     }
 }

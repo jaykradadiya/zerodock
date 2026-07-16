@@ -42,6 +42,9 @@ impl JsonIndex {
     pub fn slice<'a>(&self, data: &'a [u8], node: &IndexNode) -> &'a [u8] {
         let start = node.value_start as usize;
         let end = node.value_end as usize;
+        if start >= data.len() {
+            return &[];
+        }
         &data[start..end.min(data.len())]
     }
 
@@ -142,7 +145,7 @@ fn scan_object_children(
     nodes: &mut Vec<IndexNode>,
     next_id: &mut u32,
 ) -> anyhow::Result<u32> {
-    let inner = &text[start + 1..end - 1];
+    let inner = if end > start + 1 { &text[start + 1..end - 1] } else { "" };
     let mut count = 0u32;
     for (key_start, key_end, val_start, val_end) in parse_object_entries(inner, start + 1) {
         scan_value(text, val_start, val_end, parent_id, nodes, next_id, Some((key_start, key_end)))?;
@@ -159,7 +162,7 @@ fn scan_array_children(
     nodes: &mut Vec<IndexNode>,
     next_id: &mut u32,
 ) -> anyhow::Result<u32> {
-    let inner = &text[start + 1..end - 1];
+    let inner = if end > start + 1 { &text[start + 1..end - 1] } else { "" };
     let mut count = 0u32;
     for (s, e) in parse_array_elements(inner, start + 1) {
         scan_value(text, s, e, parent_id, nodes, next_id, None)?;

@@ -71,19 +71,12 @@ fn ThemeSync() -> Element {
     let app_state = use_app_state();
     use_effect(move || {
         let is_dark = app_state.is_dark();
-        #[cfg(target_arch = "wasm32")]
-        {
-            if let Some(html) = web_sys::window()
-                .and_then(|w| w.document())
-                .and_then(|d| d.document_element())
-            {
-                if is_dark {
-                    let _ = html.class_list().add_1("dark");
-                } else {
-                    let _ = html.class_list().remove_1("dark");
-                }
-            }
-        }
+        let js = if is_dark {
+            "document.documentElement.classList.add('dark');"
+        } else {
+            "document.documentElement.classList.remove('dark');"
+        };
+        let _ = dioxus::document::eval(js);
     });
     VNode::empty()
 }

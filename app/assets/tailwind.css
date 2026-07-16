@@ -146,12 +146,13 @@
   --zd-hero-mist: #E6E8EC;
 
   /* Syntax highlighting — restrained, token-driven (used by JSON tree/table/diff) */
-  --zd-syntax-key: #4F63E0;
-  --zd-syntax-string: #17915B;
-  --zd-syntax-number: #B5820E;
-  --zd-syntax-bool: #3A6FD6;
-  --zd-syntax-null: #9AA3B2;
-  --zd-syntax-punct: #5A6473;
+  /* JSON Editor-style semantic palette: blue keys, warm strings, sage numbers. */
+  --zd-syntax-key: #006FAE;
+  --zd-syntax-string: #A85032;
+  --zd-syntax-number: #4F7D3B;
+  --zd-syntax-bool: #1769B0;
+  --zd-syntax-null: #1769B0;
+  --zd-syntax-punct: #697586;
 
   --zd-text-xs: 0.75rem;
   --zd-text-sm: 0.875rem;
@@ -231,12 +232,12 @@ html.dark,
   --zd-hero-mist: #1E2430;
 
   /* Syntax highlighting — luminous but restrained on graphite */
-  --zd-syntax-key: #8397FF;
-  --zd-syntax-string: #3DD68C;
-  --zd-syntax-number: #E5B95B;
-  --zd-syntax-bool: #5B8DEF;
-  --zd-syntax-null: #5C6675;
-  --zd-syntax-punct: #9BA3B0;
+  --zd-syntax-key: #8FD3FF;
+  --zd-syntax-string: #D99478;
+  --zd-syntax-number: #B5CEA8;
+  --zd-syntax-bool: #5DADEC;
+  --zd-syntax-null: #5DADEC;
+  --zd-syntax-punct: #A9A9A9;
 }
 
 @layer base {
@@ -517,7 +518,7 @@ html.dark,
   .zd-code-gutter-lines {
     margin: 0;
     font-family: var(--font-mono);
-    font-size: 0.8125rem;
+    font-size: var(--zd-editor-font-size, 14px);
     line-height: 20px;
     text-align: right;
     color: var(--zd-text-muted);
@@ -529,13 +530,24 @@ html.dark,
     margin: 0;
     padding: 1rem;
     font-family: var(--font-mono);
-    font-size: 0.8125rem;
+    font-size: var(--zd-editor-font-size, 14px);
     line-height: 20px;
     white-space: pre;
     word-break: normal;
     pointer-events: none;
     color: var(--zd-text-primary);
   }
+  /* Syntect supplies token boundaries; these semantic colors deliberately come
+     from our theme so editor syntax stays legible in both color schemes. */
+  .zd-code-token-default { color: var(--zd-text-primary); }
+  .zd-code-token-key     { color: var(--zd-syntax-key); }
+  .zd-code-token-string  { color: var(--zd-syntax-string); }
+  .zd-code-token-number  { color: var(--zd-syntax-number); }
+  .zd-code-token-literal { color: var(--zd-syntax-bool); }
+  .zd-code-token-error   { color: var(--zd-error); }
+  .zd-code-token-warning { color: var(--zd-warning); }
+  .zd-code-token-info    { color: var(--zd-info); }
+  .zd-code-token-meta    { color: var(--zd-syntax-bool); }
   .zd-code-input {
     /* Stretch via inset only. Never use width/height: 100% here — percentage
        height against a min-height/auto containing block often resolves to the
@@ -551,7 +563,7 @@ html.dark,
     margin: 0;
     padding: 1rem;
     font-family: var(--font-mono);
-    font-size: 0.8125rem;
+    font-size: var(--zd-editor-font-size, 14px);
     line-height: 20px;
     resize: none;
     border: 0;

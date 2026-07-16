@@ -38,6 +38,13 @@ fn install_document_keydown(state: AppState) {
             ui.command_palette_open = !ui.command_palette_open;
             return;
         }
+        if ctrl && (key_str == "m" || key_str == "M") {
+            if st.ui.read().new_tab_registered {
+                e.prevent_default();
+                st.trigger_new_tab_action();
+            }
+            return;
+        }
         if ctrl && key_str == "." {
             e.prevent_default();
             let mut ui = st.ui.write();

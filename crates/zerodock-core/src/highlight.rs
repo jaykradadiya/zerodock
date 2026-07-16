@@ -42,6 +42,12 @@ pub fn highlight_to_html(source: &str, language: EditorLanguage) -> String {
         return html_escape(source);
     }
 
+    // JSON's grammar lets us reliably distinguish property names from string
+    // values, unlike the generic scopes supplied by the bundled theme.
+    if language == EditorLanguage::Json {
+        return highlight_json(source);
+    }
+
     let ps = syntax_set();
     let ts = theme_set();
     let syntax = ps
@@ -75,19 +81,98 @@ pub fn highlight_to_html(source: &str, language: EditorLanguage) -> String {
     html
 }
 
+fn highlight_json(source: &str) -> String {
+    let mut out = String::with_capacity(source.len() + source.len() / 3);
+    let bytes = source.as_bytes();
+    let mut index = 0;
+
+    while index < bytes.len() {
+        match bytes[index] {
+            b'"' => {
+                let start = index;
+                index += 1;
+                let mut escaped = false;
+                while index < bytes.len() {
+                    match bytes[index] {
+                        b'\\' if !escaped => escaped = true,
+                        b'"' if !escaped => { index += 1; break; }
+                        _ => escaped = false,
+                    }
+                    index += 1;
+                }
+                let mut after = index;
+                while after < bytes.len() && bytes[after].is_ascii_whitespace() { after += 1; }
+                let class = if bytes.get(after) == Some(&b':') {
+                    "zd-code-token-key"
+                } else {
+                    "zd-code-token-string"
+                };
+                append_classed(&mut out, class, &source[start..index]);
+            }
+            b'-' | b'0'..=b'9' => {
+                let start = index;
+                index += 1;
+                while index < bytes.len()
+                    && matches!(bytes[index], b'0'..=b'9' | b'.' | b'e' | b'E' | b'+' | b'-')
+                { index += 1; }
+                append_classed(&mut out, "zd-code-token-number", &source[start..index]);
+            }
+            _ if source[index..].starts_with("true") => {
+                append_classed(&mut out, "zd-code-token-literal", "true"); index += 4;
+            }
+            _ if source[index..].starts_with("false") => {
+                append_classed(&mut out, "zd-code-token-literal", "false"); index += 5;
+            }
+            _ if source[index..].starts_with("null") => {
+                append_classed(&mut out, "zd-code-token-literal", "null"); index += 4;
+            }
+            _ => {
+                let ch = source[index..].chars().next().expect("valid UTF-8 source");
+                out.push_str(&html_escape(&source[index..index + ch.len_utf8()]));
+                index += ch.len_utf8();
+            }
+        }
+    }
+    out
+}
+
+fn append_classed(out: &mut String, class: &str, text: &str) {
+    out.push_str("<span class=\"");
+    out.push_str(class);
+    out.push_str("\">");
+    out.push_str(&html_escape(text));
+    out.push_str("</span>");
+}
+
 fn append_styled(out: &mut String, style: Style, text: &str) {
     let escaped = html_escape(text);
     if style.foreground.r == 0 && style.foreground.g == 0 && style.foreground.b == 0 && style.font_style.bits() == 0 {
         out.push_str(&escaped);
         return;
     }
-    let fg = style.foreground;
-    out.push_str(&format!(
-        "<span style=\"color:#{:02x}{:02x}{:02x}\">",
-        fg.r, fg.g, fg.b
-    ));
-    out.push_str(&escaped);
-    out.push_str("</span>");
+    // Syntect's bundled theme is dark-only. Emitting its RGB values inline made
+    // the editor retain low-contrast dark-theme ink after switching to light
+    // mode. Keep Syntect for tokenization, but expose its palette as CSS classes
+    // so the active application theme owns the final color.
+    let class = token_class(style);
+    append_classed(out, class, text);
+}
+
+fn token_class(style: Style) -> &'static str {
+    let color = style.foreground;
+    match (color.r, color.g, color.b) {
+        // base16-ocean.dark accent palette used by Syntect
+        (0xa3, 0xbe, 0x8c) => "zd-code-token-string",
+        (0xd0, 0x87, 0x70) => "zd-code-token-number",
+        (0xbf, 0x61, 0x6a) => "zd-code-token-error",
+        (0xeb, 0xcb, 0x8b) => "zd-code-token-warning",
+        (0x96, 0xb5, 0xb4) => "zd-code-token-info",
+        (0x8f, 0xa1, 0xb3) => "zd-code-token-key",
+        (0xb4, 0x8e, 0xad) => "zd-code-token-meta",
+        // Base foregrounds remain readable app text rather than inheriting
+        // the pale foreground of the dark Syntect theme.
+        _ => "zd-code-token-default",
+    }
 }
 
 fn html_escape(s: &str) -> String {
@@ -176,8 +261,12 @@ mod tests {
 
     #[test]
     fn highlights_json_braces() {
-        let html = highlight_to_html(r#"{"a":1}"#, EditorLanguage::Json);
-        assert!(html.contains("span"));
+        let html = highlight_to_html(r#"{"a":"value","count":1,"ok":true,"none":null}"#, EditorLanguage::Json);
+        assert!(html.contains("zd-code-token-key"));
+        assert!(html.contains("zd-code-token-string"));
+        assert!(html.contains("zd-code-token-number"));
+        assert!(html.contains("zd-code-token-literal"));
+        assert!(!html.contains("style=\"color:"));
     }
 
     #[test]
@@ -190,4 +279,3 @@ mod tests {
         assert_eq!(line_count("hello\nworld\n"), 3);
     }
 }
-

@@ -1,16 +1,19 @@
 use crate::shell::drag_drop::DragDropZone;
 use crate::shell::export::ExportButton;
-use crate::shell::layout::{CodePanel, HubToolHeader, ModeToggle, ToolBody, ToolPage, ToolToolbar, ToolWorkspace};
+use crate::shell::layout::{CodePanel, ModeToggle, ToolBody, ToolPage, ToolToolbar, ToolWorkspace};
 use crate::shell::code_editor::CodeLanguage;
-use crate::shell::ui::{Button, ButtonVariant, SegmentedControl, TabGroup};
+use crate::shell::ui::{Button, ButtonVariant, TabGroup, IconClose, IconSearch};
 use crate::shell::virtual_code_editor::VirtualCodeEditor;
-use crate::state::{use_app_state, use_primary_action, ToastKind};
+use crate::state::{use_app_state, use_primary_action, use_new_tab_action, ToastKind};
 use dioxus::prelude::*;
 use ropey::Rope;
 use std::collections::HashSet;
 use zerodock_core::{convert_json_to_types, diff_json, format_json_opts, jmespath_query, json_to_yaml, repair_json, yaml_to_json, JsonChange, JsonChangeKind, TargetLang};
 use zerodock_indexer::JsonIndex;
 use zerodock_platform::{HttpRequest, PlatformServices};
+
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 const VISIBLE_ROWS: usize = 40;
 const ROW_HEIGHT: usize = 28;
@@ -21,7 +24,7 @@ const ROW_HEIGHT: usize = 28;
 /// code path is used completely unchanged.
 const LARGE_FILE_THRESHOLD_BYTES: usize = 2 * 1024 * 1024;
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct FileTab {
     pub id: String,
     pub name: String,
@@ -52,6 +55,27 @@ pub fn WorkspaceTabBar(
     let mut find_query = use_signal(String::new);
     let mut drag_from = use_signal(|| None::<usize>);
 
+    use_effect(move || {
+        let active = active_id.read().clone();
+        let js = format!(
+            "setTimeout(() => {{
+                const el = document.getElementById('zd-tab-btn-{}');
+                const container = document.getElementById('zd-tab-scroll-container');
+                if (el && container) {{
+                    const tabs = container.querySelectorAll('.zd-json-tab');
+                    const isLast = tabs.length > 0 && tabs[tabs.length - 1].id === 'zd-tab-btn-{}';
+                    if (isLast) {{
+                        container.scrollTo({{ left: container.scrollWidth, behavior: 'smooth' }});
+                    }} else {{
+                        el.scrollIntoView({{ behavior: 'smooth', block: 'nearest', inline: 'nearest' }});
+                    }}
+                }}
+            }}, 50);",
+            active, active
+        );
+        let _ = dioxus::document::eval(&js);
+    });
+
     let filtered_tabs: Vec<FileTabMeta> = {
         let q = find_query.read().to_lowercase();
         tabs_meta.read()
@@ -62,110 +86,172 @@ pub fn WorkspaceTabBar(
     };
 
     rsx! {
-        div { class: "flex items-center bg-[var(--zd-surface-raised)] border-b border-[var(--zd-border)] shrink-0 pr-3",
-            div { class: "flex items-center gap-1 px-3 py-1.5 overflow-x-auto custom-scrollbar select-none flex-1 min-w-0",
-            for (idx, tab) in tabs_meta.read().iter().enumerate() {
-                {
-                    let id = tab.id.clone();
-                    let name = tab.name.clone();
-                    let is_active = *active_id.read() == id;
-                    let is_renaming = renaming_id.read().as_ref() == Some(&id);
-                    let active_class = if is_active {
-                        "bg-[var(--zd-surface)] text-[var(--zd-text-primary)] border-b-2 border-[var(--zd-primary)] shadow-sm"
-                    } else {
-                        "text-[var(--zd-text-muted)] hover:text-[var(--zd-text-secondary)] hover:bg-[var(--zd-surface)]/50"
-                    };
-                    let close_id = id.clone();
-                    let rename_tab_id = id.clone();
-                    rsx! {
-                        div {
-                            key: "{id}",
-                            class: "group flex items-center gap-2 px-3 py-1 rounded-t-lg text-xs font-mono cursor-pointer transition-all duration-150 {active_class}",
-                            draggable: true,
-                            onclick: {
-                                let id = id.clone();
-                                move |_| on_select.call(id.clone())
-                            },
-                            ondoubleclick: {
-                                let id = id.clone();
-                                let name = name.clone();
-                                move |_| {
-                                    renaming_id.set(Some(id.clone()));
-                                    rename_value.set(name.clone());
-                                }
-                            },
-                            ondragstart: move |_| drag_from.set(Some(idx)),
-                            ondragover: move |e| e.prevent_default(),
-                            ondrop: move |_| {
-                                if let Some(from) = *drag_from.read() {
-                                    if from != idx {
-                                        on_reorder.call((from, idx));
+        div {
+            class: "zd-json-tabbar flex items-center shrink-0 pr-3 border-b border-[var(--zd-border)] bg-[var(--zd-surface-sunken)] px-3 h-11 relative justify-between",
+            div {
+                id: "zd-tab-scroll-container",
+                class: "flex items-end gap-1 px-1 overflow-x-auto scrollbar-none select-none flex-1 min-w-0 h-full self-stretch",
+                for (idx, tab) in tabs_meta.read().iter().enumerate() {
+                    {
+                        let id = tab.id.clone();
+                        let name = tab.name.clone();
+                        let is_active = *active_id.read() == id;
+                        let is_renaming = renaming_id.read().as_ref() == Some(&id);
+                        let active_class = if is_active {
+                            "border-t border-l border-r border-[var(--zd-border)] border-b border-[var(--zd-surface-raised)] bg-[var(--zd-surface-raised)] text-[var(--zd-text-primary)] font-medium relative z-10 translate-y-[1px] focus-ring"
+                        } else {
+                            "border-t border-l border-r border-transparent border-b border-transparent text-[var(--zd-text-muted)] hover:bg-[var(--zd-surface-hover)]/30 hover:text-[var(--zd-text-primary)] focus-ring"
+                        };
+                        let close_id = id.clone();
+                        let rename_tab_id = id.clone();
+                        let close_btn_opacity = if is_active {
+                            "opacity-70 hover:opacity-100"
+                        } else {
+                            "opacity-0 group-hover:opacity-100 hover:opacity-100"
+                        };
+                        rsx! {
+                            div {
+                                key: "{id}",
+                                id: "zd-tab-btn-{id}",
+                                class: "zd-json-tab group flex items-center gap-2 px-3 py-2 text-xs cursor-pointer transition-all duration-150 rounded-t-md outline-none {active_class}",
+                                draggable: true,
+                                tabindex: "0",
+                                role: "tab",
+                                aria_selected: is_active,
+                                onclick: {
+                                    let id = id.clone();
+                                    move |_| {
+                                        renaming_id.set(None);
+                                        on_select.call(id.clone());
                                     }
-                                }
-                                drag_from.set(None);
-                            },
-                            if is_renaming {
-                                input {
-                                    class: "w-24 px-1 py-0.5 text-xs font-mono bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] rounded",
-                                    value: "{rename_value}",
-                                    oninput: move |e: Event<FormData>| rename_value.set(e.value()),
-                                    onkeydown: move |e: Event<KeyboardData>| {
-                                        if e.key() == Key::Enter {
-                                            let new_name = rename_value.read().clone();
-                                            if !new_name.trim().is_empty() {
-                                                on_rename.call((rename_tab_id.clone(), new_name));
+                                },
+                                onkeydown: {
+                                    let id = id.clone();
+                                    let tabs_len = tabs_meta.read().len();
+                                    let on_select = on_select.clone();
+                                    move |e: Event<KeyboardData>| {
+                                        if e.key() == Key::ArrowRight || e.key() == Key::ArrowLeft {
+                                            e.prevent_default();
+                                            if let Some(current_idx) = tabs_meta.read().iter().position(|t| t.id == id) {
+                                                let next_idx = if e.key() == Key::ArrowRight {
+                                                    (current_idx + 1) % tabs_len
+                                                } else {
+                                                    (current_idx + tabs_len - 1) % tabs_len
+                                                };
+                                                if let Some(next_tab) = tabs_meta.read().get(next_idx) {
+                                                    let next_id = next_tab.id.clone();
+                                                    on_select.call(next_id.clone());
+                                                    let js = format!(
+                                                        "setTimeout(() => {{ const el = document.getElementById('zd-tab-btn-{}'); if (el) el.focus(); }}, 10);",
+                                                        next_id
+                                                    );
+                                                    let _ = dioxus::document::eval(&js);
+                                                }
                                             }
-                                            renaming_id.set(None);
                                         }
-                                        if e.key() == Key::Escape {
-                                            renaming_id.set(None);
+                                    }
+                                },
+                                ondoubleclick: {
+                                    let id = id.clone();
+                                    let name = name.clone();
+                                    move |_| {
+                                        renaming_id.set(Some(id.clone()));
+                                        rename_value.set(name.clone());
+                                    }
+                                },
+                                ondragstart: move |_| drag_from.set(Some(idx)),
+                                ondragover: move |e| e.prevent_default(),
+                                ondrop: move |_| {
+                                    if let Some(from) = *drag_from.read() {
+                                        if from != idx {
+                                            on_reorder.call((from, idx));
                                         }
-                                    },
-                                    onblur: move |_| renaming_id.set(None),
-                                }
-                            } else {
-                                span { "{name}" }
-                            }
-                            if tab.is_modified {
-                                span { class: "zd-status-dot inline-block", aria_hidden: "true" }
-                            }
-                            if tabs_meta.read().len() > 1 {
-                                button {
-                                    class: "opacity-0 group-hover:opacity-100 hover:text-[var(--zd-accent)] transition-opacity px-1 rounded hover:bg-[var(--zd-surface-raised)]",
-                                    aria_label: "Close tab",
-                                    onclick: {
-                                        move |e: Event<MouseData>| {
+                                    }
+                                    drag_from.set(None);
+                                },
+                                if is_renaming {
+                                    input {
+                                        class: "w-28 px-1.5 py-0.5 text-xs font-mono bg-[var(--zd-surface)] border border-[var(--zd-border)] rounded focus-ring outline-none",
+                                        value: "{rename_value}",
+                                        oninput: move |e: Event<FormData>| rename_value.set(e.value()),
+                                        onclick: move |e: Event<MouseData>| {
                                             e.stop_propagation();
-                                            on_close.call(close_id.clone());
-                                        }
-                                    },
-                                    "×"
+                                        },
+                                        ondoubleclick: move |e: Event<MouseData>| {
+                                            e.stop_propagation();
+                                        },
+                                        onkeydown: move |e: Event<KeyboardData>| {
+                                            e.stop_propagation();
+                                            if e.key() == Key::Enter {
+                                                let new_name = rename_value.read().clone();
+                                                if !new_name.trim().is_empty() {
+                                                    on_rename.call((rename_tab_id.clone(), new_name));
+                                                }
+                                                renaming_id.set(None);
+                                            }
+                                            if e.key() == Key::Escape {
+                                                renaming_id.set(None);
+                                            }
+                                        },
+                                        onblur: move |_| renaming_id.set(None),
+                                    }
+                                } else {
+                                    span { class: "max-w-[140px] truncate block select-none", "{name}" }
+                                }
+                                if tab.is_modified {
+                                    span { class: "zd-status-dot inline-block shrink-0", aria_hidden: "true" }
+                                }
+                                if tabs_meta.read().len() > 1 {
+                                    button {
+                                        class: "w-4 h-4 flex items-center justify-center shrink-0 rounded text-[var(--zd-text-muted)] hover:bg-[var(--zd-surface-hover)] hover:text-[var(--zd-text-primary)] transition-all {close_btn_opacity}",
+                                        aria_label: "Close tab",
+                                        onclick: {
+                                            move |e: Event<MouseData>| {
+                                                e.stop_propagation();
+                                                on_close.call(close_id.clone());
+                                            }
+                                        },
+                                        IconClose {}
+                                    }
+                                } else {
+                                    div { class: "w-4 h-4 shrink-0" }
                                 }
                             }
                         }
                     }
                 }
-            }
                 button {
-                    class: "w-6 h-6 ml-1 flex items-center justify-center shrink-0 rounded-lg text-xs text-[var(--zd-text-muted)] hover:text-[var(--zd-text-primary)] hover:bg-[var(--zd-surface)] transition-colors",
+                    class: "w-8 h-8 mb-1 flex items-center justify-center shrink-0 rounded-md text-[var(--zd-text-muted)] hover:text-[var(--zd-text-primary)] hover:bg-[var(--zd-surface-hover)] transition-all self-end cursor-pointer",
                     title: "New Tab",
-                    onclick: move |_| on_add.call(()),
-                    "+"
+                    onclick: move |_| {
+                        renaming_id.set(None);
+                        on_add.call(());
+                    },
+                    svg {
+                        width: "14", height: "14",
+                        fill: "none", stroke: "currentColor",
+                        stroke_width: "2.5", stroke_linecap: "round", stroke_linejoin: "round",
+                        view_box: "0 0 24 24",
+                        line { x1: "12", y1: "5", x2: "12", y2: "19" }
+                        line { x1: "5", y1: "12", x2: "19", y2: "12" }
+                    }
                 }
             }
-            div { class: "relative ml-2 shrink-0",
+            div { class: "relative ml-2 shrink-0 self-center",
                 button {
-                    class: "toolbar-btn",
+                    class: "toolbar-btn flex items-center gap-1.5 px-2.5 py-1.5 rounded-md hover:bg-[var(--zd-surface-hover)] text-[var(--zd-text-muted)] hover:text-[var(--zd-text-primary)] transition-all",
                     title: "Find tab",
                     onclick: move |_| {
+                        renaming_id.set(None);
                         let next = !*find_open.read();
                         find_open.set(next);
                     },
-                    "Tabs"
+                    IconSearch {},
+                    span { "Tabs" }
                 }
                 if *find_open.read() {
                     div {
-                        class: "absolute right-0 top-full mt-1 z-[var(--zd-z-dropdown)] w-56 rounded-md border border-[var(--zd-border)] bg-[var(--zd-surface-raised)] shadow-[var(--zd-shadow-lg)] p-2",
+                        class: "absolute right-0 top-full mt-1 z-[var(--zd-z-dropdown)] w-56 rounded-md border border-[var(--zd-border)] bg-[var(--zd-surface)] shadow-[var(--zd-shadow-lg)] p-2",
                         input {
                             class: "w-full px-2 py-1.5 text-xs font-mono rounded border border-[var(--zd-border)] bg-[var(--zd-surface)] focus-ring mb-2",
                             placeholder: "Search tabs…",
@@ -207,6 +293,8 @@ pub fn JsonHub(initial_panel: Option<String>) -> Element {
         pasted.unwrap_or_else(|| r#"{"name":"ZeroDock","version":1,"features":["rust","dioxus"]}"#.to_string())
     });
 
+    let mut loaded = use_signal(|| false);
+
     let mut tabs = use_signal(|| vec![
         FileTab {
             id: "tab_1".to_string(),
@@ -216,6 +304,122 @@ pub fn JsonHub(initial_panel: Option<String>) -> Element {
         }
     ]);
     let mut active_tab_id = use_signal(|| "tab_1".to_string());
+
+    // Rope mirror of the active tab's content, used only by the large-file
+    // (virtualized) editor path. Kept separate from `FileTab.content: String`
+    // so every other panel (tree/table/yaml/types/path/diff) is unaffected —
+    // they keep reading `get_active_content()` snapshots exactly as before.
+    let mut active_rope = use_signal(|| Rope::from_str(&initial_content));
+    // Tracks which tab `active_rope` currently mirrors, so switching tabs
+    // reloads the Rope from that tab's String content instead of leaking
+    // the previous tab's buffer into the newly active one.
+    let mut active_rope_tab_id = use_signal(|| "tab_1".to_string());
+
+    // Async loading effect on mount
+    {
+        let storage = platform.storage.clone();
+        let state = state.clone();
+        use_effect(move || {
+            let storage = storage.clone();
+            let mut state = state.clone();
+            spawn(async move {
+                let mut loaded_tabs = None;
+                if let Ok(Some(json)) = storage.get(zerodock_platform::JSON_TABS_KEY).await {
+                    if let Ok(parsed) = serde_json::from_str::<Vec<FileTab>>(&json) {
+                        if !parsed.is_empty() {
+                            loaded_tabs = Some(parsed);
+                        }
+                    }
+                }
+                
+                let mut loaded_active_id = None;
+                if let Ok(Some(id)) = storage.get(zerodock_platform::ACTIVE_TAB_KEY).await {
+                    loaded_active_id = Some(id);
+                }
+
+                // Check for smart paste / tool_states
+                let pasted = state.tool_states.write().remove("json-toolkit");
+
+                if let Some(mut existing_tabs) = loaded_tabs {
+                    if let Some(pasted_content) = pasted {
+                        // Create a new tab for the pasted content
+                        let new_id = uuid::Uuid::new_v4().to_string();
+                        // Find a unique name
+                        let mut name_idx = 1;
+                        let mut new_name = "pasted.json".to_string();
+                        while existing_tabs.iter().any(|t| t.name == new_name) {
+                            new_name = format!("pasted_{}.json", name_idx);
+                            name_idx += 1;
+                        }
+                        existing_tabs.push(FileTab {
+                            id: new_id.clone(),
+                            name: new_name,
+                            content: pasted_content.clone(),
+                            is_modified: true,
+                        });
+                        *tabs.write() = existing_tabs;
+                        active_tab_id.set(new_id.clone());
+                        active_rope.set(Rope::from_str(&pasted_content));
+                        active_rope_tab_id.set(new_id);
+                    } else {
+                        *tabs.write() = existing_tabs.clone();
+                        let active_id = if let Some(active_id) = loaded_active_id {
+                            if existing_tabs.iter().any(|t| t.id == active_id) {
+                                active_id
+                            } else if let Some(first) = existing_tabs.first() {
+                                first.id.clone()
+                            } else {
+                                "tab_1".to_string()
+                            }
+                        } else if let Some(first) = existing_tabs.first() {
+                            first.id.clone()
+                        } else {
+                            "tab_1".to_string()
+                        };
+                        active_tab_id.set(active_id.clone());
+                        let text = existing_tabs.iter().find(|t| t.id == active_id).map(|t| t.content.clone()).unwrap_or_default();
+                        active_rope.set(Rope::from_str(&text));
+                        active_rope_tab_id.set(active_id);
+                    }
+                } else {
+                    // No loaded tabs, use default/pasted
+                    let content = pasted.unwrap_or_else(|| r#"{"name":"ZeroDock","version":1,"features":["rust","dioxus"]}"#.to_string());
+                    let default_tabs = vec![
+                        FileTab {
+                            id: "tab_1".to_string(),
+                            name: "data.json".to_string(),
+                            content: content.clone(),
+                            is_modified: false,
+                        }
+                    ];
+                    *tabs.write() = default_tabs;
+                    active_tab_id.set("tab_1".to_string());
+                    active_rope.set(Rope::from_str(&content));
+                    active_rope_tab_id.set("tab_1".to_string());
+                }
+
+                loaded.set(true);
+            });
+        });
+    }
+
+    // Async saving effect when tabs or active tab ID changes
+    {
+        let storage = platform.storage.clone();
+        use_effect(move || {
+            let storage = storage.clone();
+            if *loaded.read() {
+                let tabs_list = tabs.read().clone();
+                let active_id = active_tab_id.read().clone();
+                spawn(async move {
+                    if let Ok(json) = serde_json::to_string(&tabs_list) {
+                        let _ = storage.set(zerodock_platform::JSON_TABS_KEY, &json).await;
+                    }
+                    let _ = storage.set(zerodock_platform::ACTIVE_TAB_KEY, &active_id).await;
+                });
+            }
+        });
+    }
 
     let tabs_meta = use_memo(move || {
         tabs.read()
@@ -227,16 +431,6 @@ pub fn JsonHub(initial_panel: Option<String>) -> Element {
             })
             .collect::<Vec<_>>()
     });
-
-    // Rope mirror of the active tab's content, used only by the large-file
-    // (virtualized) editor path. Kept separate from `FileTab.content: String`
-    // so every other panel (tree/table/yaml/types/path/diff) is unaffected —
-    // they keep reading `get_active_content()` snapshots exactly as before.
-    let mut active_rope = use_signal(|| Rope::from_str(&initial_content));
-    // Tracks which tab `active_rope` currently mirrors, so switching tabs
-    // reloads the Rope from that tab's String content instead of leaking
-    // the previous tab's buffer into the newly active one.
-    let mut active_rope_tab_id = use_signal(|| "tab_1".to_string());
 
     let get_active_content = move || {
         tabs.read()
@@ -287,27 +481,49 @@ pub fn JsonHub(initial_panel: Option<String>) -> Element {
         active_rope_tab_id.set(active_id);
     };
 
-    let mut set_active_content = move |val: String| {
-        let current = get_active_content();
-        if current != val {
-            undo_stack.write().push(current);
+    let mut auto_repair_msg = use_signal(|| None::<String>);
+    let original_before_repair = use_signal(String::new);
+    let mut indent_size = use_signal(|| 2usize);
+    let mut sort_keys = use_signal(|| false);
+    let mut editor_font_size = use_signal(|| 14usize);
+
+    let mut set_active_content = {
+        let mut original_before_repair = original_before_repair.clone();
+        let mut auto_repair_msg = auto_repair_msg.clone();
+        let mut indent_size = indent_size.clone();
+        move |val: String| {
+            let current = get_active_content();
+            if current == val {
+                return;
+            }
+            undo_stack.write().push(current.clone());
             redo_stack.write().clear();
+            
+            let detected = detect_indentation(&val);
+            let current_indent = *indent_size.peek();
+            if detected != current_indent {
+                indent_size.set(detected);
+            }
+
+            let is_paste = (val.len() as isize - current.len() as isize).abs() > 10;
+            if is_paste && !val.trim().is_empty() && serde_json::from_str::<serde_json::Value>(&val).is_err() {
+                if let Ok(repaired) = repair_json(&val) {
+                    if repaired != val {
+                        original_before_repair.set(val.clone());
+                        auto_repair_msg.set(Some("Fixed trailing commas, unquoted keys, or other syntax issues.".to_string()));
+                        set_active_content_raw(repaired);
+                        return;
+                    }
+                }
+            }
+            
+            if !is_paste {
+                auto_repair_msg.set(None);
+            }
+            set_active_content_raw(val);
         }
-        set_active_content_raw(val);
     };
 
-
-    // Applies a targeted (char_start, char_end, replacement) edit coming from
-    // `VirtualCodeEditor` — the Rope itself was already mutated in place by
-    // the editor (O(log n)), so this only needs to mirror the resulting text
-    // back into `FileTab.content` for the other (non-virtualized) panels.
-    // This still materializes a full String, but only once per edit and only
-    // for large files that already opted into the virtualized path — the
-    // per-keystroke Rope mutation itself never touches the full-file String.
-    // Deliberately does NOT call `active_rope.set(...)` (unlike
-    // `set_active_content`/`import_into_tab`) since the Rope here is already
-    // current — re-setting it would be redundant and would reset
-    // `active_rope_tab_id` unnecessarily.
     let mut sync_active_content_from_rope = move || {
         let active_id = active_tab_id.peek().clone();
         let text = active_rope.peek().to_string();
@@ -332,29 +548,59 @@ pub fn JsonHub(initial_panel: Option<String>) -> Element {
         active_rope_tab_id.set(active_id);
     };
 
-    let initial_panel_cloned = initial_panel.clone();
-    let mut panel = use_signal(move || initial_panel_cloned.unwrap_or_else(|| "editor".to_string()));
-    let initial_panel_for_sig = initial_panel.clone();
-    let mut initial_panel_sig = use_signal(move || initial_panel_for_sig.clone());
-    if *initial_panel_sig.read() != initial_panel {
-        initial_panel_sig.set(initial_panel.clone());
-        panel.set(initial_panel.clone().unwrap_or_else(|| "editor".to_string()));
-    }
-    let mut view_mode = use_signal(|| "editor".to_string());
+    let mut right_pane_view = use_signal(|| "tree".to_string());
+    let mut is_split_view = use_signal(|| true);
     let mut format_error = use_signal(|| None::<String>);
     let mut index = use_signal(|| None::<JsonIndex>);
     let mut indexing = use_signal(|| false);
-    
+
     let mut show_settings = use_signal(|| false);
-    let mut indent_size = use_signal(|| 2usize);
-    let mut sort_keys = use_signal(|| false);
     let mut show_import_url = use_signal(|| false);
     let mut import_url = use_signal(String::new);
     let mut import_loading = use_signal(|| false);
-    let mut show_bottom_jmespath = use_signal(|| false);
-    let mut bottom_jmespath_query = use_signal(|| "features[0]".to_string());
 
+    let mut jmespath_query_str = use_signal(String::new);
+    
+    let queried_content = use_memo(move || {
+        let q = jmespath_query_str.read().clone();
+        if q.trim().is_empty() {
+            None
+        } else {
+            let active = get_active_content();
+            match jmespath_query(&active, &q) {
+                Ok(res) => Some(Ok(res)),
+                Err(e) => Some(Err(e.to_string())),
+            }
+        }
+    });
 
+    let visual_content = move || {
+        if let Some(Ok(res)) = queried_content.read().clone() {
+            res
+        } else {
+            get_active_content()
+        }
+    };
+
+    let error_line = use_memo(move || {
+        format_error.read().as_ref().and_then(|err| parse_error_line(err))
+    });
+
+    use_effect(move || {
+        let text = get_active_content();
+        if text.trim().is_empty() {
+            format_error.set(None);
+        } else {
+            match serde_json::from_str::<serde_json::Value>(&text) {
+                Ok(_) => {
+                    format_error.set(None);
+                }
+                Err(e) => {
+                    format_error.set(Some(e.to_string()));
+                }
+            }
+        }
+    });
 
     let mut visit_state = state.clone();
     use_effect(move || {
@@ -365,16 +611,14 @@ pub fn JsonHub(initial_panel: Option<String>) -> Element {
         indexing.set(true);
         if let Ok(idx) = JsonIndex::from_bytes(text.as_bytes()) {
             index.set(Some(idx));
-            format_error.set(None);
         } else {
             index.set(None);
         }
         indexing.set(false);
     };
 
-    let current_text = get_active_content();
     use_effect(move || {
-        rebuild_index(current_text.clone());
+        rebuild_index(get_active_content());
     });
 
     use_primary_action(move || {
@@ -388,163 +632,339 @@ pub fn JsonHub(initial_panel: Option<String>) -> Element {
         }
     });
 
-    let header_tab = if *view_mode.read() != "editor" {
-        view_mode.read().clone()
-    } else {
-        panel.read().clone()
+    let add_new_tab = move || {
+        let new_id = Uuid::new_v4().to_string();
+        let new_name = format!("Untitled {}", tabs.read().len() + 1);
+        tabs.write().push(FileTab {
+            id: new_id.clone(),
+            name: new_name,
+            content: "{\n  \n}".to_string(),
+            is_modified: false,
+        });
+        active_tab_id.set(new_id);
     };
 
-    let hub_description = if platform.is_desktop {
-        "Format, explore, and query JSON — supports large files via mmap on desktop".to_string()
-    } else {
-        "Format, explore, and query JSON — up to ~500MB on web".to_string()
-    };
+    use_new_tab_action({
+        let mut add_new_tab = add_new_tab.clone();
+        move || {
+            add_new_tab();
+        }
+    });
+
+    let detected_lang = use_memo(move || {
+        let tabs_list = tabs.read();
+        if tabs_list.iter().any(|t| t.name.ends_with(".rs") || t.name == "Cargo.toml") {
+            "rust".to_string()
+        } else if tabs_list.iter().any(|t| t.name.ends_with(".go") || t.name == "go.mod") {
+            "go".to_string()
+        } else if tabs_list.iter().any(|t| t.name.ends_with(".py") || t.name == "requirements.txt") {
+            "pydantic".to_string()
+        } else if tabs_list.iter().any(|t| t.name.ends_with(".ts") || t.name == "tsconfig.json") {
+            "typescript".to_string()
+        } else {
+            "typescript".to_string()
+        }
+    });
+
+    let on_mutate = EventHandler::new({
+        let mut set_active_content = set_active_content.clone();
+        let indent_size = indent_size.clone();
+        let sort_keys = sort_keys.clone();
+        move |(path, mutation): (String, JsonMutation)| {
+            let text = get_active_content();
+            if let Ok(mut val) = serde_json::from_str::<serde_json::Value>(&text) {
+                if mutate_json_value(&mut val, &path, mutation) {
+                    if let Ok(formatted) = format_json_opts(&serde_json::to_string(&val).unwrap_or_default(), *indent_size.read(), *sort_keys.read()) {
+                        set_active_content(formatted);
+                    }
+                }
+            }
+        }
+    });
 
     rsx! {
         ToolPage {
             div {
-                class: "zd-tool-fill flex flex-col min-h-0",
-            HubToolHeader {
-                hub_id: "json-toolkit",
-                hub_title: "JSON Toolkit",
-                hub_description: hub_description,
-                active_tab: header_tab,
-            }
-            WorkspaceTabBar {
-                tabs_meta: tabs_meta,
-                active_id: active_tab_id,
-                on_select: EventHandler::new(move |id: String| active_tab_id.set(id)),
-                on_close: EventHandler::new(move |id: String| {
-                    let mut list = tabs.write();
-                    if list.len() > 1 {
-                        list.retain(|t| t.id != id);
-                        if *active_tab_id.read() == id {
-                            if let Some(first) = list.first() {
-                                active_tab_id.set(first.id.clone());
+                class: "zd-json-toolkit zd-tool-fill flex flex-col min-h-0",
+                style: "--zd-editor-font-size: {editor_font_size}px;",
+                ToolWorkspace {
+                    toolbar: rsx! {
+                        div { class: "zd-json-toolbar flex flex-col w-full relative",
+                            WorkspaceTabBar {
+                                tabs_meta: tabs_meta,
+                                active_id: active_tab_id,
+                                on_select: EventHandler::new(move |id: String| active_tab_id.set(id)),
+                                on_close: EventHandler::new(move |id: String| {
+                                    let mut list = tabs.write();
+                                    if list.len() > 1 {
+                                        list.retain(|t| t.id != id);
+                                        if *active_tab_id.read() == id {
+                                            if let Some(first) = list.first() {
+                                                active_tab_id.set(first.id.clone());
+                                            }
+                                        }
+                                    }
+                                }),
+                                on_add: EventHandler::new({
+                                    let mut add_new_tab = add_new_tab.clone();
+                                    move |_| {
+                                        add_new_tab();
+                                    }
+                                }),
+                                on_rename: EventHandler::new(move |(id, new_name): (String, String)| {
+                                    tabs.write().iter_mut().for_each(|t| {
+                                        if t.id == id {
+                                            t.name = new_name.clone();
+                                        }
+                                    });
+                                }),
+                                on_reorder: EventHandler::new(move |(from, to): (usize, usize)| {
+                                    let mut list = tabs.write();
+                                    if from < list.len() && to < list.len() && from != to {
+                                        let item = list.remove(from);
+                                        list.insert(to, item);
+                                    }
+                                }),
                             }
-                        }
-                    }
-                }),
-                on_add: EventHandler::new(move |_| {
-                    let new_id = format!("tab_{}", tabs.read().len() + 1);
-                    let new_name = format!("Untitled {}", tabs.read().len() + 1);
-                    tabs.write().push(FileTab {
-                        id: new_id.clone(),
-                        name: new_name,
-                        content: "{\n  \n}".to_string(),
-                        is_modified: false,
-                    });
-                    active_tab_id.set(new_id);
-                }),
-                on_rename: EventHandler::new(move |(id, new_name): (String, String)| {
-                    tabs.write().iter_mut().for_each(|t| {
-                        if t.id == id {
-                            t.name = new_name.clone();
-                        }
-                    });
-                }),
-                on_reorder: EventHandler::new(move |(from, to): (usize, usize)| {
-                    let mut list = tabs.write();
-                    if from < list.len() && to < list.len() && from != to {
-                        let item = list.remove(from);
-                        list.insert(to, item);
-                    }
-                }),
-            }
-            ToolWorkspace {
-                toolbar: rsx! {
-                    div { class: "flex flex-col w-full",
-                        ToolToolbar {
+                            ToolToolbar {
+                            // ── Edit group ──────────────────────────────────────
                             div { class: "zd-toolbar-group",
-                                span { class: "zd-toolbar-group-label", "View" }
-                                ModeToggle { active: *view_mode.read() == "editor" && *panel.read() == "editor", onclick: move |_| { view_mode.set("editor".into()); panel.set("editor".into()); }, "Editor" }
-                                ModeToggle { active: *view_mode.read() == "tree", onclick: move |_| view_mode.set("tree".into()), "Tree" }
-                                ModeToggle { active: *view_mode.read() == "table", onclick: move |_| view_mode.set("table".into()), "Table" }
-                                ModeToggle { active: *view_mode.read() == "diff", onclick: move |_| view_mode.set("diff".into()), "Diff" }
-                            }
-                            div { class: "zd-toolbar-group",
-                                span { class: "zd-toolbar-group-label", "Panels" }
-                                ModeToggle { active: *panel.read() == "yaml", onclick: move |_| { panel.set("yaml".into()); view_mode.set("editor".into()); }, "YAML ↔ JSON" }
-                                ModeToggle { active: *panel.read() == "types", onclick: move |_| { panel.set("types".into()); view_mode.set("editor".into()); }, "Types" }
                                 Button {
-                                    variant: if *show_bottom_jmespath.read() { ButtonVariant::Primary } else { ButtonVariant::Ghost },
+                                    variant: ButtonVariant::Ghost,
                                     class: "px-2 py-1 text-xs",
-                                    onclick: move |_| {
-                                        let val = *show_bottom_jmespath.read();
-                                        show_bottom_jmespath.set(!val);
-                                    },
-                                    "JMESPath Bar"
-                                }
-                            }
-                            div { class: "zd-toolbar-group",
-                                span { class: "zd-toolbar-group-label", "Format" }
-                                Button {
                                     shortcut: "⌘↵".to_string(),
                                     onclick: move |_| {
                                         let text = get_active_content();
                                         match format_json_opts(&text, *indent_size.read(), *sort_keys.read()) {
-                                            Ok(f) => {
-                                                set_active_content(f.clone());
-                                                format_error.set(None);
-                                            }
+                                            Ok(f) => { set_active_content(f); format_error.set(None); }
                                             Err(e) => format_error.set(Some(e.to_string())),
                                         }
                                     },
-                                    "Format"
-                                }
-                                Button {
-                                    onclick: move |_| {
-                                        let text = get_active_content();
-                                        match repair_json(&text) {
-                                            Ok(f) => {
-                                                set_active_content(f.clone());
-                                                format_error.set(None);
-                                            }
-                                            Err(e) => format_error.set(Some(e.to_string())),
-                                        }
-                                    },
-                                    "Repair"
+                                    IconSparkles {}
+                                    span { "Format" }
                                 }
                                 Button {
                                     variant: ButtonVariant::Ghost,
                                     class: "px-2 py-1 text-xs",
                                     onclick: move |_| {
-                                        let next = !*show_settings.read();
-                                        show_settings.set(next);
-                                    },
-                                    "Options"
-                                }
-                                Button {
-                                    shortcut: "⌘Z".to_string(),
-                                    disabled: undo_stack.read().is_empty(),
-                                    onclick: move |_| {
-                                        if let Some(prev) = undo_stack.write().pop() {
-                                            let curr = get_active_content();
-                                            redo_stack.write().push(curr);
-                                            set_active_content_raw(prev);
+                                        let text = get_active_content();
+                                        match format_json_opts(&text, 0, false) {
+                                            Ok(f) => {
+                                                let minified = f.lines().map(str::trim).collect::<Vec<_>>().join("");
+                                                set_active_content(minified);
+                                                format_error.set(None);
+                                            }
+                                            Err(e) => format_error.set(Some(e.to_string())),
                                         }
                                     },
-                                    "Undo"
+                                    IconMinify {}
+                                    span { "Minify" }
                                 }
                                 Button {
-                                    shortcut: "⌘⇧Z".to_string(),
-                                    disabled: redo_stack.read().is_empty(),
+                                    variant: ButtonVariant::Ghost,
+                                    class: "px-2 py-1 text-xs",
                                     onclick: move |_| {
-                                        if let Some(next) = redo_stack.write().pop() {
-                                            let curr = get_active_content();
-                                            undo_stack.write().push(curr);
-                                            set_active_content_raw(next);
+                                        let text = get_active_content();
+                                        match repair_json(&text) {
+                                            Ok(f) => { set_active_content(f); format_error.set(None); }
+                                            Err(e) => format_error.set(Some(e.to_string())),
                                         }
                                     },
-                                    "Redo"
+                                    IconWrench {}
+                                    span { "Repair" }
                                 }
                             }
+
+                            // ── View group ──────────────────────────────────────
                             div { class: "zd-toolbar-group",
-                                span { class: "zd-toolbar-group-label", "Import" }
+                                ModeToggle {
+                                    active: !*is_split_view.read() && *right_pane_view.read() == "editor",
+                                    onclick: move |_| {
+                                        is_split_view.set(false);
+                                        right_pane_view.set("editor".into());
+                                    },
+                                    div { class: "flex items-center gap-1.5",
+                                        IconEditor {}
+                                        span { "Editor" }
+                                    }
+                                }
+                                ModeToggle {
+                                    active: *right_pane_view.read() == "tree",
+                                    onclick: move |_| {
+                                        right_pane_view.set("tree".into());
+                                    },
+                                    div { class: "flex items-center gap-1.5",
+                                        IconTree {}
+                                        span { "Tree" }
+                                    }
+                                }
+                                ModeToggle {
+                                    active: *right_pane_view.read() == "table",
+                                    onclick: move |_| {
+                                        right_pane_view.set("table".into());
+                                    },
+                                    div { class: "flex items-center gap-1.5",
+                                        IconTable {}
+                                        span { "Table" }
+                                    }
+                                }
+                                ModeToggle {
+                                    active: *right_pane_view.read() == "yaml",
+                                    onclick: move |_| {
+                                        right_pane_view.set("yaml".into());
+                                    },
+                                    div { class: "flex items-center gap-1.5",
+                                        IconYaml {}
+                                        span { "YAML" }
+                                    }
+                                }
+                                ModeToggle {
+                                    active: *right_pane_view.read() == "types",
+                                    onclick: move |_| {
+                                        right_pane_view.set("types".into());
+                                    },
+                                    div { class: "flex items-center gap-1.5",
+                                        IconTypes {}
+                                        span { "Types" }
+                                    }
+                                }
+                                ModeToggle {
+                                    active: *right_pane_view.read() == "query",
+                                    onclick: move |_| {
+                                        right_pane_view.set("query".into());
+                                    },
+                                    div { class: "flex items-center gap-1.5",
+                                        IconPath {}
+                                        span { "Query" }
+                                    }
+                                }
+                                ModeToggle {
+                                    active: *right_pane_view.read() == "diff",
+                                    onclick: move |_| {
+                                        right_pane_view.set("diff".into());
+                                    },
+                                    div { class: "flex items-center gap-1.5",
+                                        IconCompare {}
+                                        span { "Compare" }
+                                    }
+                                }
+                            }
+
+                            // ── Split View Group ────────────────────────────────
+                            div { class: "zd-toolbar-group",
+                                ModeToggle {
+                                    active: *is_split_view.read(),
+                                    onclick: move |_| {
+                                        let was_split = *is_split_view.read();
+                                        is_split_view.set(!was_split);
+                                        if !was_split && *right_pane_view.read() == "editor" {
+                                            right_pane_view.set("tree".into());
+                                        }
+                                    },
+                                    div { class: "flex items-center gap-1.5",
+                                        IconColumns {}
+                                        span { "Split" }
+                                    }
+                                }
+                            }
+
+                            // ── Options group ───────────────────────────────────
+                            div { class: "zd-toolbar-group relative",
+                                Button {
+                                    variant: ButtonVariant::Ghost,
+                                    class: "px-2 py-1 text-xs",
+                                    onclick: move |_| {
+                                        let is_open = *show_settings.read();
+                                        show_settings.set(!is_open);
+                                    },
+                                    IconSliders {}
+                                    span { "Options" }
+                                }
+                                if *show_settings.read() {
+                                    div {
+                                        class: "absolute top-10 left-0 z-50 p-4 bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] rounded-lg shadow-xl flex flex-col gap-3 min-w-[200px] text-xs font-mono text-[var(--zd-text-secondary)]",
+                                        div { class: "flex flex-col gap-1.5",
+                                            span { class: "font-semibold text-[var(--zd-text-muted)]", "Editor Font Size:" }
+                                            div { class: "flex items-center gap-1 bg-[var(--zd-surface)] p-0.5 rounded border border-[var(--zd-border)]",
+                                                for size in [12usize, 14usize, 16usize] {
+                                                    {
+                                                        let is_sel = *editor_font_size.read() == size;
+                                                        rsx! {
+                                                            button {
+                                                                class: if is_sel { "flex-1 px-2 py-1 rounded bg-[var(--zd-primary)] text-[var(--zd-primary-fg)] font-semibold text-center cursor-pointer" } else { "flex-1 px-2 py-1 rounded hover:text-[var(--zd-text-primary)] text-center cursor-pointer transition-colors" },
+                                                                onclick: move |_| editor_font_size.set(size),
+                                                                "{size}px"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        div { class: "h-[1px] bg-[var(--zd-border)] my-1" }
+                                        div { class: "flex flex-col gap-1.5",
+                                            span { class: "font-semibold text-[var(--zd-text-muted)]", "Indent Width:" }
+                                            div { class: "flex items-center gap-1 bg-[var(--zd-surface)] p-0.5 rounded border border-[var(--zd-border)]",
+                                                for (label, val) in [("2", 2usize), ("4", 4usize), ("Tab", 0usize)] {
+                                                    {
+                                                        let is_sel = *indent_size.read() == val;
+                                                        rsx! {
+                                                            button {
+                                                                class: if is_sel { "flex-1 px-2 py-1 rounded bg-[var(--zd-primary)] text-[var(--zd-primary-fg)] font-semibold text-center cursor-pointer" } else { "flex-1 px-2 py-1 rounded hover:text-[var(--zd-text-primary)] text-center cursor-pointer transition-colors" },
+                                                                title: "Use {label} indentation",
+                                                                onclick: {
+                                                                    let mut set_active_content = set_active_content.clone();
+                                                                    move |_| {
+                                                                        indent_size.set(val);
+                                                                        // Apply the choice immediately when the current document is valid,
+                                                                        // so every option has visible, useful feedback.
+                                                                        let text = get_active_content();
+                                                                        if let Ok(formatted) = format_json_opts(&text, val, *sort_keys.read()) {
+                                                                            set_active_content(formatted);
+                                                                            format_error.set(None);
+                                                                        }
+                                                                    }
+                                                                },
+                                                                "{label}"
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        div { class: "h-[1px] bg-[var(--zd-border)] my-1" }
+                                        label { class: "flex items-center justify-between cursor-pointer select-none py-1 hover:text-[var(--zd-text-primary)] transition-colors",
+                                            span { "Sort Keys" }
+                                            input {
+                                                type: "checkbox",
+                                                checked: *sort_keys.read(),
+                                                onchange: {
+                                                    let mut set_active_content = set_active_content.clone();
+                                                    move |e| {
+                                                        let enabled = e.checked();
+                                                        sort_keys.set(enabled);
+                                                        // Sorting is meaningful only after formatting; doing both here
+                                                        // makes toggling the checkbox affect the open document at once.
+                                                        let text = get_active_content();
+                                                        if let Ok(formatted) = format_json_opts(&text, *indent_size.read(), enabled) {
+                                                            set_active_content(formatted);
+                                                            format_error.set(None);
+                                                        }
+                                                    }
+                                                },
+                                                class: "rounded border-[var(--zd-border)] bg-[var(--zd-surface)] text-[var(--zd-primary)] focus:ring-0 cursor-pointer"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // ── Import group ────────────────────────────────────
+                            div { class: "zd-toolbar-group",
                                 label {
-                                    class: "toolbar-btn cursor-pointer inline-flex items-center gap-1",
+                                    class: "toolbar-btn cursor-pointer inline-flex items-center gap-1.5",
                                     title: "Open JSON file from device",
-                                    "Open File"
+                                    IconFolderOpen {}
+                                    span { "Open" }
                                     input {
                                         r#type: "file",
                                         accept: ".json,application/json,.txt",
@@ -567,17 +987,45 @@ pub fn JsonHub(initial_panel: Option<String>) -> Element {
                                     variant: ButtonVariant::Ghost,
                                     class: "px-2 py-1 text-xs",
                                     onclick: move |_| {
-                                        let next = !*show_import_url.read();
-                                        show_import_url.set(next);
+                                        let is_open = *show_import_url.read();
+                                        show_import_url.set(!is_open);
                                     },
-                                    "From URL"
+                                    IconGlobe {}
+                                    span { "URL" }
+                                }
+                                ExportButton {
+                                    filename: "data.json",
+                                    content: get_active_content(),
+                                    div { class: "flex items-center gap-1.5",
+                                        IconSave {}
+                                        span { "Save" }
+                                    }
+                                }
+                            }
+
+                            // ── Zen mode / Expand ────────────────────────────────
+                            div { class: "zd-toolbar-group",
+                                button {
+                                    class: "toolbar-btn",
+                                    title: "Expand (Zen mode)",
+                                    onclick: move |_| {
+                                        let zen = state.ui.read().zen_mode;
+                                        state.ui.write().zen_mode = !zen;
+                                    },
+                                    div { class: "flex items-center gap-1.5",
+                                        IconExpand {}
+                                        span { "Expand" }
+                                    }
                                 }
                             }
 
                             if *indexing.read() {
                                 span { class: "text-xs text-[var(--zd-text-muted)] zd-mono-label ml-2", "Indexing…" }
                             }
+                            }
                         }
+
+                        // ── URL import sub-bar ───────────────────────────────────
                         if *show_import_url.read() {
                             div { class: "px-4 py-2 bg-[var(--zd-surface-raised)] border-b border-[var(--zd-border)] flex items-center gap-2",
                                 span { class: "text-xs font-mono text-[var(--zd-text-secondary)] shrink-0", "Fetch JSON URL:" }
@@ -591,9 +1039,7 @@ pub fn JsonHub(initial_panel: Option<String>) -> Element {
                                     disabled: *import_loading.read() || import_url.read().trim().is_empty(),
                                     onclick: move |_| {
                                         let url_val = import_url.read().trim().to_string();
-                                        if url_val.is_empty() {
-                                            return;
-                                        }
+                                        if url_val.is_empty() { return; }
                                         import_loading.set(true);
                                         let platform = platform.clone();
                                         let mut state = state.clone();
@@ -626,181 +1072,282 @@ pub fn JsonHub(initial_panel: Option<String>) -> Element {
                                 }
                             }
                         }
-                        if *show_settings.read() {
-                            div { class: "px-4 py-2 bg-[var(--zd-surface-raised)] border-b border-[var(--zd-border)] flex flex-wrap items-center gap-4 text-xs font-mono text-[var(--zd-text-secondary)]",
+
+                        // ── Smart Auto-repair pill ──────────────────────────────
+                        if let Some(msg) = auto_repair_msg.read().clone() {
+                            div {
+                                class: "px-4 py-1.5 text-xs font-mono bg-[var(--zd-primary)]/10 text-[var(--zd-primary)] border-b border-[var(--zd-border)] flex items-center justify-between transition-all duration-150 animate-fade-in shrink-0",
                                 div { class: "flex items-center gap-2",
-                                    span { "Indent:" }
-                                    for (label, val) in [("2 spaces", 2usize), ("4 spaces", 4usize), ("Tab", 0usize)] {
-                                        {
-                                            let is_sel = *indent_size.read() == val;
-                                            rsx! {
-                                                button {
-                                                    class: if is_sel { "px-2 py-0.5 rounded bg-[var(--zd-primary)] text-[var(--zd-primary-fg)] font-semibold" } else { "px-2 py-0.5 rounded bg-[var(--zd-surface)] hover:text-[var(--zd-text-primary)]" },
-                                                    onclick: move |_| indent_size.set(val),
-                                                    "{label}"
+                                    span { class: "font-semibold", "✨ Smart Repair:" }
+                                    span { "{msg}" }
+                                }
+                                button {
+                                    class: "px-2 py-0.5 rounded bg-[var(--zd-primary)] text-[var(--zd-primary-fg)] hover:opacity-90 font-medium cursor-pointer transition-opacity",
+                                    onclick: move |_| {
+                                        let orig = original_before_repair.read().clone();
+                                        set_active_content_raw(orig);
+                                        auto_repair_msg.set(None);
+                                    },
+                                    "Undo"
+                                }
+                            }
+                        }
+                    },
+                ToolBody {
+                    DragDropZone {
+                        on_drop_text: EventHandler::new(move |t| set_active_content(t)),
+                        if *is_split_view.read() {
+                            div { class: "zd-tool-fill flex flex-col md:flex-row gap-0.5 bg-[var(--zd-border)] min-h-0",
+                                    
+                                    // Left Pane: raw JSON editor
+                                    div { class: "flex-1 flex flex-col min-h-0 bg-[var(--zd-bg)] border-r border-[var(--zd-border)]",
+                                        if is_large_file() {
+                                            div { class: "zd-tool-fill flex flex-col min-h-0",
+                                                div {
+                                                    class: "flex items-center justify-between px-3 py-2 border-b border-[var(--zd-border)] bg-[var(--zd-surface-raised)] shrink-0 gap-2",
+                                                    span { class: "zd-mono-label", "JSON Editor" }
+                                                    span {
+                                                        class: "text-xs text-[var(--zd-text-muted)] zd-mono-label",
+                                                        title: "Large file: using windowed rendering for smooth scroll/typing",
+                                                        "LARGE FILE MODE"
+                                                    }
+                                                }
+                                                div {
+                                                    class: "zd-code-panel-body relative flex-1 min-h-0 flex flex-col",
+                                                    VirtualCodeEditor {
+                                                        buffer: active_rope,
+                                                        error_line: *error_line.read(),
+                                                        on_edit_range: Some(EventHandler::new(move |_range: (usize, usize, String)| {
+                                                            sync_active_content_from_rope();
+                                                        })),
+                                                        placeholder: "Enter or paste JSON...",
+                                                        language: CodeLanguage::Json,
+                                                        tab_size: *indent_size.read(),
+                                                        indent_with_tabs: *indent_size.read() == 0,
+                                                        font_size: *editor_font_size.read(),
+                                                    }
+                                                    if let Some(err) = format_error.read().clone() {
+                                                        p {
+                                                            class: "px-4 py-2 text-sm text-[var(--zd-error)] border-t border-[var(--zd-border)] shrink-0 bg-[var(--zd-error)]/10 flex items-center gap-2",
+                                                            role: "alert",
+                                                            span { class: "w-2 h-2 rounded-full bg-[var(--zd-error)] animate-pulse" }
+                                                            span { "{err}" }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        } else {
+                                            CodePanel {
+                                                title: "JSON Editor".to_string(),
+                                                value: get_active_content(),
+                                                oninput: Some(EventHandler::new(move |e: Event<FormData>| set_active_content(e.value()))),
+                                                on_edit: Some(EventHandler::new(move |v: String| set_active_content(v))),
+                                                error_line: *error_line.read(),
+                                                placeholder: "Enter or paste JSON...",
+                                                error: format_error.read().clone(),
+                                                language: CodeLanguage::Json,
+                                                tab_size: *indent_size.read(),
+                                                indent_with_tabs: *indent_size.read() == 0,
+                                                font_size: *editor_font_size.read(),
+                                                header_actions: rsx! {
+                                                    ExportButton {
+                                                        filename: "data.json",
+                                                        content: get_active_content(),
+                                                        label: "Download",
+                                                    }
+                                                },
+                                            }
+                                        }
+                                    }
+
+                                    // Right Pane: visual representation
+                                    div { class: "flex-1 flex flex-col min-h-0 bg-[var(--zd-bg)]",
+                                            if *right_pane_view.read() == "tree" {
+                                                VirtualTreeView {
+                                                    content: visual_content(),
+                                                    index: index.read().clone(),
+                                                    on_mutate: on_mutate.clone(),
+                                                }
+                                            } else if *right_pane_view.read() == "table" {
+                                                VirtualTableView {
+                                                    content: visual_content(),
+                                                    on_mutate: on_mutate.clone(),
+                                                }
+                                            } else if *right_pane_view.read() == "diff" {
+                                                DiffViewPanel {
+                                                    tabs: tabs,
+                                                    active_tab_id: active_tab_id,
+                                                    on_update_tab: EventHandler::new({
+                                                        let mut set_active_raw = set_active_content_raw.clone();
+                                                        move |(id, new_content): (String, String)| {
+                                                            let is_active = id == *active_tab_id.peek();
+                                                            tabs.write().iter_mut().for_each(|t| {
+                                                                if t.id == id {
+                                                                    t.content = new_content.clone();
+                                                                    t.is_modified = true;
+                                                                }
+                                                            });
+                                                            if is_active {
+                                                                set_active_raw(new_content);
+                                                            }
+                                                        }
+                                                    }),
+                                                    on_add_tab: EventHandler::new(move |initial_name: String| {
+                                                        let new_id = Uuid::new_v4().to_string();
+                                                        let name = if initial_name.is_empty() { format!("Untitled {}", tabs.read().len() + 1) } else { initial_name };
+                                                        tabs.write().push(FileTab {
+                                                            id: new_id.clone(),
+                                                            name,
+                                                            content: "{\n  \n}".to_string(),
+                                                            is_modified: false,
+                                                        });
+                                                    }),
+                                                }
+                                            } else if *right_pane_view.read() == "yaml" {
+                                                YamlPanel {
+                                                    content: visual_content(),
+                                                    on_change: EventHandler::new(move |v| {
+                                                        set_active_content(v);
+                                                        format_error.set(None);
+                                                    }),
+                                                }
+                                            } else if *right_pane_view.read() == "types" {
+                                                TypesPanel {
+                                                    content: visual_content(),
+                                                    default_lang: detected_lang.read().clone(),
+                                                }
+                                            } else if *right_pane_view.read() == "query" {
+                                                PathPanel {
+                                                    content: get_active_content(),
+                                                    query: jmespath_query_str.read().clone(),
+                                                    on_query_change: move |v: String| jmespath_query_str.set(v),
+                                                }
+                                            }
+                                        }
+                                    }
+                            } else {
+                                div { class: "zd-tool-fill flex flex-col min-h-0 bg-[var(--zd-bg)]",
+                                    if *right_pane_view.read() == "editor" {
+                                        if is_large_file() {
+                                            div { class: "zd-tool-fill flex flex-col min-h-0",
+                                                div {
+                                                    class: "flex items-center justify-between px-3 py-2 border-b border-[var(--zd-border)] bg-[var(--zd-surface-raised)] shrink-0 gap-2",
+                                                    span { class: "zd-mono-label", "JSON Editor" }
+                                                    span {
+                                                        class: "text-xs text-[var(--zd-text-muted)] zd-mono-label",
+                                                        title: "Large file: using windowed rendering for smooth scroll/typing",
+                                                        "LARGE FILE MODE"
+                                                    }
+                                                }
+                                                div {
+                                                    class: "zd-code-panel-body relative flex-1 min-h-0 flex flex-col",
+                                                    VirtualCodeEditor {
+                                                        buffer: active_rope,
+                                                        error_line: *error_line.read(),
+                                                        on_edit_range: Some(EventHandler::new(move |_range: (usize, usize, String)| {
+                                                            sync_active_content_from_rope();
+                                                        })),
+                                                        placeholder: "Enter or paste JSON...",
+                                                        language: CodeLanguage::Json,
+                                                        tab_size: *indent_size.read(),
+                                                        indent_with_tabs: *indent_size.read() == 0,
+                                                        font_size: *editor_font_size.read(),
+                                                    }
+                                                    if let Some(err) = format_error.read().clone() {
+                                                        p {
+                                                            class: "px-4 py-2 text-sm text-[var(--zd-error)] border-t border-[var(--zd-border)] shrink-0 bg-[var(--zd-error)]/10 flex items-center gap-2",
+                                                            role: "alert",
+                                                            span { class: "w-2 h-2 rounded-full bg-[var(--zd-error)] animate-pulse" }
+                                                            span { "{err}" }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        } else {
+                                            CodePanel {
+                                                title: "JSON Editor".to_string(),
+                                                value: get_active_content(),
+                                                oninput: Some(EventHandler::new(move |e: Event<FormData>| set_active_content(e.value()))),
+                                                on_edit: Some(EventHandler::new(move |v: String| set_active_content(v))),
+                                                error_line: *error_line.read(),
+                                                placeholder: "Enter or paste JSON...",
+                                                error: format_error.read().clone(),
+                                                language: CodeLanguage::Json,
+                                                tab_size: *indent_size.read(),
+                                                indent_with_tabs: *indent_size.read() == 0,
+                                                font_size: *editor_font_size.read(),
+                                            }
+                                        }
+                                    } else {
+                                        div { class: "zd-tool-fill flex flex-col min-h-0 bg-[var(--zd-bg)]",
+                                            if *right_pane_view.read() == "tree" {
+                                                VirtualTreeView {
+                                                    content: visual_content(),
+                                                    index: index.read().clone(),
+                                                    on_mutate: on_mutate.clone(),
+                                                }
+                                            } else if *right_pane_view.read() == "table" {
+                                                VirtualTableView {
+                                                    content: visual_content(),
+                                                    on_mutate: on_mutate.clone(),
+                                                }
+                                            } else if *right_pane_view.read() == "diff" {
+                                                DiffViewPanel {
+                                                    tabs: tabs,
+                                                    active_tab_id: active_tab_id,
+                                                    on_update_tab: EventHandler::new({
+                                                        let mut set_active_raw = set_active_content_raw.clone();
+                                                        move |(id, new_content): (String, String)| {
+                                                            let is_active = id == *active_tab_id.peek();
+                                                            tabs.write().iter_mut().for_each(|t| {
+                                                                if t.id == id {
+                                                                    t.content = new_content.clone();
+                                                                    t.is_modified = true;
+                                                                }
+                                                            });
+                                                            if is_active {
+                                                                set_active_raw(new_content);
+                                                            }
+                                                        }
+                                                    }),
+                                                    on_add_tab: EventHandler::new(move |initial_name: String| {
+                                                        let new_id = Uuid::new_v4().to_string();
+                                                        let name = if initial_name.is_empty() { format!("Untitled {}", tabs.read().len() + 1) } else { initial_name };
+                                                        tabs.write().push(FileTab {
+                                                            id: new_id.clone(),
+                                                            name,
+                                                            content: "{\n  \n}".to_string(),
+                                                            is_modified: false,
+                                                        });
+                                                    }),
+                                                }
+                                            } else if *right_pane_view.read() == "yaml" {
+                                                YamlPanel {
+                                                    content: visual_content(),
+                                                    on_change: EventHandler::new(move |v| {
+                                                        set_active_content(v);
+                                                        format_error.set(None);
+                                                    }),
+                                                }
+                                            } else if *right_pane_view.read() == "types" {
+                                                TypesPanel {
+                                                    content: visual_content(),
+                                                    default_lang: detected_lang.read().clone(),
+                                                }
+                                            } else if *right_pane_view.read() == "query" {
+                                                PathPanel {
+                                                    content: get_active_content(),
+                                                    query: jmespath_query_str.read().clone(),
+                                                    on_query_change: move |v: String| jmespath_query_str.set(v),
                                                 }
                                             }
                                         }
                                     }
                                 }
-                                div { class: "flex items-center gap-2",
-                                    label { class: "flex items-center gap-1.5 cursor-pointer select-none",
-                                        input {
-                                            type: "checkbox",
-                                            checked: *sort_keys.read(),
-                                            onchange: move |e| sort_keys.set(e.checked()),
-                                            class: "rounded border-[var(--zd-border)] bg-[var(--zd-surface)] text-[var(--zd-primary)]"
-                                        }
-                                        "Sort Object Keys"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                ToolBody {
-                    DragDropZone {
-                        on_drop_text: EventHandler::new(move |t| set_active_content(t)),
-                        if *view_mode.read() == "tree" {
-                            VirtualTreeView {
-                                content: get_active_content(),
-                                index: index.read().clone(),
-                            }
-                        } else if *view_mode.read() == "table" {
-                            VirtualTableView {
-                                content: get_active_content(),
-                            }
-                        } else if *view_mode.read() == "diff" {
-                            DiffViewPanel {
-                                tabs: tabs,
-                                active_tab_id: active_tab_id,
-                                on_update_tab: EventHandler::new({
-                                    let mut set_active_raw = set_active_content_raw.clone();
-                                    move |(id, new_content): (String, String)| {
-                                        let is_active = id == *active_tab_id.peek();
-                                        tabs.write().iter_mut().for_each(|t| {
-                                            if t.id == id {
-                                                t.content = new_content.clone();
-                                                t.is_modified = true;
-                                            }
-                                        });
-                                        if is_active {
-                                            set_active_raw(new_content);
-                                        }
-                                    }
-                                }),
-                                on_add_tab: EventHandler::new(move |initial_name: String| {
-                                    let new_id = format!("tab_{}", tabs.read().len() + 1);
-                                    let name = if initial_name.is_empty() { format!("Untitled {}", tabs.read().len() + 1) } else { initial_name };
-                                    tabs.write().push(FileTab {
-                                        id: new_id.clone(),
-                                        name,
-                                        content: "{\n  \n}".to_string(),
-                                        is_modified: false,
-                                    });
-                                }),
-                            }
-                        } else if *panel.read() == "yaml" {
-                            YamlPanel {
-                                content: get_active_content(),
-                                on_apply: EventHandler::new(move |v| {
-                                    set_active_content(v);
-                                    format_error.set(None);
-                                }),
-                            }
-                        } else if *panel.read() == "types" {
-                            TypesPanel { content: get_active_content() }
-                        } else if *panel.read() == "path" {
-                            PathPanel { content: get_active_content() }
-                        } else if is_large_file() {
-                            // Large-file path: Rope-backed, viewport-virtualized
-                            // editor. Scroll/typing cost is O(visible lines),
-                            // not O(file size) — see VirtualCodeEditor.
-                            div {
-                                class: "zd-code-panel border-b md:border-b-0 md:border-r border-[var(--zd-border)] flex flex-col min-h-0 flex-1",
-                                div {
-                                    class: "flex items-center justify-between px-3 py-2 border-b border-[var(--zd-border)] bg-[var(--zd-surface-raised)] shrink-0 gap-2",
-                                    span { class: "zd-mono-label", "JSON Editor" }
-                                    span {
-                                        class: "text-xs text-[var(--zd-text-muted)] zd-mono-label",
-                                        title: "Large file: using windowed rendering for smooth scroll/typing",
-                                        "LARGE FILE MODE"
-                                    }
-                                }
-                                div {
-                                    class: "zd-code-panel-body relative flex-1 min-h-0 flex flex-col",
-                                    VirtualCodeEditor {
-                                        buffer: active_rope,
-                                        on_edit_range: Some(EventHandler::new(move |_range: (usize, usize, String)| {
-                                            sync_active_content_from_rope();
-                                        })),
-                                        placeholder: "Enter or paste JSON...",
-                                        language: CodeLanguage::Json,
-                                    }
-                                    if let Some(err) = format_error.read().clone() {
-                                        p {
-                                            class: "px-4 py-2 text-sm text-[var(--zd-error)] border-t border-[var(--zd-border)] shrink-0",
-                                            role: "alert",
-                                            "{err}"
-                                        }
-                                    }
-                                }
-                            }
-                        } else {
-                            CodePanel {
-                                title: "JSON Editor".to_string(),
-                                value: get_active_content(),
-                                oninput: Some(EventHandler::new(move |e: Event<FormData>| set_active_content(e.value()))),
-                                on_edit: Some(EventHandler::new(move |v: String| set_active_content(v))),
-                                placeholder: "Enter or paste JSON...",
-                                error: format_error.read().clone(),
-                                language: CodeLanguage::Json,
-                                header_actions: rsx! {
-                                    ExportButton {
-                                        filename: "data.json",
-                                        content: get_active_content(),
-                                        label: "Download",
-                                    }
-                                },
                             }
                         }
                     }
                 }
-            }
-            if *show_bottom_jmespath.read() {
-                div {
-                    class: "h-48 border-t border-[var(--zd-border)] bg-[var(--zd-surface-raised)] flex flex-col shrink-0 min-h-0 z-10 shadow-lg",
-                    div {
-                        class: "px-3 py-1.5 border-b border-[var(--zd-border)] flex items-center justify-between bg-[var(--zd-surface)] shrink-0 gap-2",
-                        div {
-                            class: "flex items-center gap-2 flex-1 max-w-xl",
-                            span { class: "text-xs font-mono font-semibold text-[var(--zd-accent)]", "Live JMESPath:" }
-                            input {
-                                class: "flex-1 px-2.5 py-1 text-xs font-mono rounded border border-[var(--zd-border)] bg-[var(--zd-surface-raised)] text-[var(--zd-text-primary)] focus-ring",
-                                placeholder: "e.g. features[0] or users[?age > `20`]",
-                                value: "{bottom_jmespath_query}",
-                                oninput: move |e: Event<FormData>| bottom_jmespath_query.set(e.value()),
-                            }
-                        }
-                        button {
-                            class: "text-xs text-[var(--zd-text-muted)] hover:text-[var(--zd-text-primary)] focus-ring px-1",
-                            onclick: move |_| show_bottom_jmespath.set(false),
-                            "Close (×)"
-                        }
-                    }
-                    div {
-                        class: "flex-1 min-h-0",
-                        CodePanel {
-                            title: "Query Result".to_string(),
-                            value: jmespath_query(&get_active_content(), &bottom_jmespath_query.read()).unwrap_or_else(|e| e.to_string()),
-                            oninput: None,
-                            read_only: true,
-                            show_empty: true,
-                            language: CodeLanguage::Json,
-                        }
-                    }
-                }
-            }
             }
         }
     }
@@ -839,6 +1386,14 @@ fn matches_tree_filter(val: &serde_json::Value, path: &str, query: &str) -> bool
     }
 }
 
+#[derive(Clone, Copy)]
+struct TreeEventsContext {
+    on_mutate: EventHandler<(String, JsonMutation)>,
+    editing_path: Signal<Option<(String, bool)>>,
+    editing_value: Signal<String>,
+    drag_from_array: Signal<Option<(String, usize)>>,
+}
+
 fn render_single_tree_node(
     val: &serde_json::Value,
     path: String,
@@ -849,6 +1404,7 @@ fn render_single_tree_node(
         return rsx! {};
     }
 
+    let mut ctx = use_context::<TreeEventsContext>();
     let is_expanded = expanded_paths.read().contains(&path);
     let key_label = if path == "$" {
         "root".to_string()
@@ -862,6 +1418,49 @@ fn render_single_tree_node(
 
     let is_array_idx = (path.rfind('[').is_some() && !path.ends_with(']')) || (key_label.starts_with('[') && key_label.ends_with(']'));
 
+    let parent_path = get_parent_path(&path);
+    let item_idx = if path.ends_with(']') {
+        if let Some(start) = path.rfind('[') {
+            path[start + 1..path.len() - 1].parse::<usize>().ok()
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+    let is_draggable = item_idx.is_some();
+    let drag_idx = item_idx.unwrap_or(0);
+
+    let drag_start_h = {
+        let parent_path = parent_path.clone();
+        move |_| {
+            if is_draggable {
+                ctx.drag_from_array.set(Some((parent_path.clone(), drag_idx)));
+            }
+        }
+    };
+    let drag_over_h = move |e: Event<DragData>| {
+        if is_draggable {
+            e.prevent_default();
+        }
+    };
+    let drop_h = {
+        let parent_path = parent_path.clone();
+        move |_| {
+            if is_draggable {
+                if let Some((from_parent, from_idx)) = ctx.drag_from_array.read().clone() {
+                    if from_parent == parent_path && from_idx != drag_idx {
+                        ctx.on_mutate.call((parent_path.clone(), JsonMutation::ReorderArray { from: from_idx, to: drag_idx }));
+                    }
+                }
+                ctx.drag_from_array.set(None);
+            }
+        }
+    };
+
+    let is_editing_key = *ctx.editing_path.read() == Some((path.clone(), true));
+    let is_editing_value = *ctx.editing_path.read() == Some((path.clone(), false));
+
     match val {
         serde_json::Value::Object(map) => {
             let mut keys: Vec<_> = map.keys().collect();
@@ -870,6 +1469,10 @@ fn render_single_tree_node(
                 div { class: "flex flex-col font-mono text-xs select-text",
                     div {
                         class: "flex items-center justify-between py-1 px-2 hover:bg-[var(--zd-surface-hover)] transition-colors cursor-pointer rounded",
+                        draggable: is_draggable,
+                        ondragstart: drag_start_h,
+                        ondragover: drag_over_h,
+                        ondrop: drop_h,
                         onclick: move |_| {
                             let mut exp = expanded_paths.write();
                             if exp.contains(&path) {
@@ -884,10 +1487,47 @@ fn render_single_tree_node(
                             }
                             if key_label == "root" {
                                 span { class: "font-bold text-[var(--zd-accent)] shrink-0", "root:" }
+                            } else if is_editing_key {
+                                input {
+                                    class: "px-1 py-0.5 text-[11px] font-mono bg-[var(--zd-surface)] border border-[var(--zd-border)] rounded focus-ring outline-none text-[var(--zd-primary)] font-semibold",
+                                    value: "{ctx.editing_value}",
+                                    oninput: move |e: Event<FormData>| ctx.editing_value.set(e.value()),
+                                    onclick: move |e| e.stop_propagation(),
+                                    onkeydown: {
+                                        let path = path.clone();
+                                        let key_label = key_label.clone();
+                                        move |e: Event<KeyboardData>| {
+                                            e.stop_propagation();
+                                            if e.key() == Key::Enter {
+                                                let new_key = ctx.editing_value.read().clone();
+                                                if !new_key.trim().is_empty() && new_key != key_label {
+                                                    let parent_path = get_parent_path(&path);
+                                                    ctx.on_mutate.call((parent_path, JsonMutation::RenameKey { old_key: key_label.clone(), new_key }));
+                                                }
+                                                ctx.editing_path.set(None);
+                                            } else if e.key() == Key::Escape {
+                                                ctx.editing_path.set(None);
+                                            }
+                                        }
+                                    },
+                                    onblur: move |_| ctx.editing_path.set(None),
+                                }
                             } else if is_array_idx {
                                 span { class: "font-semibold text-[var(--zd-primary)] shrink-0", "{key_label}:" }
                             } else {
-                                span { class: "font-semibold text-[var(--zd-primary)] shrink-0", "\"{key_label}\":" }
+                                span {
+                                    class: "font-semibold text-[var(--zd-primary)] shrink-0 hover:underline cursor-text",
+                                    ondoubleclick: {
+                                        let path = path.clone();
+                                        let key_label = key_label.clone();
+                                        move |e| {
+                                            e.stop_propagation();
+                                            ctx.editing_path.set(Some((path.clone(), true)));
+                                            ctx.editing_value.set(key_label.clone());
+                                        }
+                                    },
+                                    "\"{key_label}\":"
+                                }
                             }
                             span { class: "text-[var(--zd-text-muted)] text-[11px] opacity-75 shrink-0 select-none italic", "{{...}} ({map.len()} keys)" }
                         }
@@ -914,6 +1554,10 @@ fn render_single_tree_node(
                 div { class: "flex flex-col font-mono text-xs select-text",
                     div {
                         class: "flex items-center justify-between py-1 px-2 hover:bg-[var(--zd-surface-hover)] transition-colors cursor-pointer rounded",
+                        draggable: is_draggable,
+                        ondragstart: drag_start_h,
+                        ondragover: drag_over_h,
+                        ondrop: drop_h,
                         onclick: move |_| {
                             let mut exp = expanded_paths.write();
                             if exp.contains(&path) {
@@ -928,10 +1572,47 @@ fn render_single_tree_node(
                             }
                             if key_label == "root" {
                                 span { class: "font-bold text-[var(--zd-accent)] shrink-0", "root:" }
+                            } else if is_editing_key {
+                                input {
+                                    class: "px-1 py-0.5 text-[11px] font-mono bg-[var(--zd-surface)] border border-[var(--zd-border)] rounded focus-ring outline-none text-[var(--zd-primary)] font-semibold",
+                                    value: "{ctx.editing_value}",
+                                    oninput: move |e: Event<FormData>| ctx.editing_value.set(e.value()),
+                                    onclick: move |e| e.stop_propagation(),
+                                    onkeydown: {
+                                        let path = path.clone();
+                                        let key_label = key_label.clone();
+                                        move |e: Event<KeyboardData>| {
+                                            e.stop_propagation();
+                                            if e.key() == Key::Enter {
+                                                let new_key = ctx.editing_value.read().clone();
+                                                if !new_key.trim().is_empty() && new_key != key_label {
+                                                    let parent_path = get_parent_path(&path);
+                                                    ctx.on_mutate.call((parent_path, JsonMutation::RenameKey { old_key: key_label.clone(), new_key }));
+                                                }
+                                                ctx.editing_path.set(None);
+                                            } else if e.key() == Key::Escape {
+                                                ctx.editing_path.set(None);
+                                            }
+                                        }
+                                    },
+                                    onblur: move |_| ctx.editing_path.set(None),
+                                }
                             } else if is_array_idx {
                                 span { class: "font-semibold text-[var(--zd-primary)] shrink-0", "{key_label}:" }
                             } else {
-                                span { class: "font-semibold text-[var(--zd-primary)] shrink-0", "\"{key_label}\":" }
+                                span {
+                                    class: "font-semibold text-[var(--zd-primary)] shrink-0 hover:underline cursor-text",
+                                    ondoubleclick: {
+                                        let path = path.clone();
+                                        let key_label = key_label.clone();
+                                        move |e| {
+                                            e.stop_propagation();
+                                            ctx.editing_path.set(Some((path.clone(), true)));
+                                            ctx.editing_value.set(key_label.clone());
+                                        }
+                                    },
+                                    "\"{key_label}\":"
+                                }
                             }
                             span { class: "text-[var(--zd-text-muted)] text-[11px] opacity-75 shrink-0 select-none italic", "[...] ({arr.len()} items)" }
                         }
@@ -953,24 +1634,99 @@ fn render_single_tree_node(
             rsx! {
                 div {
                     class: "flex items-center justify-between py-1 px-2 hover:bg-[var(--zd-surface-hover)] transition-colors rounded font-mono text-xs",
+                    draggable: is_draggable,
+                    ondragstart: drag_start_h,
+                    ondragover: drag_over_h,
+                    ondrop: drop_h,
                     div { class: "flex items-center gap-1.5 min-w-0 truncate pr-2",
                         span { class: "w-4 shrink-0 select-none", " " }
                         if key_label == "root" {
                             span { class: "font-bold text-[var(--zd-accent)] shrink-0", "root:" }
+                        } else if is_editing_key {
+                            input {
+                                class: "px-1 py-0.5 text-[11px] font-mono bg-[var(--zd-surface)] border border-[var(--zd-border)] rounded focus-ring outline-none text-[var(--zd-primary)] font-semibold",
+                                value: "{ctx.editing_value}",
+                                oninput: move |e: Event<FormData>| ctx.editing_value.set(e.value()),
+                                onclick: move |e| e.stop_propagation(),
+                                onkeydown: {
+                                    let path = path.clone();
+                                    let key_label = key_label.clone();
+                                    move |e: Event<KeyboardData>| {
+                                        e.stop_propagation();
+                                        if e.key() == Key::Enter {
+                                            let new_key = ctx.editing_value.read().clone();
+                                            if !new_key.trim().is_empty() && new_key != key_label {
+                                                let parent_path = get_parent_path(&path);
+                                                ctx.on_mutate.call((parent_path, JsonMutation::RenameKey { old_key: key_label.clone(), new_key }));
+                                            }
+                                            ctx.editing_path.set(None);
+                                        } else if e.key() == Key::Escape {
+                                            ctx.editing_path.set(None);
+                                        }
+                                    }
+                                },
+                                onblur: move |_| ctx.editing_path.set(None),
+                            }
                         } else if is_array_idx {
                             span { class: "font-semibold text-[var(--zd-primary)] shrink-0", "{key_label}:" }
                         } else {
-                            span { class: "font-semibold text-[var(--zd-primary)] shrink-0", "\"{key_label}\":" }
+                            span {
+                                class: "font-semibold text-[var(--zd-primary)] shrink-0 hover:underline cursor-text",
+                                ondoubleclick: {
+                                    let path = path.clone();
+                                    let key_label = key_label.clone();
+                                    move |e| {
+                                        e.stop_propagation();
+                                        ctx.editing_path.set(Some((path.clone(), true)));
+                                        ctx.editing_value.set(key_label.clone());
+                                    }
+                                },
+                                "\"{key_label}\":"
+                            }
                         }
-                        span {
-                            class: match val {
-                                serde_json::Value::String(_) => "text-[var(--zd-syntax-string)] font-medium truncate",
-                                serde_json::Value::Number(_) => "text-[var(--zd-syntax-number)] font-medium",
-                                serde_json::Value::Bool(_) => "text-[var(--zd-syntax-bool)] font-medium",
-                                serde_json::Value::Null => "text-[var(--zd-syntax-null)] italic",
-                                _ => "",
-                            },
-                            "{format_val_short(val)}"
+                        if is_editing_value {
+                            input {
+                                class: "px-1 py-0.5 text-[11px] font-mono bg-[var(--zd-surface)] border border-[var(--zd-border)] rounded focus-ring outline-none text-[var(--zd-text-primary)] w-full max-w-sm",
+                                value: "{ctx.editing_value}",
+                                oninput: move |e: Event<FormData>| ctx.editing_value.set(e.value()),
+                                onclick: move |e| e.stop_propagation(),
+                                onkeydown: {
+                                    let path = path.clone();
+                                    move |e: Event<KeyboardData>| {
+                                        e.stop_propagation();
+                                        if e.key() == Key::Enter {
+                                            let new_val_str = ctx.editing_value.read().clone();
+                                            let parsed_val = serde_json::from_str::<serde_json::Value>(&new_val_str)
+                                                .unwrap_or_else(|_| serde_json::Value::String(new_val_str.clone()));
+                                            ctx.on_mutate.call((path.clone(), JsonMutation::EditValue { new_value: parsed_val }));
+                                            ctx.editing_path.set(None);
+                                        } else if e.key() == Key::Escape {
+                                            ctx.editing_path.set(None);
+                                        }
+                                    }
+                                },
+                                onblur: move |_| ctx.editing_path.set(None),
+                            }
+                        } else {
+                            span {
+                                class: match val {
+                                    serde_json::Value::String(_) => "text-[var(--zd-syntax-string)] font-medium truncate hover:underline cursor-text",
+                                    serde_json::Value::Number(_) => "text-[var(--zd-syntax-number)] font-medium hover:underline cursor-text",
+                                    serde_json::Value::Bool(_) => "text-[var(--zd-syntax-bool)] font-medium hover:underline cursor-text",
+                                    serde_json::Value::Null => "text-[var(--zd-syntax-null)] italic hover:underline cursor-text",
+                                    _ => "",
+                                },
+                                ondoubleclick: {
+                                    let path = path.clone();
+                                    let val_str = format_val_short(val);
+                                    move |e| {
+                                        e.stop_propagation();
+                                        ctx.editing_path.set(Some((path.clone(), false)));
+                                        ctx.editing_value.set(val_str.clone());
+                                    }
+                                },
+                                "{format_val_short(val)}"
+                            }
                         }
                     }
                 }
@@ -980,13 +1736,23 @@ fn render_single_tree_node(
 }
 
 #[component]
-fn SingleJsonTreeView(val: serde_json::Value) -> Element {
+fn SingleJsonTreeView(val: serde_json::Value, on_mutate: EventHandler<(String, JsonMutation)>) -> Element {
     let mut expanded_paths = use_signal(|| {
         let mut set = HashSet::new();
         set.insert("$".to_string());
         set
     });
     let mut filter_text = use_signal(String::new);
+    let editing_path = use_signal(|| None::<(String, bool)>);
+    let editing_value = use_signal(String::new);
+    let drag_from_array = use_signal(|| None::<(String, usize)>);
+
+    use_context_provider(|| TreeEventsContext {
+        on_mutate,
+        editing_path,
+        editing_value,
+        drag_from_array,
+    });
 
     rsx! {
         div { class: "zd-tool-fill flex flex-col min-h-0 bg-[var(--zd-bg)]",
@@ -1038,10 +1804,10 @@ fn SingleJsonTreeView(val: serde_json::Value) -> Element {
 }
 
 #[component]
-fn VirtualTreeView(content: String, index: Option<JsonIndex>) -> Element {
+fn VirtualTreeView(content: String, index: Option<JsonIndex>, on_mutate: EventHandler<(String, JsonMutation)>) -> Element {
     if let Ok(val) = serde_json::from_str::<serde_json::Value>(&content) {
         return rsx! {
-            SingleJsonTreeView { val }
+            SingleJsonTreeView { val, on_mutate }
         };
     }
 
@@ -1190,12 +1956,13 @@ fn flatten_tree_interactive(
 }
 
 #[component]
-fn VirtualTableView(content: String) -> Element {
+fn VirtualTableView(content: String, on_mutate: EventHandler<(String, JsonMutation)>) -> Element {
     let mut sort_col = use_signal(|| None::<String>);
     let mut sort_desc = use_signal(|| false);
+    let mut editing_cell = use_signal(|| None::<(usize, String)>);
+    let mut editing_val = use_signal(String::new);
 
-    // Parse directly from the `content` prop so the table refreshes on edits.
-    let parsed_table: Option<(Vec<String>, Vec<Vec<String>>)> = (|| {
+    let parsed_table: Option<(Vec<String>, Vec<(usize, Vec<String>)>)> = (|| {
         let val: serde_json::Value = serde_json::from_str(&content).ok()?;
         let arr = val.as_array()?;
         let mut headers = Vec::new();
@@ -1211,7 +1978,7 @@ fn VirtualTableView(content: String) -> Element {
             }
         }
 
-        for item in arr.iter().take(200) {
+        for (idx, item) in arr.iter().enumerate().take(200) {
             if let Some(obj) = item.as_object() {
                 let mut row = Vec::new();
                 for h in &headers {
@@ -1223,7 +1990,7 @@ fn VirtualTableView(content: String) -> Element {
                     };
                     row.push(cell_str);
                 }
-                rows.push(row);
+                rows.push((idx, row));
             }
         }
         Some((headers, rows))
@@ -1237,7 +2004,7 @@ fn VirtualTableView(content: String) -> Element {
                     if let Some(col_name) = sort_col.read().as_ref() {
                         if let Some(col_idx) = headers.iter().position(|h| h == col_name) {
                             rows.sort_by(|a, b| {
-                                let res = a.get(col_idx).cmp(&b.get(col_idx));
+                                let res = a.1.get(col_idx).cmp(&b.1.get(col_idx));
                                 if *sort_desc.read() { res.reverse() } else { res }
                             });
                         }
@@ -1300,12 +2067,15 @@ fn VirtualTableView(content: String) -> Element {
                         }
                     }
                     tbody {
-                        for (r_idx, row) in rows.iter().enumerate() {
+                        for (original_idx, row) in rows {
                             tr {
-                                key: "{r_idx}",
+                                key: "{original_idx}",
                                 class: "border-b border-[var(--zd-border)] hover:bg-[var(--zd-surface-hover)] transition-colors duration-150",
                                 for (c_idx, cell) in row.iter().enumerate() {
                                     {
+                                        let h = headers[c_idx].clone();
+                                        let path = format!("$[{original_idx}].{h}");
+                                        let is_editing = *editing_cell.read() == Some((original_idx, h.clone()));
                                         let is_null = cell == "null" || cell.is_empty();
                                         let cell_class = if is_null { "text-[var(--zd-text-muted)] italic" } else { "text-[var(--zd-text-primary)]" };
                                         rsx! {
@@ -1313,9 +2083,45 @@ fn VirtualTableView(content: String) -> Element {
                                                 key: "{c_idx}",
                                                 tabindex: "0",
                                                 role: "cell",
-                                                class: "px-4 py-3 max-w-sm truncate {cell_class} focus-ring",
+                                                class: "px-4 py-3 max-w-sm truncate {cell_class} focus-ring hover:bg-[var(--zd-surface-hover)]/40 cursor-text",
                                                 title: "{cell}",
-                                                if cell.is_empty() { "-" } else { "{cell}" }
+                                                ondoubleclick: {
+                                                    let cell = cell.clone();
+                                                    let h = h.clone();
+                                                    move |e| {
+                                                        e.stop_propagation();
+                                                        editing_cell.set(Some((original_idx, h.clone())));
+                                                        editing_val.set(cell.clone());
+                                                    }
+                                                },
+                                                if is_editing {
+                                                    input {
+                                                        class: "px-1.5 py-0.5 text-xs font-mono bg-[var(--zd-surface)] border border-[var(--zd-border)] rounded focus-ring outline-none text-[var(--zd-text-primary)] w-full",
+                                                        value: "{editing_val}",
+                                                        oninput: move |e: Event<FormData>| editing_val.set(e.value()),
+                                                        onclick: move |e| e.stop_propagation(),
+                                                        onkeydown: {
+                                                            let path = path.clone();
+                                                            move |e: Event<KeyboardData>| {
+                                                                e.stop_propagation();
+                                                                if e.key() == Key::Enter {
+                                                                    let new_val_str = editing_val.read().clone();
+                                                                    let parsed_val = serde_json::from_str::<serde_json::Value>(&new_val_str)
+                                                                        .unwrap_or_else(|_| serde_json::Value::String(new_val_str.clone()));
+                                                                    on_mutate.call((path.clone(), JsonMutation::EditValue { new_value: parsed_val }));
+                                                                    editing_cell.set(None);
+                                                                } else if e.key() == Key::Escape {
+                                                                    editing_cell.set(None);
+                                                                }
+                                                            }
+                                                        },
+                                                        onblur: move |_| {
+                                                            editing_cell.set(None);
+                                                        }
+                                                    }
+                                                } else {
+                                                    if cell.is_empty() { "-" } else { "{cell}" }
+                                                }
                                             }
                                         }
                                     }
@@ -1335,93 +2141,61 @@ fn VirtualTableView(content: String) -> Element {
 }
 
 #[component]
-fn YamlPanel(content: String, on_apply: EventHandler<String>) -> Element {
-    let mut direction = use_signal(|| "json_to_yaml".to_string());
-    let mut yaml_input = use_signal(String::new);
+fn YamlPanel(content: String, on_change: EventHandler<String>) -> Element {
+    let mut yaml_buffer = use_signal(String::new);
+    let mut last_content = use_signal(String::new);
+    let mut yaml_error = use_signal(|| None::<String>);
 
-    // Compute directly from the `content` prop instead of a `use_memo`. A memo
-    // capturing an owned clone of `content` would never recompute when the prop
-    // changes (the prop is not a signal), leaving the conversion output stale
-    // after actions like Format or Send-to that rewrite the active tab.
-    let output = if *direction.read() == "json_to_yaml" {
-        json_to_yaml(&content).unwrap_or_else(|e| e.to_string())
-    } else {
-        yaml_to_json(&yaml_input.read()).unwrap_or_else(|e| e.to_string())
-    };
+    let current_yaml = use_memo(move || {
+        let cnt = content.clone();
+        if cnt != *last_content.read() {
+            let converted = json_to_yaml(&cnt).unwrap_or_else(|e| e.to_string());
+            yaml_buffer.set(converted.clone());
+            last_content.set(cnt);
+            yaml_error.set(None);
+            converted
+        } else {
+            yaml_buffer.read().clone()
+        }
+    });
 
     rsx! {
         div {
             class: "zd-tool-fill flex flex-col min-h-0",
-            div {
-                class: "px-3 py-2 border-b border-[var(--zd-border)] bg-[var(--zd-surface-raised)] flex flex-wrap items-center gap-2 shrink-0",
-                SegmentedControl {
-                    options: vec![("json_to_yaml", "JSON → YAML"), ("yaml_to_json", "YAML → JSON")],
-                    active: direction.read().clone(),
-                    on_change: EventHandler::new(move |d| direction.set(d)),
-                }
-                if *direction.read() == "yaml_to_json" {
-                    Button {
-                        onclick: move |_| {
-                            match yaml_to_json(&yaml_input.read()) {
-                                Ok(json) => {
-                                    on_apply.call(json);
-                                }
-                                Err(_) => {}
-                            }
-                        },
-                        "Apply to editor"
+            CodePanel {
+                title: "YAML Editor (Syncs to JSON on blur)".to_string(),
+                value: current_yaml,
+                oninput: Some(EventHandler::new(move |e: Event<FormData>| {
+                    yaml_buffer.set(e.value());
+                })),
+                on_edit: Some(EventHandler::new(move |v: String| {
+                    yaml_buffer.set(v);
+                })),
+                onblur: Some(EventHandler::new(move |_| {
+                    match yaml_to_json(&yaml_buffer.read()) {
+                        Ok(json) => {
+                            on_change.call(json);
+                            yaml_error.set(None);
+                        }
+                        Err(e) => {
+                            yaml_error.set(Some(format!("Invalid YAML: {}", e)));
+                        }
                     }
-                }
-            }
-            div {
-                class: "zd-tool-fill grid grid-cols-1 md:grid-cols-2 min-h-0 flex-1",
-                if *direction.read() == "json_to_yaml" {
-                    CodePanel {
-                        title: "JSON".to_string(),
-                        value: content.clone(),
-                        oninput: None,
-                        read_only: true,
-                        language: CodeLanguage::Json,
-                    }
-                    CodePanel {
-                        title: "YAML".to_string(),
-                        value: output.clone(),
-                        oninput: None,
-                        read_only: true,
-                        show_empty: true,
-                        language: CodeLanguage::Yaml,
-                    }
-                } else {
-                    CodePanel {
-                        title: "YAML Input".to_string(),
-                        value: yaml_input.read().clone(),
-                        oninput: Some(EventHandler::new(move |e: Event<FormData>| yaml_input.set(e.value()))),
-                        on_edit: Some(EventHandler::new(move |v: String| yaml_input.set(v))),
-                        placeholder: "Paste YAML...",
-                        language: CodeLanguage::Yaml,
-                    }
-                    CodePanel {
-                        title: "JSON Preview".to_string(),
-                        value: output.clone(),
-                        oninput: None,
-                        read_only: true,
-                        show_empty: true,
-                        language: CodeLanguage::Json,
-                    }
-                }
+                })),
+                error: yaml_error.read().clone(),
+                language: CodeLanguage::Yaml,
             }
         }
     }
 }
 
 #[component]
-fn TypesPanel(content: String) -> Element {
-    let mut lang = use_signal(|| "typescript".to_string());
-    // Compute directly from the `content` prop so the generated types refresh
-    // when the underlying JSON changes (a `use_memo` over an owned prop clone
-    // would freeze on the first value).
+fn TypesPanel(content: String, default_lang: String) -> Element {
+    let mut lang = use_signal(|| None::<String>);
+    let active_lang = lang.read().clone().unwrap_or_else(|| default_lang.clone());
+
     let output = {
-        let target = match lang.read().as_str() {
+        let target = match active_lang.as_str() {
             "go" => TargetLang::Go,
             "rust" => TargetLang::Rust,
             "zod" => TargetLang::Zod,
@@ -1432,7 +2206,7 @@ fn TypesPanel(content: String) -> Element {
         convert_json_to_types(&content, target).unwrap_or_else(|e| e.to_string())
     };
 
-    let filename = match lang.read().as_str() {
+    let filename = match active_lang.as_str() {
         "go" => "types.go",
         "rust" => "types.rs",
         "pydantic" => "models.py",
@@ -1454,8 +2228,8 @@ fn TypesPanel(content: String) -> Element {
                         ("rust", "Rust Structs"),
                         ("schema", "JSON Schema"),
                     ],
-                    active: lang.read().clone(),
-                    on_change: EventHandler::new(move |l| lang.set(l)),
+                    active: active_lang,
+                    on_change: EventHandler::new(move |l| lang.set(Some(l))),
                     variant: crate::shell::ui::TabVariant::Toolbar,
                 }
             }
@@ -1479,10 +2253,12 @@ fn TypesPanel(content: String) -> Element {
 }
 
 #[component]
-fn PathPanel(content: String) -> Element {
-    let mut query = use_signal(|| "features[0]".to_string());
-    // Compute directly from the `content` prop so results track JSON edits.
-    let output = jmespath_query(&content, &query.read()).unwrap_or_else(|e| e.to_string());
+fn PathPanel(
+    content: String,
+    query: String,
+    on_query_change: EventHandler<String>,
+) -> Element {
+    let output = jmespath_query(&content, &query).unwrap_or_else(|e| e.to_string());
 
     rsx! {
         div {
@@ -1494,11 +2270,11 @@ fn PathPanel(content: String) -> Element {
                     placeholder: "JMESPath expression",
                     aria_label: "JMESPath expression",
                     value: "{query}",
-                    oninput: move |e: Event<FormData>| query.set(e.value()),
+                    oninput: move |e: Event<FormData>| on_query_change.call(e.value()),
                 }
             }
             CodePanel {
-                title: "Query Result".to_string(),
+                title: "Query JSON (JMESPath)".to_string(),
                 value: output.clone(),
                 oninput: None,
                 read_only: true,
@@ -2366,5 +3142,502 @@ fn DiffViewPanel(
                 }
             }
         }
+    }
+}
+
+// ── Inline ModeToggle Icons ──────────────────────────────────────────────────
+
+#[component]
+fn IconEditor() -> Element {
+    rsx! {
+        svg {
+            width: "14",
+            height: "14",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            polyline { points: "16 18 22 12 16 6" }
+            polyline { points: "8 6 2 12 8 18" }
+        }
+    }
+}
+
+#[component]
+fn IconTree() -> Element {
+    rsx! {
+        svg {
+            width: "14",
+            height: "14",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            rect { x: "9", y: "3", width: "6", height: "4", rx: "1" }
+            rect { x: "3", y: "17", width: "6", height: "4", rx: "1" }
+            rect { x: "15", y: "17", width: "6", height: "4", rx: "1" }
+            path { d: "M12 7v6M12 13H6v4M12 13h6v4" }
+        }
+    }
+}
+
+#[component]
+fn IconTable() -> Element {
+    rsx! {
+        svg {
+            width: "14",
+            height: "14",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            rect { x: "3", y: "3", width: "18", height: "18", rx: "2" }
+            line { x1: "3", y1: "9", x2: "21", y2: "9" }
+            line { x1: "3", y1: "15", x2: "21", y2: "15" }
+            line { x1: "10", y1: "3", x2: "10", y2: "21" }
+        }
+    }
+}
+
+#[component]
+fn IconPath() -> Element {
+    rsx! {
+        svg {
+            width: "14",
+            height: "14",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            circle { cx: "6", cy: "19", r: "3" }
+            path { d: "M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15" }
+            circle { cx: "18", cy: "5", r: "3" }
+        }
+    }
+}
+
+#[component]
+fn IconYaml() -> Element {
+    rsx! {
+        svg {
+            width: "14",
+            height: "14",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            path { d: "M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" }
+            polyline { points: "14 2 14 8 20 8" }
+            line { x1: "16", y1: "13", x2: "8", y2: "13" }
+            line { x1: "16", y1: "17", x2: "8", y2: "17" }
+            line { x1: "10", y1: "9", x2: "8", y2: "9" }
+        }
+    }
+}
+
+#[component]
+fn IconTypes() -> Element {
+    rsx! {
+        svg {
+            width: "14",
+            height: "14",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            path { d: "M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5a2 2 0 0 0 2 2h1" }
+            path { d: "M16 21h1a2 2 0 0 0 2-2v-5a2 2 0 0 1 2-2 2 2 0 0 1-2-2V5a2 2 0 0 0-2-2h-1" }
+        }
+    }
+}
+
+#[component]
+fn IconSparkles() -> Element {
+    rsx! {
+        svg {
+            width: "14",
+            height: "14",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            path { d: "m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275Z" }
+            path { d: "m5 3 1 2.5L8.5 6 6 7 5 9.5 4 7 1.5 6 4 5.5Z" }
+            path { d: "m19 17 1 2.5 2.5.5-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1Z" }
+        }
+    }
+}
+
+#[component]
+fn IconMinify() -> Element {
+    rsx! {
+        svg {
+            width: "14",
+            height: "14",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            path { d: "M4 14h6v6" }
+            path { d: "m10 14-6 6" }
+            path { d: "M20 10h-6V4" }
+            path { d: "m14 10 6-6" }
+        }
+    }
+}
+
+#[component]
+fn IconWrench() -> Element {
+    rsx! {
+        svg {
+            width: "14",
+            height: "14",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            path { d: "M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" }
+        }
+    }
+}
+
+#[component]
+fn IconSliders() -> Element {
+    rsx! {
+        svg {
+            width: "14",
+            height: "14",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            line { x1: "4", y1: "21", x2: "4", y2: "14" }
+            line { x1: "4", y1: "10", x2: "4", y2: "3" }
+            line { x1: "12", y1: "21", x2: "12", y2: "12" }
+            line { x1: "12", y1: "8", x2: "12", y2: "3" }
+            line { x1: "20", y1: "21", x2: "20", y2: "16" }
+            line { x1: "20", y1: "12", x2: "20", y2: "3" }
+            line { x1: "2", y1: "14", x2: "6", y2: "14" }
+            line { x1: "10", y1: "8", x2: "14", y2: "8" }
+            line { x1: "18", y1: "16", x2: "22", y2: "16" }
+        }
+    }
+}
+
+#[component]
+fn IconShieldCheck() -> Element {
+    rsx! {
+        svg {
+            width: "14",
+            height: "14",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            path { d: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" }
+            path { d: "m9 11 2 2 4-4" }
+        }
+    }
+}
+
+#[component]
+fn IconFolderOpen() -> Element {
+    rsx! {
+        svg {
+            width: "14",
+            height: "14",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            path { d: "m6 14 1.45-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.55 6a2 2 0 0 1-1.94 1.5H4a2 2 0 0 1-2-2V5c0-1.1.9-2 2-2h3.93a2 2 0 0 1 1.66.9l.82 1.2a2 2 0 0 0 1.66.9H18a2 2 0 0 1 2 2v2" }
+        }
+    }
+}
+
+#[component]
+fn IconGlobe() -> Element {
+    rsx! {
+        svg {
+            width: "14",
+            height: "14",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            circle { cx: "12", cy: "12", r: "10" }
+            line { x1: "2", y1: "12", x2: "22", y2: "12" }
+            path { d: "M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" }
+        }
+    }
+}
+
+#[component]
+fn IconSave() -> Element {
+    rsx! {
+        svg {
+            width: "14",
+            height: "14",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            path { d: "M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" }
+            polyline { points: "17 21 17 13 7 13 7 21" }
+            polyline { points: "7 3 7 8 15 8" }
+        }
+    }
+}
+
+#[component]
+fn IconCompare() -> Element {
+    rsx! {
+        svg {
+            width: "14",
+            height: "14",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            rect { x: "3", y: "3", width: "18", height: "18", rx: "2" }
+            line { x1: "12", y1: "3", x2: "12", y2: "21" }
+        }
+    }
+}
+
+#[component]
+fn IconColumns() -> Element {
+    rsx! {
+        svg {
+            width: "14",
+            height: "14",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            rect { x: "3", y: "3", width: "18", height: "18", rx: "2" }
+            line { x1: "12", y1: "3", x2: "12", y2: "21" }
+        }
+    }
+}
+
+#[component]
+fn IconExpand() -> Element {
+    rsx! {
+        svg {
+            width: "14",
+            height: "14",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            path { d: "M15 3h6v6" }
+            path { d: "M9 21H3v-6" }
+            path { d: "M21 3l-7 7" }
+            path { d: "M3 21l7-7" }
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum JsonMutation {
+    RenameKey { old_key: String, new_key: String },
+    EditValue { new_value: serde_json::Value },
+    ReorderArray { from: usize, to: usize },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum Accessor {
+    Key(String),
+    Index(usize),
+}
+
+fn parse_json_path(path: &str) -> Vec<Accessor> {
+    let mut accessors = Vec::new();
+    if !path.starts_with('$') {
+        return accessors;
+    }
+    let mut chars = path.chars().peekable();
+    chars.next(); // skip '$'
+    
+    while let Some(&c) = chars.peek() {
+        if c == '.' {
+            chars.next(); // consume '.'
+            let mut key = String::new();
+            while let Some(&next_c) = chars.peek() {
+                if next_c == '.' || next_c == '[' {
+                    break;
+                }
+                key.push(chars.next().unwrap());
+            }
+            if !key.is_empty() {
+                accessors.push(Accessor::Key(key));
+            }
+        } else if c == '[' {
+            chars.next(); // consume '['
+            let mut idx_str = String::new();
+            while let Some(&next_c) = chars.peek() {
+                if next_c == ']' {
+                    break;
+                }
+                idx_str.push(chars.next().unwrap());
+            }
+            chars.next(); // consume ']'
+            if let Ok(idx) = idx_str.parse::<usize>() {
+                accessors.push(Accessor::Index(idx));
+            }
+        } else {
+            chars.next(); // fallback/skip
+        }
+    }
+    accessors
+}
+
+fn mutate_json_value(
+    root: &mut serde_json::Value,
+    path: &str,
+    mutation: JsonMutation,
+) -> bool {
+    let accessors = parse_json_path(path);
+    modify_at_path(root, &accessors, 0, mutation)
+}
+
+fn modify_at_path(
+    current: &mut serde_json::Value,
+    accessors: &[Accessor],
+    depth: usize,
+    mutation: JsonMutation,
+) -> bool {
+    if depth == accessors.len() {
+        match mutation {
+            JsonMutation::EditValue { new_value } => {
+                *current = new_value;
+                return true;
+            }
+            JsonMutation::RenameKey { old_key, new_key } => {
+                if let serde_json::Value::Object(map) = current {
+                    if let Some(val) = map.remove(&old_key) {
+                        map.insert(new_key, val);
+                        return true;
+                    }
+                }
+                return false;
+            }
+            JsonMutation::ReorderArray { from, to } => {
+                if let serde_json::Value::Array(arr) = current {
+                    if from < arr.len() && to < arr.len() {
+                        let item = arr.remove(from);
+                        arr.insert(to, item);
+                        return true;
+                    }
+                }
+                return false;
+            }
+        }
+    }
+
+    match &accessors[depth] {
+        Accessor::Key(k) => {
+            if let serde_json::Value::Object(map) = current {
+                if let Some(child) = map.get_mut(k) {
+                    return modify_at_path(child, accessors, depth + 1, mutation);
+                }
+            }
+            false
+        }
+        Accessor::Index(idx) => {
+            if let serde_json::Value::Array(arr) = current {
+                if let Some(child) = arr.get_mut(*idx) {
+                    return modify_at_path(child, accessors, depth + 1, mutation);
+                }
+            }
+            false
+        }
+    }
+}
+
+fn get_parent_path(path: &str) -> String {
+    if let Some(idx) = path.rfind('.') {
+        path[..idx].to_string()
+    } else if let Some(idx) = path.rfind('[') {
+        path[..idx].to_string()
+    } else {
+        "$".to_string()
+    }
+}
+
+fn detect_indentation(text: &str) -> usize {
+    let mut counts = std::collections::HashMap::new();
+    let mut tab_indented_lines = 0;
+    for line in text.lines() {
+        if line.starts_with('\t') {
+            tab_indented_lines += 1;
+            continue;
+        }
+        let trimmed = line.trim_start();
+        if trimmed.is_empty() || trimmed.len() == line.len() {
+            continue;
+        }
+        let leading = line.len() - trimmed.len();
+        if leading > 0 {
+            *counts.entry(leading).or_insert(0) += 1;
+        }
+    }
+    let mut best_indent = 2;
+    let mut max_count = 0;
+    for (&indent, &count) in counts.iter() {
+        if count > max_count && indent >= 2 && indent <= 8 {
+            max_count = count;
+            best_indent = indent;
+        }
+    }
+    if tab_indented_lines > max_count {
+        0
+    } else {
+        best_indent
+    }
+}
+
+fn parse_error_line(err_msg: &str) -> Option<usize> {
+    if let Some(idx) = err_msg.find("at line ") {
+        let rest = &err_msg[idx + 8..];
+        let num_str: String = rest.chars().take_while(|c| c.is_ascii_digit()).collect();
+        num_str.parse::<usize>().ok()
+    } else {
+        None
     }
 }

@@ -115,6 +115,7 @@ pub fn KeyboardShortcutsHelp() -> Element {
                     for (keys, desc) in [
                         ("⌘ K",         "Open command palette"),
                         ("⌘ ↵",         "Run primary action"),
+                        ("⌘ M",         "Create new tab"),
                         ("⌘ .",         "Toggle zen mode"),
                         ("?",            "Show this help"),
                         ("Escape",       "Close dialogs"),

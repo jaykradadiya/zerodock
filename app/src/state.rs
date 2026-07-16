@@ -42,6 +42,8 @@ pub struct UiState {
     pub toasts: Vec<Toast>,
     pub primary_action_tick: u64,
     pub primary_action_registered: bool,
+    pub new_tab_tick: u64,
+    pub new_tab_registered: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -126,6 +128,17 @@ impl AppState {
         self.ui.write().primary_action_registered = registered;
     }
 
+    pub fn trigger_new_tab_action(&mut self) {
+        if self.ui.read().new_tab_registered {
+            let tick = PRIMARY_TICK.fetch_add(1, Ordering::Relaxed);
+            self.ui.write().new_tab_tick = tick;
+        }
+    }
+
+    pub fn set_new_tab_registered(&mut self, registered: bool) {
+        self.ui.write().new_tab_registered = registered;
+    }
+
     pub fn record_tool_visit(&mut self, tool_id: &str) {
         let mut prefs = self.preferences.write();
         prefs.recent_tools.retain(|id| id != tool_id);
@@ -176,7 +189,6 @@ pub fn use_primary_action(mut handler: impl FnMut() + 'static) {
     let state = use_app_state();
     let mut register_state = state.clone();
     let mut cleanup_state = state.clone();
-    let tick = state.ui.read().primary_action_tick;
     let mut last_tick = use_signal(|| 0u64);
 
     use_effect(move || {
@@ -188,6 +200,31 @@ pub fn use_primary_action(mut handler: impl FnMut() + 'static) {
     });
 
     use_effect(move || {
+        let tick = state.ui.read().primary_action_tick;
+        if tick > *last_tick.read() {
+            last_tick.set(tick);
+            handler();
+        }
+    });
+}
+
+/// Invoke `handler` when the user presses Ctrl+M / Cmd+M (new tab action shortcut).
+pub fn use_new_tab_action(mut handler: impl FnMut() + 'static) {
+    let state = use_app_state();
+    let mut register_state = state.clone();
+    let mut cleanup_state = state.clone();
+    let mut last_tick = use_signal(|| 0u64);
+
+    use_effect(move || {
+        register_state.set_new_tab_registered(true);
+    });
+
+    use_drop(move || {
+        cleanup_state.set_new_tab_registered(false);
+    });
+
+    use_effect(move || {
+        let tick = state.ui.read().new_tab_tick;
         if tick > *last_tick.read() {
             last_tick.set(tick);
             handler();

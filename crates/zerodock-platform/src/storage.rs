@@ -18,7 +18,7 @@ pub const JSON_TABS_KEY: &str = "zd_json_tabs";
 pub const ACTIVE_TAB_KEY: &str = "zd_active_tab_id";
 
 #[cfg(all(feature = "web", target_arch = "wasm32"))]
-pub mod web_impl {
+mod web_impl {
     use super::*;
     use gloo_storage::{LocalStorage, Storage as GlooStorage};
 
@@ -53,7 +53,7 @@ pub mod web_impl {
 pub use web_impl::WebStorage;
 
 #[cfg(all(feature = "desktop", not(target_arch = "wasm32")))]
-pub mod desktop_impl {
+mod desktop_impl {
     use super::*;
     use directories::ProjectDirs;
     use r2d2_sqlite::SqliteConnectionManager;

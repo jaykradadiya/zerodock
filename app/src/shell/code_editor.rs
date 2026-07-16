@@ -4,6 +4,7 @@ use std::collections::BTreeSet;
 use ropey::Rope;
 use zerodock_core::{find_collapsible_blocks, highlight_to_html, line_count, EditorLanguage};
 use std::collections::HashSet;
+#[allow(unused_imports)]
 pub use zerodock_editor::{
     Command as EditorCommand, Document as EngineDocument, RenderSnapshot as EditorRenderSnapshot,
     Selection as EditorSelection, Viewport as EditorViewport,
@@ -29,6 +30,7 @@ impl From<CodeLanguage> for EditorLanguage {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Clone)]
 pub struct EditorState {
     pub buffer: Rope,
@@ -38,6 +40,7 @@ pub struct EditorState {
     pub engine: zerodock_editor::Document,
 }
 
+#[allow(dead_code)]
 impl EditorState {
     pub fn new(text: &str) -> Self {
         let engine = zerodock_editor::Document::new(text);

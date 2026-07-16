@@ -19,7 +19,7 @@ pub fn ApiTester() -> Element {
             } else {
                 "Test HTTP APIs with native reqwest — no CORS restrictions".to_string()
             },
-            ApiTesterContent {}
+            ApiTesterContent { initial_tab: "api".to_string() }
         }
     }
 }
@@ -40,7 +40,7 @@ fn substitute_env_vars(text: &str, vars: &[(String, String)]) -> String {
 }
 
 #[component]
-pub fn ApiTesterContent() -> Element {
+pub fn ApiTesterContent(initial_tab: String) -> Element {
     let platform = use_context::<PlatformServices>();
     let mut state = use_app_state();
     let cors = platform.http.cors_restricted();
@@ -60,7 +60,21 @@ pub fn ApiTesterContent() -> Element {
         }
         c
     });
-    let mut import_curl_open = use_signal(|| initial_curl.is_some());
+    let initial_curl_cloned = initial_curl.clone();
+    let initial_tab_cloned = initial_tab.clone();
+    let mut import_curl_open = use_signal(move || {
+        initial_curl_cloned.is_some() || initial_tab_cloned == "curl"
+    });
+    let initial_tab_for_sig = initial_tab.clone();
+    let mut initial_tab_sig = use_signal(move || initial_tab_for_sig.clone());
+    if *initial_tab_sig.read() != initial_tab {
+        initial_tab_sig.set(initial_tab.clone());
+        if initial_tab == "curl" {
+            import_curl_open.set(true);
+        } else {
+            import_curl_open.set(false);
+        }
+    }
     let mut import_curl_text = use_signal(|| initial_curl.clone().unwrap_or_default());
     let mut code_target = use_signal(|| "javascript".to_string());
 

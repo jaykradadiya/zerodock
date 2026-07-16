@@ -7,7 +7,6 @@ mod shell;
 mod state;
 mod tools;
 
-use dioxus::prelude::*;
 use router::App;
 
 fn main() {

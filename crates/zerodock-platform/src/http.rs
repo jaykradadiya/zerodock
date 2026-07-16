@@ -27,7 +27,7 @@ pub trait HttpClient: Send + Sync {
 }
 
 #[cfg(all(feature = "web", target_arch = "wasm32"))]
-pub mod web_impl {
+mod web_impl {
     use super::*;
     use gloo_net::http::Request;
 
@@ -103,7 +103,7 @@ pub mod web_impl {
 pub use web_impl::WebHttpClient;
 
 #[cfg(all(feature = "desktop", not(target_arch = "wasm32")))]
-pub mod desktop_impl {
+mod desktop_impl {
     use super::*;
     use std::time::Instant;
 

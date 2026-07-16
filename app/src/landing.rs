@@ -5,7 +5,7 @@ use crate::state::use_app_state;
 use dioxus::prelude::*;
 use dioxus_router::Link;
 
-fn category_icon(category: &str) -> &'static str {
+pub(crate) fn category_icon(category: &str) -> &'static str {
     match category {
         "Data"       => "{}",
         "Network"    => "⇄",
@@ -15,6 +15,20 @@ fn category_icon(category: &str) -> &'static str {
         "Converters" => "↔",
         "Generators" => "∗",
         _            => "·",
+    }
+}
+
+#[allow(dead_code)]
+fn category_color(category: &str) -> &'static str {
+    match category {
+        "Data"       => "var(--zd-accent)",
+        "Network"    => "var(--zd-info)",
+        "Encoding"   => "var(--zd-primary)",
+        "Security"   => "var(--zd-error)",
+        "Text"       => "var(--zd-primary)",
+        "Converters" => "var(--zd-info)",
+        "Generators" => "var(--zd-warning)",
+        _            => "var(--zd-primary)",
     }
 }
 
@@ -40,17 +54,6 @@ fn analyze_smart_paste(text: &str) -> Option<DetectedPayload> {
             explanation: "3-part base64url JSON Web Token detected.",
             confidence: "99%",
             color: "var(--zd-primary)",
-        });
-    }
-    let lower = t.to_lowercase();
-    if lower.starts_with("curl ") || lower.starts_with("curl\t") {
-        return Some(DetectedPayload {
-            label: "cURL Command",
-            target_name: "HTTP Client Studio",
-            route: Route::Http {},
-            explanation: "HTTP request invocation detected.",
-            confidence: "99%",
-            color: "var(--zd-info)",
         });
     }
     if (t.starts_with('{') && t.ends_with('}')) || (t.starts_with('[') && t.ends_with(']')) {
@@ -105,7 +108,7 @@ fn analyze_smart_paste(text: &str) -> Option<DetectedPayload> {
 
 #[component]
 pub fn LandingPage() -> Element {
-    let mut state = use_app_state();
+    let state = use_app_state();
     let mut search = use_signal(String::new);
     let mut category_filters = use_signal(Vec::<String>::new); // Empty = All
     let mut smart_paste_input = use_signal(String::new);
@@ -140,16 +143,23 @@ pub fn LandingPage() -> Element {
 
             // ── HERO (centered, flat — itspdftools-style) ──────────────────
             section {
-                class: "relative shrink-0 border-b border-[var(--zd-border)] overflow-hidden",
+                class: "relative shrink-0 border-b border-[var(--zd-border)] overflow-hidden flex flex-col items-center justify-center min-h-[calc(100vh-3rem)]",
+                div {
+                    class: "absolute inset-0 opacity-[0.05] pointer-events-none",
+                    style: "background-image: linear-gradient(var(--zd-primary) 1px, transparent 1px), linear-gradient(90deg, var(--zd-primary) 1px, transparent 1px); background-size: 40px 40px; mask-image: radial-gradient(ellipse at center, black 40%, transparent 80%); -webkit-mask-image: radial-gradient(ellipse at center, black 40%, transparent 80%);"
+                }
 
                 div {
-                    class: "relative max-w-3xl mx-auto w-full px-6 pt-20 pb-16 md:pt-28 md:pb-20 flex flex-col items-center text-center",
+                    class: "relative max-w-3xl mx-auto w-full px-6 py-12 md:py-16 flex flex-col items-center text-center",
 
                     h1 {
                         class: "zd-rise font-display text-[var(--zd-text-primary)] leading-[1.05] mb-6",
                         style: "font-size: clamp(2.25rem, 5vw, 3.5rem); letter-spacing: -0.03em;",
                         "Developer tools that never leave "
-                        span { style: "color: var(--zd-primary);", "your machine." }
+                        span {
+                            style: "background: linear-gradient(135deg, var(--zd-primary) 0%, var(--zd-accent) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;",
+                            "your machine."
+                        }
                     }
                     p {
                         class: "zd-rise text-lg text-[var(--zd-text-secondary)] max-w-xl leading-relaxed mb-6",
@@ -162,17 +172,17 @@ pub fn LandingPage() -> Element {
                         class: "zd-rise flex flex-wrap items-center justify-center gap-x-5 gap-y-2 mb-10",
                         span {
                             class: "inline-flex items-center gap-1.5 text-sm text-[var(--zd-text-secondary)]",
-                            IconCheck {}
+                            span { style: "color: var(--zd-accent);", IconCheck {} }
                             "No login"
                         }
                         span {
                             class: "inline-flex items-center gap-1.5 text-sm text-[var(--zd-text-secondary)]",
-                            IconCheck {}
+                            span { class: "w-2 h-2 rounded-full bg-[var(--zd-success)] animate-pulse inline-block" }
                             "100% private"
                         }
                         span {
                             class: "inline-flex items-center gap-1.5 text-sm text-[var(--zd-text-secondary)]",
-                            IconCheck {}
+                            span { style: "color: var(--zd-accent);", IconCheck {} }
                             "Free forever"
                         }
                     }
@@ -181,11 +191,13 @@ pub fn LandingPage() -> Element {
                     div {
                         class: "zd-rise-delay-1 w-full",
                         div {
-                            class: "rounded-lg border bg-[var(--zd-surface)] overflow-hidden transition-[border-color,box-shadow] duration-200 text-left",
-                            style: if !smart_paste_input.read().is_empty() {
-                                "border-color: color-mix(in srgb, var(--zd-primary) 45%, var(--zd-border)); box-shadow: var(--zd-shadow-glow);"
+                            class: "rounded-lg border bg-[var(--zd-surface)] overflow-hidden transition-all duration-300 text-left",
+                            style: if let Some(d) = &detected {
+                                format!("border-color: {}; box-shadow: 0 0 20px color-mix(in srgb, {} 12%, transparent);", d.color, d.color)
+                            } else if !smart_paste_input.read().is_empty() {
+                                "border-color: var(--zd-border-hover); box-shadow: var(--zd-shadow-md);".to_string()
                             } else {
-                                "border-color: var(--zd-border);"
+                                "border-color: var(--zd-border);".to_string()
                             },
 
                             // Toolbar row
@@ -197,9 +209,22 @@ pub fn LandingPage() -> Element {
                                 }
                                 span { class: "zd-mono-label", style: "color: var(--zd-text-secondary);", "Smart paste" }
                                 span { class: "flex-1" }
+                                button {
+                                    class: "inline-flex items-center gap-1.5 px-2.5 py-1 rounded border border-[var(--zd-border)] bg-[var(--zd-surface)] text-[10px] font-mono text-[var(--zd-text-secondary)] hover:text-[var(--zd-text-primary)] hover:border-[var(--zd-border-hover)] transition-colors focus-ring cursor-pointer",
+                                    onclick: move |_| {
+                                        let mut smart_paste_input = smart_paste_input.clone();
+                                        spawn(async move {
+                                            if let Some(text) = crate::shell::ui::read_from_clipboard().await {
+                                                smart_paste_input.set(text);
+                                            }
+                                        });
+                                    },
+                                    IconPaste {}
+                                    "Paste Clipboard"
+                                }
                                 span {
-                                    class: "text-[10px] font-mono text-[var(--zd-text-muted)] hidden sm:inline",
-                                    "Not sure which tool? Paste anything — we'll open the right one"
+                                    class: "text-[10px] font-mono text-[var(--zd-text-muted)] hidden sm:inline ml-2",
+                                    "Paste anything — we'll open the right tool"
                                 }
                             }
 
@@ -230,14 +255,14 @@ pub fn LandingPage() -> Element {
                             }
 
                             // Detection result / hint footer
-                            if let Some(d) = detected {
+                            if let Some(d) = &detected {
                                 div {
                                     class: "flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 border-t border-[var(--zd-border)]",
-                                    style: "background: color-mix(in srgb, {d.color} 6%, var(--zd-surface));",
+                                    style: "background: color-mix(in srgb, {d.color} 4%, var(--zd-surface)); border-top-color: color-mix(in srgb, {d.color} 15%, var(--zd-border));",
                                     div { class: "flex flex-col gap-0.5 min-w-0",
-                                        div { class: "flex items-center gap-2.5",
+                                        div { class: "flex items-center gap-2",
                                             span {
-                                                class: "w-1.5 h-1.5 rounded-full shrink-0",
+                                                class: "w-1.5 h-1.5 rounded-full shrink-0 animate-ping",
                                                 style: "background: {d.color};"
                                             }
                                             span {
@@ -246,19 +271,19 @@ pub fn LandingPage() -> Element {
                                             }
                                             span {
                                                 class: "text-[10px] font-mono font-bold px-1.5 py-0.5 rounded",
-                                                style: "background: color-mix(in srgb, {d.color} 15%, transparent); color: {d.color};",
-                                                "{d.confidence}"
+                                                style: "background: color-mix(in srgb, {d.color} 12%, transparent); color: {d.color}; border: 1px solid color-mix(in srgb, {d.color} 20%, transparent);",
+                                                "{d.confidence} match"
                                             }
                                         }
                                         p {
-                                            class: "text-xs font-semibold ml-4",
+                                            class: "text-xs font-semibold ml-3.5 mt-0.5",
                                             style: "color: {d.color};",
-                                            "→  {d.target_name}"
+                                            "Open {d.target_name}"
                                         }
                                     }
                                     button {
-                                        class: "flex items-center justify-center gap-1.5 px-4 py-2 rounded-md text-xs font-semibold text-white shrink-0 transition-all btn-micro focus-ring",
-                                        style: "background: {d.color};",
+                                        class: "flex items-center justify-center gap-1.5 px-4 py-2 rounded text-xs font-semibold text-[var(--zd-surface-sunken)] shrink-0 transition-all cursor-pointer focus-ring shadow-sm hover:brightness-110 active:scale-[0.98]",
+                                        style: "background: {d.color}; color: var(--zd-bg);",
                                         onclick: {
                                             let d = d.clone();
                                             let smart_paste_input = smart_paste_input.clone();
@@ -272,7 +297,7 @@ pub fn LandingPage() -> Element {
                                                 nav.push(d.route.clone());
                                             }
                                         },
-                                        "Launch"
+                                        "Launch Studio"
                                         IconArrowRight {}
                                     }
                                 }
@@ -303,65 +328,70 @@ pub fn LandingPage() -> Element {
 
                 // Header
                 div {
-                    class: "flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6",
+                    class: "mb-6",
+                    h2 {
+                        class: "font-display text-2xl text-[var(--zd-text-primary)]",
+                        style: "letter-spacing: -0.02em;",
+                        "All tools"
+                    }
+                    p {
+                        class: "mt-1.5 text-sm text-[var(--zd-text-muted)]",
+                        "{visible_tools.len()} of {tool_count} · filter by category or search by name"
+                    }
+                }
+
+                // Toolbar: Redesigned segmented control on the left, aligned search input on the right
+                div {
+                    class: "flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 pb-6 border-b border-[var(--zd-border)]",
                     div {
-                        h2 {
-                            class: "font-display text-2xl text-[var(--zd-text-primary)]",
-                            style: "letter-spacing: -0.02em;",
-                            "All tools"
+                        class: "inline-flex flex-wrap sm:flex-nowrap items-center p-0.5 rounded-lg bg-[var(--zd-surface-sunken)] border border-[var(--zd-border)] gap-0.5 max-w-full overflow-x-auto custom-scrollbar",
+                        CategoryChip {
+                            label: "All",
+                            active: active_categories.is_empty(),
+                            onclick: EventHandler::new(move |_| {
+                                tracing::info!("ZeroDock: Clearing category filters");
+                                category_filters.write().clear();
+                            }),
                         }
-                        p {
-                            class: "mt-1.5 text-sm text-[var(--zd-text-muted)]",
-                            "{visible_tools.len()} of {tool_count} · filter by category or search by name"
+                        for category in CATEGORIES {
+                            {
+                                let cat = *category;
+                                let is_active = active_categories.iter().any(|x| x.as_str() == cat);
+                                rsx! {
+                                    CategoryChip {
+                                        label: cat,
+                                        active: is_active,
+                                        onclick: EventHandler::new(move |_| {
+                                            tracing::info!("ZeroDock: Category clicked: {}", cat);
+                                            let mut filters = category_filters.write();
+                                            if filters.len() != 1 || filters[0] != cat {
+                                                filters.clear();
+                                                filters.push(cat.to_string());
+                                            }
+                                            tracing::info!("ZeroDock: New active categories: {:?}", *filters);
+                                        }),
+                                    }
+                                }
+                            }
                         }
                     }
                     label {
-                        class: "relative flex items-center w-full sm:max-w-xs",
+                        class: "relative flex items-center w-full md:max-w-xs shrink-0",
                         span { class: "sr-only", "Search tools" }
                         span {
-                            class: "absolute left-3 text-[var(--zd-text-muted)] pointer-events-none",
+                            class: "absolute left-2.5 text-[var(--zd-text-muted)] pointer-events-none",
                             IconSearch {}
                         }
                         input {
-                            class: "w-full pl-9 pr-4 py-2.5 rounded-md border border-[var(--zd-border)] bg-[var(--zd-surface)] text-sm text-[var(--zd-text-primary)] focus-ring placeholder:text-[var(--zd-text-muted)] transition-colors focus:border-[var(--zd-primary)]",
+                            id: "catalog-search-input",
+                            class: "w-full pl-8 pr-8 h-8 rounded-md border border-[var(--zd-border)] bg-[var(--zd-surface)] text-xs text-[var(--zd-text-primary)] focus-ring placeholder:text-[var(--zd-text-muted)] transition-colors focus:border-[var(--zd-primary)]",
                             placeholder: "Search tools…",
                             value: "{search}",
                             oninput: move |e: Event<FormData>| search.set(e.value()),
                         }
-                    }
-                }
-
-                // Category filter chips
-                div {
-                    class: "flex flex-wrap items-center gap-1.5 mb-8 pb-6 border-b border-[var(--zd-border)]",
-                    CategoryChip {
-                        label: "All",
-                        active: active_categories.is_empty(),
-                        onclick: EventHandler::new(move |_| {
-                            tracing::info!("ZeroDock: Clearing category filters");
-                            category_filters.write().clear();
-                        }),
-                    }
-                    for category in CATEGORIES {
-                        {
-                            let cat = *category;
-                            let is_active = active_categories.iter().any(|x| x.as_str() == cat);
-                            rsx! {
-                                CategoryChip {
-                                    label: cat,
-                                    active: is_active,
-                                    onclick: EventHandler::new(move |_| {
-                                        tracing::info!("ZeroDock: Category clicked: {}", cat);
-                                        let mut filters = category_filters.write();
-                                        if let Some(pos) = filters.iter().position(|x| x.as_str() == cat) {
-                                            filters.remove(pos);
-                                        } else {
-                                            filters.push(cat.to_string());
-                                        }
-                                        tracing::info!("ZeroDock: New active categories: {:?}", *filters);
-                                    }),
-                                }
-                            }
+                        span {
+                            class: "absolute right-2.5 px-1.5 py-0.5 rounded text-[9px] font-mono border border-[var(--zd-border)] bg-[var(--zd-surface-raised)] text-[var(--zd-text-muted)] pointer-events-none hidden sm:inline-block",
+                            "/"
                         }
                     }
                 }
@@ -387,16 +417,21 @@ pub fn LandingPage() -> Element {
                 } else {
                     div {
                         class: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4",
-                        for tool in visible_tools {
-                            ToolCard { tool: tool, hub_name: None }
+                        for (idx, tool) in visible_tools.iter().enumerate() {
+                            {
+                                let parent_name = tool.hub_parent.and_then(|p_id| crate::registry::find_tool(p_id).map(|p| p.name));
+                                rsx! {
+                                    ToolCard { tool: *tool, hub_name: parent_name, index: idx }
+                                }
+                            }
                         }
                     }
                 }
             }
 
-            // ── VALUE PROPS — Built different, on purpose ──────────────────
+            // ── VALUE PROPS — Redesigned premium cards grid ────────────────
             section {
-                class: "border-t border-[var(--zd-border)] bg-[var(--zd-surface)] shrink-0",
+                class: "border-t border-[var(--zd-border)] bg-[var(--zd-surface-soft)] shrink-0",
                 div {
                     class: "max-w-6xl mx-auto px-6 lg:px-10 py-16 md:py-20",
                     div {
@@ -407,48 +442,26 @@ pub fn LandingPage() -> Element {
                             "Why people switch to ZeroDock"
                         }
                         p {
-                            class: "text-base text-[var(--zd-text-secondary)] leading-relaxed",
+                            class: "text-sm text-[var(--zd-text-secondary)] leading-relaxed",
                             "Not another SaaS. Just tools that respect your data and your time."
                         }
                     }
-                    // Asymmetric: lead privacy prop, then two supporting props
                     div {
-                        class: "flex flex-col gap-10 md:gap-12",
-
-                        // Lead prop — Privacy by architecture
-                        div {
-                            class: "flex flex-col md:flex-row md:items-start gap-5 md:gap-8 md:max-w-3xl",
-                            span {
-                                class: "zd-icon-ring inline-flex items-center justify-center w-12 h-12 shrink-0",
-                                style: "color: var(--zd-primary);",
-                                IconShield {}
-                            }
-                            div {
-                                h3 {
-                                    class: "font-display text-xl text-[var(--zd-text-primary)] mb-2",
-                                    style: "letter-spacing: -0.02em;",
-                                    "Privacy by architecture"
-                                }
-                                p {
-                                    class: "text-base text-[var(--zd-text-secondary)] leading-relaxed max-w-xl",
-                                    "Every tool runs locally — in your browser via WebAssembly, or natively on desktop. No data is transmitted, stored, or logged. Your files never touch a server."
-                                }
-                            }
+                        class: "grid grid-cols-1 md:grid-cols-3 gap-6",
+                        ValuePropCard {
+                            icon: rsx! { IconShield {} },
+                            title: "Privacy by architecture",
+                            body: "Every tool runs locally — in your browser via WebAssembly, or natively on desktop. No data is transmitted, stored, or logged. Your files never touch a server.",
                         }
-
-                        // Two supporting props
-                        div {
-                            class: "grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 md:max-w-3xl",
-                            ValueProp {
-                                icon: rsx! { IconBolt {} },
-                                title: "Instant performance",
-                                body: "No round-trips, no loading spinners. Tools process data in-memory at native speed, with streaming and chunking for large files.",
-                            }
-                            ValueProp {
-                                icon: rsx! { IconUserOff {} },
-                                title: "No accounts, ever",
-                                body: "No sign-up, no email, no tracking. Open the page, use the tool, close the tab. Open-source and auditable.",
-                            }
+                        ValuePropCard {
+                            icon: rsx! { IconBolt {} },
+                            title: "Instant performance",
+                            body: "No round-trips, no loading spinners. Tools process data in-memory at native speed, with streaming and chunking for large files.",
+                        }
+                        ValuePropCard {
+                            icon: rsx! { IconUserOff {} },
+                            title: "No accounts, ever",
+                            body: "No sign-up, no email, no tracking. Open the page, use the tool, close the tab. Open-source and auditable.",
                         }
                     }
                 }
@@ -485,17 +498,24 @@ pub fn LandingPage() -> Element {
 fn route_key_for_route(route: &Route) -> &'static str {
     match route {
         Route::JwtDecoder {}     => "jwt-decoder",
-        Route::Http {}           => "api-tester",
         Route::JsonToolkit {}    => "json-toolkit",
         Route::EpochConverter {} => "epoch-converter",
         Route::UrlEncoder {}     => "url-encoder",
         Route::Base64Codec {}    => "base64-codec",
+        Route::YamlJsonConverter {} => "yaml-json-converter",
+        Route::JsonTypeConverter {} => "json-type-converter",
+        Route::JsonPath {}       => "json-path",
+        Route::HashGenerator {}  => "hash-generator",
+        Route::Security {}       => "hash-generator",
+        Route::EncodeDecode {}   => "base64-codec",
+        Route::DiffChecker {}    => "diff-checker",
+        Route::RegexTester {}    => "regex-tester",
         _                        => "",
     }
 }
 
 #[component]
-fn ToolCard(tool: &'static crate::registry::ToolDef, hub_name: Option<&'static str>) -> Element {
+fn ToolCard(tool: &'static crate::registry::ToolDef, hub_name: Option<&'static str>, index: usize) -> Element {
     let route = route_for_path(tool.route);
     let featured = tool.tier == ToolTier::Featured;
     let icon = category_icon(tool.category);
@@ -504,13 +524,14 @@ fn ToolCard(tool: &'static crate::registry::ToolDef, hub_name: Option<&'static s
     rsx! {
         Link {
             to: route,
-            class: "zd-tool-card group",
+            class: "zd-tool-card group animate-tile-fast hover:border-[var(--zd-border-hover)] hover:bg-[var(--zd-surface-hover)] transition-all duration-200 hover:-translate-y-0.5 shadow-sm hover:shadow-md",
+            style: "animation-delay: {index * 25}ms; opacity: 0; animation-fill-mode: forwards;",
 
             // Top row: icon + featured badge
             div {
                 class: "flex items-start justify-between gap-2",
                 span {
-                    class: "zd-icon-ring inline-flex items-center justify-center w-9 h-9 text-sm font-mono shrink-0",
+                    class: "w-8 h-8 rounded-lg border border-[var(--zd-border)] bg-[var(--zd-surface-sunken)] text-xs font-mono text-[var(--zd-text-secondary)] flex items-center justify-center group-hover:text-[var(--zd-primary)] group-hover:border-[var(--zd-primary)] transition-colors shrink-0",
                     "{icon}"
                 }
                 if featured {
@@ -544,17 +565,12 @@ fn ToolCard(tool: &'static crate::registry::ToolDef, hub_name: Option<&'static s
                 }
             }
 
-            // Footer — reassurance + explicit primary action (itspdftools-style)
+            // Footer — explicit primary action reveal on hover
             div {
-                class: "flex items-center justify-between gap-2 mt-auto pt-3",
+                class: "flex items-center justify-end gap-2 mt-auto pt-3 border-t border-[var(--zd-border)] opacity-0 group-hover:opacity-100 transition-opacity duration-200",
                 span {
-                    class: "inline-flex items-center gap-1 text-[10px] font-mono text-[var(--zd-text-muted)]",
-                    IconLockSmall {}
-                    "Runs locally"
-                }
-                span {
-                    class: "inline-flex items-center gap-1 text-xs font-medium text-[var(--zd-text-muted)] group-hover:text-[var(--zd-primary)] transition-colors",
-                    "Open"
+                    class: "inline-flex items-center gap-1 text-[10px] font-mono text-[var(--zd-text-muted)] group-hover:text-[var(--zd-primary)] transition-colors",
+                    "Launch now"
                     IconArrowRight {}
                 }
             }
@@ -567,40 +583,46 @@ fn ToolCard(tool: &'static crate::registry::ToolDef, hub_name: Option<&'static s
 #[component]
 fn CategoryChip(label: &'static str, active: bool, onclick: EventHandler<MouseEvent>) -> Element {
     let class = if active {
-        "inline-flex items-center h-8 px-3 rounded-md text-xs font-medium border transition-colors focus-ring btn-micro border-transparent bg-[var(--zd-primary)] text-[var(--zd-primary-fg)]"
+        "inline-flex items-center h-7 px-3 rounded-md text-xs font-semibold border border-[var(--zd-primary)] bg-[var(--zd-surface-raised)] text-[var(--zd-primary)] shadow-sm transition-all scale-[1.01]"
     } else {
-        "inline-flex items-center h-8 px-3 rounded-md text-xs font-medium border transition-colors focus-ring btn-micro border-[var(--zd-border)] bg-[var(--zd-surface)] text-[var(--zd-text-secondary)] hover:text-[var(--zd-text-primary)] hover:border-[var(--zd-border-hover)]"
+        "inline-flex items-center h-7 px-3 rounded-md text-xs font-medium border border-transparent text-[var(--zd-text-muted)] hover:text-[var(--zd-text-primary)] transition-all cursor-pointer"
     };
     rsx! {
         button {
+            r#type: "button",
             class: "{class}",
             aria_pressed: active,
-            onclick: move |e| onclick.call(e),
+            onclick: move |e: Event<MouseData>| {
+                e.stop_propagation();
+                onclick.call(e);
+            },
             "{label}"
         }
     }
 }
 
-// ── ValueProp ───────────────────────────────────────────────────────────────
+// ── ValuePropCard ───────────────────────────────────────────────────────────
 
 #[component]
-fn ValueProp(icon: Element, title: &'static str, body: &'static str) -> Element {
+fn ValuePropCard(icon: Element, title: &'static str, body: &'static str) -> Element {
     rsx! {
         div {
-            class: "flex flex-col gap-3",
+            class: "flex flex-col gap-4 p-6 rounded-xl border border-[var(--zd-border)] bg-[var(--zd-surface)] hover:bg-[var(--zd-surface-hover)] transition-all duration-300 hover:-translate-y-0.5 hover:border-[var(--zd-border-hover)] hover:shadow-md",
             span {
-                class: "zd-icon-ring inline-flex items-center justify-center w-10 h-10 shrink-0",
-                style: "color: var(--zd-primary);",
+                class: "inline-flex items-center justify-center w-10 h-10 rounded-lg border border-[var(--zd-border)] bg-[var(--zd-surface-sunken)] text-[var(--zd-text-secondary)] shrink-0",
                 {icon}
             }
-            h3 {
-                class: "text-base font-semibold text-[var(--zd-text-primary)]",
-                style: "letter-spacing: -0.01em;",
-                "{title}"
-            }
-            p {
-                class: "text-sm text-[var(--zd-text-secondary)] leading-relaxed",
-                "{body}"
+            div {
+                class: "flex flex-col gap-1.5",
+                h3 {
+                    class: "text-base font-semibold text-[var(--zd-text-primary)]",
+                    style: "letter-spacing: -0.010em;",
+                    "{title}"
+                }
+                p {
+                    class: "text-xs text-[var(--zd-text-secondary)] leading-relaxed",
+                    "{body}"
+                }
             }
         }
     }

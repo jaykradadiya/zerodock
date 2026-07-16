@@ -18,11 +18,11 @@ pub fn HttpHub(initial_tab: String) -> Element {
                 hub_id: "http",
                 hub_title: "HTTP Client Studio",
                 hub_description: "REST API testing, cURL import, and multi-language code snippets".to_string(),
-                active_tab: "api".to_string(),
+                active_tab: initial_tab.clone(),
             }
             ToolWorkspace {
                 ToolBody {
-                    api_tester::ApiTesterContent {}
+                    api_tester::ApiTesterContent { initial_tab }
                 }
             }
         }

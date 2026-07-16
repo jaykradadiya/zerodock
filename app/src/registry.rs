@@ -21,17 +21,11 @@ pub struct ToolDef {
 
 pub const TOOLS: &[ToolDef] = &[
     ToolDef { id: "json-toolkit", name: "JSON & Data Studio", category: "Data", route: "/json-toolkit", description: "Format, repair, convert YAML & Types, and query live JMESPath.", tier: ToolTier::Featured, hidden_from_browse: false, hub_parent: None, hub_tab: None },
-    ToolDef { id: "http", name: "HTTP Client Studio", category: "Network", route: "/http", description: "Test REST APIs, import cURL, and generate code snippets.", tier: ToolTier::Featured, hidden_from_browse: false, hub_parent: None, hub_tab: None },
     ToolDef { id: "encode-decode", name: "Inspect & Codec Studio", category: "Encoding", route: "/encode-decode", description: "Base64, URL encoding/decoding, and JWT token inspection.", tier: ToolTier::Featured, hidden_from_browse: false, hub_parent: None, hub_tab: None },
     ToolDef { id: "security", name: "Hash & Crypto Studio", category: "Security", route: "/security", description: "Cryptographic hash generation (MD5, SHA-1, SHA-256, SHA-512).", tier: ToolTier::Featured, hidden_from_browse: false, hub_parent: None, hub_tab: None },
     ToolDef { id: "diff-checker", name: "Text Diff Checker", category: "Text", route: "/diff-checker", description: "Compare text side-by-side.", tier: ToolTier::Featured, hidden_from_browse: false, hub_parent: None, hub_tab: None },
     ToolDef { id: "epoch-converter", name: "Epoch Converter", category: "Converters", route: "/epoch-converter", description: "Convert Unix timestamps.", tier: ToolTier::Featured, hidden_from_browse: false, hub_parent: None, hub_tab: None },
     ToolDef { id: "regex-tester", name: "Regex Tester", category: "Text", route: "/regex-tester", description: "Test regular expressions.", tier: ToolTier::Featured, hidden_from_browse: false, hub_parent: None, hub_tab: None },
-    ToolDef { id: "token-counter", name: "LLM Token Counter", category: "Text", route: "/token-counter", description: "Count GPT tokens.", tier: ToolTier::Standard, hidden_from_browse: false, hub_parent: None, hub_tab: None },
-    ToolDef { id: "base64-codec", name: "Base64 Codec", category: "Encoding", route: "/base64-codec", description: "Base64 encode/decode.", tier: ToolTier::Standard, hidden_from_browse: true, hub_parent: Some("encode-decode"), hub_tab: Some("base64") },
-    ToolDef { id: "url-encoder", name: "URL Encoder", category: "Encoding", route: "/url-encoder", description: "URL encode/decode.", tier: ToolTier::Standard, hidden_from_browse: true, hub_parent: Some("encode-decode"), hub_tab: Some("url") },
-    ToolDef { id: "jwt-decoder", name: "JWT Decoder", category: "Security", route: "/jwt-decoder", description: "Decode JWT tokens.", tier: ToolTier::Standard, hidden_from_browse: true, hub_parent: Some("encode-decode"), hub_tab: Some("jwt") },
-    ToolDef { id: "hash-generator", name: "Hash Generator", category: "Security", route: "/hash-generator", description: "Cryptographic hashes.", tier: ToolTier::Standard, hidden_from_browse: true, hub_parent: Some("security"), hub_tab: Some("hash") },
 ];
 
 pub fn find_tool(id: &str) -> Option<&'static ToolDef> {
@@ -42,10 +36,12 @@ pub fn browse_tools() -> impl Iterator<Item = &'static ToolDef> {
     TOOLS.iter().filter(|t| !t.hidden_from_browse)
 }
 
+#[allow(dead_code)]
 pub fn all_tools() -> impl Iterator<Item = &'static ToolDef> {
     TOOLS.iter()
 }
 
+#[allow(dead_code)]
 pub fn find_tool_by_route(route: &str) -> Option<&'static ToolDef> {
     TOOLS.iter().find(|t| t.route == route)
 }
@@ -62,7 +58,6 @@ pub fn hub_tab_label(hub_id: &str, tab: &str) -> Option<(&'static str, &'static 
 
 pub const CATEGORIES: &[&str] = &[
     "Data",
-    "Network",
     "Encoding",
     "Security",
     "Text",
@@ -77,6 +72,7 @@ pub fn hub_children(hub_id: &str) -> Vec<&'static ToolDef> {
         .collect()
 }
 
+#[allow(dead_code)]
 pub fn tools_in_category(category: &str) -> Vec<&'static ToolDef> {
     browse_tools()
         .filter(|t| t.category == category)
@@ -95,13 +91,6 @@ pub fn search_tools(query: &str) -> Vec<(&'static ToolDef, Option<&'static str>)
             || tool.description.to_lowercase().contains(&q)
         {
             results.push((tool, None));
-        }
-        for child in hub_children(tool.id) {
-            if child.name.to_lowercase().contains(&q)
-                || child.description.to_lowercase().contains(&q)
-            {
-                results.push((child, Some(tool.name)));
-            }
         }
     }
     results

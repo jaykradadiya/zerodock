@@ -26,10 +26,11 @@ fn install_document_keydown(state: AppState) {
     // which is exactly why the shortcuts stopped firing. We install at most once
     // (guarded by INSTALLED above), so leak the closure for the page lifetime to
     // keep the trampoline valid.
+    let state_for_keys = state.clone();
     let handler: Closure<dyn FnMut(web_sys::KeyboardEvent)> = Closure::wrap(Box::new(move |e: web_sys::KeyboardEvent| {
         let key_str = e.key();
         let ctrl = e.ctrl_key() || e.meta_key();
-        let mut st = state.clone();
+        let mut st = state_for_keys.clone();
 
         if ctrl && key_str == "k" {
             e.prevent_default();
@@ -49,6 +50,23 @@ fn install_document_keydown(state: AppState) {
                 st.trigger_primary_action();
             }
             return;
+        }
+        if key_str == "/" && !ctrl {
+            if let Some(target) = e.target().and_then(|t| t.dyn_into::<web_sys::Element>().ok()) {
+                let tag = target.tag_name();
+                if is_editable_target(&tag) {
+                    return;
+                }
+            }
+            if let Some(doc) = web_sys::window().and_then(|w| w.document()) {
+                if let Some(el) = doc.get_element_by_id("catalog-search-input") {
+                    if let Ok(input_el) = el.dyn_into::<web_sys::HtmlInputElement>() {
+                        e.prevent_default();
+                        let _ = input_el.focus();
+                        return;
+                    }
+                }
+            }
         }
         if key_str == "?" && !ctrl {
             if let Some(target) = e.target().and_then(|t| t.dyn_into::<web_sys::Element>().ok()) {
@@ -74,6 +92,23 @@ fn install_document_keydown(state: AppState) {
     if let Some(doc) = web_sys::window().and_then(|w| w.document()) {
         let _ = doc.add_event_listener_with_callback("keydown", handler.as_ref().unchecked_ref());
     }
+
+    // Close the command palette on browser back/forward navigation.
+    let nav_state = state.clone();
+    let popstate_handler: Closure<dyn FnMut()> = Closure::wrap(Box::new(move || {
+        let mut st = nav_state.clone();
+        let mut ui = st.ui.write();
+        if ui.command_palette_open {
+            ui.command_palette_open = false;
+        }
+    }) as Box<dyn FnMut()>);
+    if let Some(win) = web_sys::window() {
+        let _ = win.add_event_listener_with_callback(
+            "popstate",
+            popstate_handler.as_ref().unchecked_ref(),
+        );
+    }
+    std::mem::forget(popstate_handler);
 
     // Keep the closure backing the listener alive for the lifetime of the page.
     std::mem::forget(handler);

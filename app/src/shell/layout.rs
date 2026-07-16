@@ -16,7 +16,7 @@ pub fn ToolPage(children: Element) -> Element {
             class: if zen {
                 "zd-tool-fill flex flex-col min-h-0 p-2 overflow-hidden"
             } else {
-                "zd-tool-fill flex flex-col min-h-0 w-full p-4 md:p-6 overflow-hidden"
+                "zd-tool-fill flex flex-col min-h-0 w-full p-2.5 sm:p-4 md:p-6 overflow-hidden"
             },
             {children}
         }
@@ -36,7 +36,7 @@ pub fn ToolHeader(
     }
     rsx! {
         header {
-            class: "mb-6 shrink-0",
+            class: "mb-3 md:mb-6 shrink-0",
             div {
                 class: "flex items-start justify-between gap-4",
                 div {

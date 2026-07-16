@@ -44,7 +44,7 @@ pub fn ExportButton(
     #[props(default)] mime: &'static str,
     #[props(default)] label: &'static str,
 ) -> Element {
-    let mut state = use_app_state();
+    let state = use_app_state();
     rsx! {
         button {
             class: "toolbar-btn",

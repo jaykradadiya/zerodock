@@ -1,9 +1,9 @@
 use crate::persistence;
-use crate::hubs::{encode_hub, http_hub, json_hub, security_hub};
+use crate::hubs::{encode_hub, json_hub, security_hub};
 use crate::landing::LandingPage;
 use crate::shell::{self, command_palette, keyboard, navbar, toast};
 use crate::state::{use_app_state, AppState};
-use crate::tools::{diff_checker, epoch_converter, regex_tester, token_counter};
+use crate::tools::{diff_checker, epoch_converter, regex_tester};
 use dioxus::prelude::*;
 use dioxus_router::{Outlet, Router, Routable};
 
@@ -17,8 +17,6 @@ pub enum Route {
         Landing {},
         #[route("/json-toolkit")]
         JsonToolkit {},
-        #[route("/http")]
-        Http {},
         #[route("/encode-decode")]
         EncodeDecode {},
         #[route("/security")]
@@ -29,18 +27,12 @@ pub enum Route {
         EpochConverter {},
         #[route("/regex-tester")]
         RegexTester {},
-        #[route("/token-counter")]
-        TokenCounter {},
         #[route("/yaml-json-converter")]
         YamlJsonConverter {},
         #[route("/json-type-converter")]
         JsonTypeConverter {},
         #[route("/json-path")]
         JsonPath {},
-        #[route("/api-tester")]
-        ApiTester {},
-        #[route("/curl-converter")]
-        CurlConverter {},
         #[route("/base64-codec")]
         Base64Codec {},
         #[route("/url-encoder")]
@@ -101,18 +93,14 @@ pub fn route_for_path(path: &str) -> Route {
     match path {
         "/" => Route::Landing {},
         "/json-toolkit" => Route::JsonToolkit {},
-        "/http" => Route::Http {},
         "/encode-decode" => Route::EncodeDecode {},
         "/security" => Route::Security {},
         "/diff-checker" => Route::DiffChecker {},
         "/epoch-converter" => Route::EpochConverter {},
         "/regex-tester" => Route::RegexTester {},
-        "/token-counter" => Route::TokenCounter {},
         "/yaml-json-converter" => Route::YamlJsonConverter {},
         "/json-type-converter" => Route::JsonTypeConverter {},
         "/json-path" => Route::JsonPath {},
-        "/api-tester" => Route::ApiTester {},
-        "/curl-converter" => Route::CurlConverter {},
         "/base64-codec" => Route::Base64Codec {},
         "/url-encoder" => Route::UrlEncoder {},
         "/hash-generator" => Route::HashGenerator {},
@@ -150,11 +138,6 @@ fn JsonToolkit() -> Element {
 }
 
 #[component]
-fn Http() -> Element {
-    rsx! { http_hub::HttpHub { initial_tab: "api".to_string() } }
-}
-
-#[component]
 fn EncodeDecode() -> Element {
     rsx! { encode_hub::EncodeHub { initial_tab: "base64".to_string() } }
 }
@@ -180,11 +163,6 @@ fn RegexTester() -> Element {
 }
 
 #[component]
-fn TokenCounter() -> Element {
-    rsx! { token_counter::TokenCounter {} }
-}
-
-#[component]
 fn YamlJsonConverter() -> Element {
     rsx! { json_hub::JsonHub { initial_panel: Some("yaml".to_string()) } }
 }
@@ -197,16 +175,6 @@ fn JsonTypeConverter() -> Element {
 #[component]
 fn JsonPath() -> Element {
     rsx! { json_hub::JsonHub { initial_panel: Some("path".to_string()) } }
-}
-
-#[component]
-fn ApiTester() -> Element {
-    rsx! { http_hub::HttpHub { initial_tab: "api".to_string() } }
-}
-
-#[component]
-fn CurlConverter() -> Element {
-    rsx! { http_hub::HttpHub { initial_tab: "curl".to_string() } }
 }
 
 #[component]

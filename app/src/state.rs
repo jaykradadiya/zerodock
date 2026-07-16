@@ -17,6 +17,7 @@ pub struct Preferences {
 }
 
 impl Preferences {
+    #[allow(dead_code)]
     pub fn is_dark(&self) -> bool {
         self.theme == "dark"
     }
@@ -35,6 +36,7 @@ pub struct UiState {
     pub command_palette_open: bool,
     pub preferences_open: bool,
     pub zen_mode: bool,
+    #[allow(dead_code)]
     pub sidebar_collapsed: bool,
     pub shortcuts_help_open: bool,
     pub toasts: Vec<Toast>,
@@ -82,6 +84,7 @@ impl AppState {
         self.preferences.read().theme == "dark"
     }
 
+    #[allow(dead_code)]
     pub fn toggle_theme(&mut self) {
         let is_dark = self.is_dark();
         let mut prefs = self.preferences.write();

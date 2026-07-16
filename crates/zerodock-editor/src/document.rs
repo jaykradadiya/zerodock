@@ -13,7 +13,7 @@ use std::ops::Range;
 use crate::buffer::Buffer;
 use crate::command::Command;
 use crate::decorations::DecorationManager;
-use crate::error::{EditorError, EditorResult};
+use crate::error::EditorResult;
 use crate::folding::FoldManager;
 use crate::history::{EditGroup, EditOperation, History};
 use crate::search::SearchEngine;
@@ -47,6 +47,7 @@ pub struct Document {
     selections: SelectionSet,
     history: History,
     fold_manager: FoldManager,
+    #[allow(dead_code)]
     search_engine: SearchEngine,
     decoration_manager: DecorationManager,
 }

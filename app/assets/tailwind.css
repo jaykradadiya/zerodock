@@ -302,6 +302,14 @@ html.dark,
   from { background-position: -200% 0; }
   to   { background-position: 200% 0; }
 }
+@keyframes tile-in-fast {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes borderPulse {
+  0%, 100% { border-color: var(--zd-border); }
+  50% { border-color: var(--zd-primary); }
+}
 
 /* ═══════════════════════════════════════════════════════
    COMPONENT LAYER
@@ -638,6 +646,24 @@ html.dark,
   .zd-rise-delay-1  { animation: rise-in 0.5s var(--zd-ease-spring) 0.06s both; }
   .zd-rise-delay-2  { animation: rise-in 0.5s var(--zd-ease-spring) 0.12s both; }
   .zd-rise-delay-3  { animation: rise-in 0.5s var(--zd-ease-spring) 0.18s both; }
+  .animate-tile-fast {
+    animation: tile-in-fast 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  .active-pulse {
+    animation: borderPulse 1.6s ease-in-out infinite;
+  }
+  .noise-overlay {
+    position: relative;
+  }
+  .noise-overlay::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.02;
+    z-index: 1;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  }
 
   .zd-brand-mark {
     display: inline-block;

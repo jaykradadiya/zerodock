@@ -51,7 +51,6 @@ pub fn Base64CodecContent() -> Element {
     });
 
     let mode = if *encode_mode.read() { "encode" } else { "decode" }.to_string();
-    let out_val = output.read().0.clone();
     let share_state = state_json(&input.read());
 
     rsx! {

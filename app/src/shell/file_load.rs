@@ -13,6 +13,7 @@ use ropey::Rope;
 /// decode — the remainder is carried into the next chunk. Platform-agnostic
 /// (no web-sys dependency) so it's natively unit-testable regardless of
 /// target.
+#[allow(dead_code)]
 fn utf8_valid_prefix_len(bytes: &[u8]) -> usize {
     match std::str::from_utf8(bytes) {
         Ok(_) => bytes.len(),
@@ -65,6 +66,7 @@ pub async fn load_rope_desktop(
 /// boundaries are handled correctly, and yielding to the event loop between
 /// chunks so a large drop/selection doesn't jank the tab.
 #[cfg(target_arch = "wasm32")]
+#[allow(dead_code)]
 pub mod web {
     use super::{utf8_valid_prefix_len, Rope};
     use web_sys::File;

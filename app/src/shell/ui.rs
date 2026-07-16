@@ -32,6 +32,7 @@ pub enum ButtonVariant {
     Ghost,
 }
 
+#[allow(dead_code)]
 #[derive(Clone, Copy, PartialEq, Default)]
 pub enum ButtonSize {
     Small,
@@ -151,6 +152,36 @@ pub async fn copy_to_clipboard(text: &str) -> bool {
         arboard::Clipboard::new()
             .and_then(|mut c| c.set_text(text.to_owned()))
             .is_ok()
+    }
+}
+
+pub async fn read_from_clipboard() -> Option<String> {
+    #[cfg(target_arch = "wasm32")]
+    {
+        let mut eval = dioxus::document::eval(
+            r#"
+            (async () => {
+                try {
+                    let text = await navigator.clipboard.readText();
+                    dioxus.send(text);
+                } catch (e) {
+                    dioxus.send(null);
+                }
+            })()
+            "#
+        );
+        if let Ok(val) = eval.recv::<serde_json::Value>().await {
+            if let serde_json::Value::String(s) = val {
+                return Some(s);
+            }
+        }
+        None
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        arboard::Clipboard::new()
+            .and_then(|mut c| c.get_text())
+            .ok()
     }
 }
 

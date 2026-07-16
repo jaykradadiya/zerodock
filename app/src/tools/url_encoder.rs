@@ -51,7 +51,6 @@ pub fn UrlEncoderContent() -> Element {
     });
 
     let mode = if *mode_encode.read() { "encode" } else { "decode" }.to_string();
-    let out_val = output.read().0.clone();
 
     rsx! {
         ToolBody {

@@ -5,14 +5,26 @@ use dioxus::prelude::*;
 
 #[component]
 pub fn PreferencesModal() -> Element {
-    let mut state = use_app_state();
+    let state = use_app_state();
     let platform = use_context::<zerodock_platform::PlatformServices>();
 
-    if !state.ui.read().preferences_open {
-        return VNode::empty();
-    }
+    let open = state.ui.read().preferences_open;
 
-    let sound_enabled = state.preferences.read().sound_enabled;
+    let route = use_route::<crate::router::Route>();
+    let last_route = use_signal(|| route.clone());
+
+    let state_for_effect = state.clone();
+    use_effect(move || {
+        let current = route.clone();
+        let mut last = last_route;
+        let mut state = state_for_effect.clone();
+        if *last.read() != current {
+            last.set(current);
+            if state.ui.peek().preferences_open {
+                state.ui.write().preferences_open = false;
+            }
+        }
+    });
 
     let state_for_export = state.clone();
     let export_json = use_memo(move || {
@@ -24,6 +36,12 @@ pub fn PreferencesModal() -> Element {
         };
         serde_json::to_string_pretty(&backup).unwrap_or_default()
     });
+
+    if !open {
+        return VNode::empty();
+    }
+
+    let sound_enabled = state.preferences.read().sound_enabled;
 
     rsx! {
         Overlay {

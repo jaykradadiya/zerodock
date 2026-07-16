@@ -1,6 +1,7 @@
 use crate::shell::ui::Button;
 use dioxus::prelude::*;
 
+#[allow(dead_code)]
 #[derive(Clone)]
 pub struct ToolHistory<T: Clone + PartialEq + 'static> {
     pub current: Signal<T>,
@@ -8,6 +9,7 @@ pub struct ToolHistory<T: Clone + PartialEq + 'static> {
     pub redo_stack: Signal<Vec<T>>,
 }
 
+#[allow(dead_code)]
 impl<T: Clone + PartialEq + 'static> ToolHistory<T> {
     pub fn new(initial: T) -> Self {
         Self {

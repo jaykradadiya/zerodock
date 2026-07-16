@@ -2,13 +2,13 @@ use crate::shell::drag_drop::DragDropZone;
 use crate::shell::export::ExportButton;
 use crate::shell::layout::{CodePanel, HubToolHeader, ModeToggle, ToolBody, ToolPage, ToolToolbar, ToolWorkspace};
 use crate::shell::code_editor::CodeLanguage;
-use crate::shell::ui::{Button, ButtonVariant, CopyButton, SegmentedControl, TabGroup};
+use crate::shell::ui::{Button, ButtonVariant, SegmentedControl, TabGroup};
 use crate::shell::virtual_code_editor::VirtualCodeEditor;
 use crate::state::{use_app_state, use_primary_action, ToastKind};
 use dioxus::prelude::*;
 use ropey::Rope;
 use std::collections::HashSet;
-use zerodock_core::{convert_json_to_types, diff_lines, diff_json, format_json_opts, jmespath_query, json_to_yaml, repair_json, yaml_to_json, DiffLineKind, JsonChange, JsonChangeKind, TargetLang};
+use zerodock_core::{convert_json_to_types, diff_json, format_json_opts, jmespath_query, json_to_yaml, repair_json, yaml_to_json, JsonChange, JsonChangeKind, TargetLang};
 use zerodock_indexer::JsonIndex;
 use zerodock_platform::{HttpRequest, PlatformServices};
 
@@ -319,7 +319,7 @@ pub fn JsonHub(initial_panel: Option<String>) -> Element {
         });
     };
 
-    let mut import_into_tab = move |name: String, val: String| {
+    let import_into_tab = move |name: String, val: String| {
         let active_id = active_tab_id.peek().clone();
         tabs.write().iter_mut().for_each(|t| {
             if t.id == active_id {
@@ -332,7 +332,14 @@ pub fn JsonHub(initial_panel: Option<String>) -> Element {
         active_rope_tab_id.set(active_id);
     };
 
-    let mut panel = use_signal(move || initial_panel.clone().unwrap_or_else(|| "editor".to_string()));
+    let initial_panel_cloned = initial_panel.clone();
+    let mut panel = use_signal(move || initial_panel_cloned.unwrap_or_else(|| "editor".to_string()));
+    let initial_panel_for_sig = initial_panel.clone();
+    let mut initial_panel_sig = use_signal(move || initial_panel_for_sig.clone());
+    if *initial_panel_sig.read() != initial_panel {
+        initial_panel_sig.set(initial_panel.clone());
+        panel.set(initial_panel.clone().unwrap_or_else(|| "editor".to_string()));
+    }
     let mut view_mode = use_signal(|| "editor".to_string());
     let mut format_error = use_signal(|| None::<String>);
     let mut index = use_signal(|| None::<JsonIndex>);

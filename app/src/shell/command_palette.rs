@@ -1,49 +1,113 @@
-use crate::registry::{all_tools, find_tool, ToolDef};
+use crate::registry::{find_tool, ToolDef};
 use crate::router::route_for_path;
-use crate::shell::empty_state::EmptyState;
 use crate::shell::ui::{Badge, BadgeVariant, IconSearch, Kbd, Modal, Overlay};
 use crate::state::use_app_state;
+use crate::landing::category_icon;
 use dioxus::prelude::*;
 use dioxus_router::Link;
 use zerodock_platform::PlatformServices;
 
 #[component]
 pub fn CommandPalette() -> Element {
-    let mut state = use_app_state();
+    let state = use_app_state();
     let platform = use_context::<PlatformServices>();
     let open = state.ui.read().command_palette_open;
+
+    let route = use_route::<crate::router::Route>();
+    let last_route = use_signal(|| route.clone());
+
+    let state_for_effect = state.clone();
+    use_effect(move || {
+        let current = route.clone();
+        let mut last = last_route;
+        let mut state = state_for_effect.clone();
+        if *last.read() != current {
+            last.set(current);
+            if state.ui.peek().command_palette_open {
+                state.ui.write().command_palette_open = false;
+            }
+        }
+    });
+
+    let mut query = use_signal(String::new);
+    let mut selected = use_signal(|| 0usize);
+
+    // Auto-focus the search input when the palette opens so arrow keys work immediately
+    let state_for_focus = state.clone();
+    use_effect(move || {
+        let is_open = state_for_focus.ui.read().command_palette_open;
+        if is_open {
+            spawn(async move {
+                let _ = dioxus::document::eval(
+                    r#"
+                    setTimeout(() => {
+                        const el = document.getElementById('cmd-k-input');
+                        if (el) { el.focus(); el.select(); }
+                    }, 30);
+                    "#
+                );
+            });
+        }
+    });
+
+    // Automatically scroll the active item into view on selection change
+    use_effect(move || {
+        let _sel = *selected.read();
+        if state.ui.peek().command_palette_open {
+            spawn(async move {
+                let mut _eval = dioxus::document::eval(
+                    r#"
+                    setTimeout(() => {
+                        const el = document.querySelector(".cmd-k-item-selected");
+                        if (el) {
+                            el.scrollIntoView({ block: "nearest" });
+                        }
+                    }, 10);
+                    "#
+                );
+            });
+        }
+    });
+
     if !open {
         return VNode::empty();
     }
 
-    let mut query = use_signal(String::new);
-    let mut selected = use_signal(|| 0usize);
     let q = query.read().to_lowercase();
     let favorites = state.preferences.read().favorite_tools.clone();
     let recent = state.preferences.read().recent_tools.clone();
 
-    let mut all_items: Vec<&'static ToolDef> = Vec::new();
+    let mut all_items: Vec<(&'static ToolDef, Option<&'static str>)> = Vec::new();
+    let mut seen: std::collections::HashSet<&'static str> = std::collections::HashSet::new();
+
     if q.is_empty() {
+        // Favourites first
         for id in &favorites {
-            if let Some(t) = find_tool(id) { all_items.push(t); }
-        }
-        for id in &recent {
             if let Some(t) = find_tool(id) {
-                if !favorites.contains(id) { all_items.push(t); }
+                if !t.hidden_from_browse && seen.insert(t.id) {
+                    let parent_name = t.hub_parent.and_then(|p_id| find_tool(p_id).map(|p| p.name));
+                    all_items.push((t, parent_name));
+                }
             }
         }
-        all_items.extend(all_tools());
+        // Recents (not already in favourites)
+        for id in &recent {
+            if let Some(t) = find_tool(id) {
+                if !t.hidden_from_browse && seen.insert(t.id) {
+                    let parent_name = t.hub_parent.and_then(|p_id| find_tool(p_id).map(|p| p.name));
+                    all_items.push((t, parent_name));
+                }
+            }
+        }
+        // Remaining tools not yet shown
+        for t in crate::registry::browse_tools() {
+            if seen.insert(t.id) {
+                all_items.push((t, None));
+            }
+        }
     } else {
-        all_items.extend(all_tools().filter(|t| {
-            t.name.to_lowercase().contains(&q)
-                || t.id.contains(&q)
-                || t.category.to_lowercase().contains(&q)
-                || t.description.to_lowercase().contains(&q)
-        }));
+        all_items.extend(crate::registry::search_tools(&q));
     }
-
-    // Deduplicate (favorites+recent may re-appear in all_tools)
-    all_items.dedup_by_key(|t| t.id);
 
     let total_items = all_items.len();
     if total_items > 0 && *selected.read() >= total_items {
@@ -51,7 +115,6 @@ pub fn CommandPalette() -> Element {
     }
 
     let mut state_for_close = state.clone();
-    let platform_for_close = platform.clone();
     let mut state_for_keys = state.clone();
     let platform_for_keys = platform.clone();
 
@@ -66,13 +129,14 @@ pub fn CommandPalette() -> Element {
 
                 // Search input row
                 div {
-                    class: "flex items-center gap-3 px-4 py-3 border-b border-[var(--zd-border)]",
+                    class: "flex items-center gap-3 px-4 py-3 bg-[var(--zd-surface)] border-b border-[var(--zd-border)]",
                     // Search icon
                     span { class: "text-[var(--zd-text-muted)] shrink-0",
                         IconSearch {}
                     }
                     input {
-                        class: "flex-1 bg-transparent text-[var(--zd-text-primary)] text-sm focus:outline-none placeholder:text-[var(--zd-text-muted)]",
+                        id: "cmd-k-input",
+                        class: "flex-1 bg-transparent text-[var(--zd-text-primary)] text-sm focus:outline-none placeholder:text-[var(--zd-text-muted)] font-medium",
                         placeholder: "Search tools…",
                         aria_label: "Search tools",
                         autofocus: true,
@@ -100,7 +164,7 @@ pub fn CommandPalette() -> Element {
                                 }
                                 Key::Enter => {
                                     e.prevent_default();
-                                    if let Some(tool) = all_items.get(*selected.read()) {
+                                    if let Some((tool, _)) = all_items.get(*selected.read()) {
                                         record_visit_and_close(state_for_keys.clone(), platform_for_keys.clone(), tool.id);
                                     }
                                 }
@@ -124,7 +188,7 @@ pub fn CommandPalette() -> Element {
 
                 // Results list
                 div {
-                    class: "max-h-[min(340px,60vh)] overflow-y-auto custom-scrollbar",
+                    class: "max-h-[min(380px,60vh)] overflow-y-auto custom-scrollbar p-2 flex flex-col gap-1 bg-[var(--zd-surface)]",
                     if total_items == 0 {
                         div {
                             class: "py-12 flex flex-col items-center gap-2.5",
@@ -135,7 +199,7 @@ pub fn CommandPalette() -> Element {
                             p { class: "text-sm text-[var(--zd-text-secondary)]", "No tools match your search" }
                         }
                     }
-                    for (i, tool) in all_items.iter().enumerate() {
+                    for (i, (tool, parent_name)) in all_items.iter().enumerate() {
                         {
                             let is_selected = i == *selected.read();
                             let route = route_for_path(tool.route);
@@ -148,26 +212,30 @@ pub fn CommandPalette() -> Element {
                                 Link {
                                     to: route,
                                     class: if is_selected {
-                                        "flex items-center gap-3 px-4 py-3 bg-[var(--zd-primary-soft)] border-b border-[var(--zd-border)] last:border-0 transition-colors"
+                                        "flex items-center gap-3 px-3 py-2.5 rounded-lg bg-[var(--zd-surface-raised)] border border-[var(--zd-primary)] text-[var(--zd-text-primary)] transition-all cursor-pointer shadow-sm cmd-k-item-selected"
                                     } else {
-                                        "flex items-center gap-3 px-4 py-3 hover:bg-[var(--zd-surface-raised)] border-b border-[var(--zd-border)] last:border-0 transition-colors"
+                                        "flex items-center gap-3 px-3 py-2.5 rounded-lg border border-transparent hover:bg-[var(--zd-surface-hover)] text-[var(--zd-text-secondary)] transition-all cursor-pointer"
                                     },
                                     onclick: move |_| record_visit_and_close(row_state.clone(), row_platform.clone(), tool_id),
 
-                                    // Left accent indicator
-                                    div {
-                                        class: "w-1 h-6 rounded-full shrink-0",
-                                        style: if is_selected { "background: var(--zd-primary);" } else { "background: var(--zd-border);" }
+                                    // Category Character Icon
+                                    span {
+                                        class: "w-7 h-7 rounded bg-[var(--zd-surface-sunken)] border border-[var(--zd-border)] flex items-center justify-center text-[10px] font-mono text-[var(--zd-text-muted)] transition-colors shrink-0",
+                                        style: if is_selected { "border-color: var(--zd-primary); color: var(--zd-primary);" } else { "" },
+                                        "{category_icon(tool.category)}"
                                     }
 
                                     // Content
                                     div { class: "flex-1 min-w-0",
                                         div {
-                                            class: "flex items-center gap-2",
+                                            class: "flex items-baseline gap-2 flex-wrap",
                                             span {
-                                                class: "text-sm font-medium text-[var(--zd-text-primary)] truncate",
-                                                style: if is_selected { "color: var(--zd-primary);" } else { "" },
+                                                class: "text-sm font-semibold truncate",
+                                                style: if is_selected { "color: var(--zd-primary);" } else { "color: var(--zd-text-primary);" },
                                                 "{tool.name}"
+                                            }
+                                            if let Some(hub) = parent_name {
+                                                span { class: "text-[9px] font-mono text-[var(--zd-text-muted)]", "in {hub}" }
                                             }
                                             if is_fav {
                                                 Badge { variant: BadgeVariant::Accent, "fav" }
@@ -182,8 +250,17 @@ pub fn CommandPalette() -> Element {
                                         }
                                     }
 
-                                    // Category badge
-                                    Badge { variant: BadgeVariant::Muted, "{tool.category}" }
+                                    // Right side details
+                                    div {
+                                        class: "flex items-center gap-2 shrink-0",
+                                        Badge { variant: BadgeVariant::Muted, "{tool.category}" }
+                                        if is_selected {
+                                            span {
+                                                class: "text-[10px] font-mono text-[var(--zd-text-muted)] px-1.5 py-0.5 rounded border border-[var(--zd-border)] bg-[var(--zd-surface-sunken)] select-none",
+                                                "↵"
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }

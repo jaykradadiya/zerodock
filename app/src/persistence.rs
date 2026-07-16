@@ -2,13 +2,13 @@ use crate::state::{AppState, Preferences};
 use dioxus::prelude::*;
 use zerodock_platform::{PlatformServices, PREFERENCES_KEY};
 
-pub fn use_persistence(mut app_state: AppState, platform: PlatformServices) {
+pub fn use_persistence(app_state: AppState, platform: PlatformServices) {
     let storage = platform.storage.clone();
     let mut loaded = use_signal(|| false);
 
     {
         let storage = storage.clone();
-        let mut app_state = app_state.clone();
+        let app_state = app_state.clone();
         use_effect(move || {
             let storage = storage.clone();
             let mut app_state = app_state.clone();

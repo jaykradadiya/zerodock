@@ -4,7 +4,7 @@ import { ToolPage, ToolHeader, ToolWorkspace, MobileSwapBar } from '../../../sha
 import { useToolEmbed } from '../../../shared/context/ToolEmbedContext';
 import { useToolkitPanel, type SidePanel } from '../../../shared/hooks/useToolkitPanel';
 import { cn } from '../../../shared/components/ui';
-import { FileJson, Lock } from 'lucide-react';
+import { FileJson } from 'lucide-react';
 import { json2csv, csv2json } from 'csv42';
 import type { WorkerMessage, WorkerError } from '../../../workers/base.worker';
 import { SchemaPanel } from './components/SchemaPanel';
@@ -191,21 +191,36 @@ export default function JsonFormatter() {
     initWorkspace();
   }, []);
 
-  // Restore URL content into active tab once initialized
+  // Restore URL content into active tab once initialized or load active tab content on tab switch
   useEffect(() => {
-    if (!isLoading && activeTabId && !urlRestoredRef.current) {
-      urlRestoredRef.current = true;
-      const urlState = getStateFromURL<{ content?: string }>();
-      if (urlState?.content) {
-        updateTabContent(activeTabId, urlState.content).then(() => {
-          setActiveTabContent(urlState.content!);
-          if (editorRef.current?.setValue) {
-            editorRef.current.setValue(urlState.content!);
-          }
-        });
-      } else {
-        getFileContent(activeTabId).then(setActiveTabContent);
+    if (!isLoading && activeTabId) {
+      let isMounted = true;
+      if (!urlRestoredRef.current) {
+        urlRestoredRef.current = true;
+        const urlState = getStateFromURL<{ content?: string }>();
+        if (urlState?.content) {
+          updateTabContent(activeTabId, urlState.content).then(() => {
+            if (!isMounted) return;
+            setActiveTabContent(urlState.content!);
+            if (editorRef.current?.setValue) {
+              editorRef.current.setValue(urlState.content!);
+            }
+          });
+          return;
+        }
       }
+
+      getFileContent(activeTabId).then((content) => {
+        if (!isMounted) return;
+        setActiveTabContent(content);
+        if (editorRef.current?.setValue) {
+          editorRef.current.setValue(content);
+        }
+      });
+
+      return () => {
+        isMounted = false;
+      };
     }
   }, [isLoading, activeTabId, getFileContent, updateTabContent]);
 
@@ -498,7 +513,12 @@ export default function JsonFormatter() {
     if (embedded) return <div className="zd-tool-fill">{loadingEl}</div>;
     return (
       <ToolPage fullWidth compact className="relative flex-1 min-h-0">
-        {headerEl}
+        <ToolHeader
+          icon={FileJson}
+          title="JSON Toolkit"
+          description="Format, validate, repair, diff, and explore JSON in a multi-tab browser workspace."
+          toolId="json-toolkit"
+        />
         <ToolWorkspace className={workspaceShellClass}>
           {loadingEl}
         </ToolWorkspace>
@@ -547,7 +567,6 @@ export default function JsonFormatter() {
         activeTabId={activeTabId}
         onProcessJson={processJson}
         onRepairJson={repairJson}
-        onShowTransform={() => setShowTransform(true)}
         showSchema={showSchema}
         setShowSchema={setShowSchema}
         indent={indent}

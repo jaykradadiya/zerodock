@@ -1,7 +1,6 @@
-import React, { useMemo } from 'react';
-import { CheckCircle2, AlertCircle, RefreshCw, FileText, Command } from 'lucide-react';
+import { useMemo } from 'react';
+import { CheckCircle2, AlertCircle, RefreshCw, FileText } from 'lucide-react';
 import type { WorkerError } from '../../../../workers/base.worker';
-import { cn } from '../../../../shared/components/ui';
 
 interface JsonStatusBarProps {
   content: string;

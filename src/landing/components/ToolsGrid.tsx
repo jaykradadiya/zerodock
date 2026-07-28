@@ -7,7 +7,6 @@ import type { Tool } from '../../types/tool';
 import { usePreferenceStore } from '../../core/store/usePreferenceStore';
 import { playSound } from '../../shared/utils/sound';
 import { Badge, Button, ToolCard } from '../../shared/components/ui';
-import { fuzzyFilter } from '../../shared/utils/fuzzySearch';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -19,7 +18,7 @@ const containerVariants = {
 
 const itemVariants = {
   hidden: { opacity: 0, y: 12 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] } },
+  show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] as const } },
 };
 
 const FEATURED_ORDER = [

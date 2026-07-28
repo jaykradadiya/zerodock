@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Play,
@@ -9,7 +9,6 @@ import {
   Filter,
   FileCode,
   Code2,
-  Database,
   ShieldCheck,
   Settings2,
   Upload,
@@ -85,7 +84,7 @@ export function JsonToolbar({
   onDownload,
   isFullscreen,
   setIsFullscreen,
-  embedded = false,
+  embedded: _embedded = false,
 }: JsonToolbarProps) {
   const [showSettings, setShowSettings] = useState(false);
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);

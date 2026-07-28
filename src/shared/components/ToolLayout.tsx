@@ -1,12 +1,7 @@
 import React from 'react';
-import { Link } from '@tanstack/react-router';
-import { ArrowRightLeft, ChevronRight } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { toolRegistry } from '../../core/registry/tools';
 import { useUIStore } from '../../core/store/useUIStore';
-import { useToolRoute } from '../context/ToolRouteContext';
-import { IconBox, Button, cn } from './ui';
-import { ToolStandardActions } from './ToolStandardActions';
+import { cn } from './ui';
 import { MobileSwapBar } from './MobileSwapBar';
 
 interface ToolPageProps {
@@ -49,17 +44,7 @@ interface ToolHeaderProps {
   compact?: boolean;
 }
 
-export function ToolHeader({
-  icon,
-  title,
-  description,
-  toolId,
-  actions,
-  badges,
-  className = '',
-  showStandardActions = true,
-  compact = false,
-}: ToolHeaderProps) {
+export function ToolHeader(_props: ToolHeaderProps) {
   return null;
 }
 

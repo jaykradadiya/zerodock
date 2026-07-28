@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Play, Filter, Sparkles } from 'lucide-react';
+import { Filter } from 'lucide-react';
 import { CodePanel } from '../../../../shared/components/CodePanel';
 import { SidePanelShell } from './SidePanelShell';
 import type { ToolkitPanelProps } from './types';

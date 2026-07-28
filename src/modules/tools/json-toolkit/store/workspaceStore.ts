@@ -39,20 +39,22 @@ export const useWorkspaceStore = create<WorkspaceState>((setStore, getStore) => 
     try {
       const storedTabs = await get<FileTab[]>('zd_json_tabs');
       if (storedTabs && storedTabs.length > 0) {
-        // Just verify they exist in IDB
         setStore({ tabs: storedTabs, activeTabId: storedTabs[0].id, isLoading: false });
-      } else {
-        // Initialize default tab
-        const id = crypto.randomUUID();
-        const defaultTab: FileTab = { id, name: 'Untitled 1', size: 0, isModified: false };
-        await set(`zd_file_${id}`, '');
-        await set('zd_json_tabs', [defaultTab]);
-        setStore({ tabs: [defaultTab], activeTabId: id, isLoading: false });
+        return;
       }
     } catch (e) {
       console.error('Failed to init workspace:', e);
-      setStore({ isLoading: false });
     }
+    // Fallback: Create default tab if empty or error
+    const id = crypto.randomUUID();
+    const defaultTab: FileTab = { id, name: 'Untitled 1', size: 0, isModified: false };
+    try {
+      await set(`zd_file_${id}`, '');
+      await set('zd_json_tabs', [defaultTab]);
+    } catch (e) {
+      console.error('Failed to save default tab to IDB:', e);
+    }
+    setStore({ tabs: [defaultTab], activeTabId: id, isLoading: false });
   },
 
   addTab: async (name: string, content: string) => {

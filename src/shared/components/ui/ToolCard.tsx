@@ -17,6 +17,7 @@ interface ToolCardProps {
   onFavoriteToggle?: (e: React.MouseEvent) => void;
   viewMode?: 'grid' | 'list';
   className?: string;
+  iconClassName?: string;
   variants?: Variants;
 }
 
@@ -31,6 +32,7 @@ export function ToolCard({
   onFavoriteToggle,
   viewMode = 'grid',
   className = '',
+  iconClassName,
   variants,
 }: ToolCardProps) {
   const isList = viewMode === 'list';
@@ -54,7 +56,10 @@ export function ToolCard({
             <IconBox
               icon={icon}
               size="sm"
-              className="transition-colors duration-150 group-hover:bg-[var(--zd-primary)] group-hover:text-white"
+              className={cn(
+                'transition-colors duration-150 group-hover:bg-[var(--zd-primary)] group-hover:text-white',
+                iconClassName
+              )}
             />
 
             {onFavoriteToggle && (

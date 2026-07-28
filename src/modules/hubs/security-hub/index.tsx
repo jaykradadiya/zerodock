@@ -7,12 +7,10 @@ const HUB_ROUTE = '/security';
 const TABS = [
   { id: 'hash', label: 'Hash' },
   { id: 'jwt', label: 'JWT' },
-  { id: 'rsa', label: 'RSA Keys' },
 ];
 
 const HashGenerator = lazy(() => import('../../tools/hash-generator'));
 const JwtDecoder = lazy(() => import('../../tools/jwt-decoder'));
-const RsaGenerator = lazy(() => import('../../tools/rsa-generator'));
 
 function SecurityHub({ initialTab = 'hash' }: { initialTab?: string }) {
   return (
@@ -22,11 +20,10 @@ function SecurityHub({ initialTab = 'hash' }: { initialTab?: string }) {
       initialTab={initialTab}
       icon={Shield}
       title="Security Suite"
-      description="Hash, decode JWTs, and generate RSA key pairs — all processed locally."
+      description="Hash strings and decode JWTs — all processed locally."
       toolId="security"
       renderContent={(tab) => {
         if (tab === 'jwt') return <JwtDecoder />;
-        if (tab === 'rsa') return <RsaGenerator />;
         return <HashGenerator />;
       }}
     />
@@ -35,4 +32,3 @@ function SecurityHub({ initialTab = 'hash' }: { initialTab?: string }) {
 
 export default SecurityHub;
 export const SecurityHubJwt = () => <SecurityHub initialTab="jwt" />;
-export const SecurityHubRsa = () => <SecurityHub initialTab="rsa" />;

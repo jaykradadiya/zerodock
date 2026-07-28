@@ -26,11 +26,9 @@ export interface Tool {
 
 export const FEATURED_TOOL_IDS = [
   'json-toolkit',
-  'http',
   'encode-decode',
   'security',
   'diff-checker',
-  'regex-tester',
   'epoch-converter',
 ] as const;
 

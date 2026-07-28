@@ -1,73 +1,122 @@
-# React + TypeScript + Vite
+# ZeroDock — Privacy-First Web Utilities & Developer Toolbox
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+ZeroDock is an ultra-responsive, privacy-first suite of developer tools running 100% locally inside your browser. No server uploads, no user tracking, no account registration required.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 🎨 Design System & UI/UX Architecture
 
-## React Compiler
+ZeroDock is designed to feel like a high-precision developer instrument—drawing inspiration from modern engineering environments like Vercel, Linear, and macOS utilities.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Design Principles (Anti-AI Aesthetic Rules)
 
-## Expanding the ESLint configuration
+When adding new tools or updating UI components in ZeroDock, follow these anti-AI design rules:
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+1. **Restraint Over Decoration**:
+   - Avoid generic AI-generated tropes like massive floating gradient blobs, over-used blurred orbs, or rainbow gradients on every header.
+   - Use **structural CSS grid lines** (`.zd-hero-grid`) and clean subtle radial gradients instead.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+2. **Distinctive Color Palette**:
+   - **Primary Violet**: `var(--zd-primary)` (`#6C5CE7` light / `#8B7CF7` dark) — Used for key CTAs, active states, focus rings, and primary highlights.
+   - **Warm Amber Accent**: `var(--zd-accent)` (`#D4931F` light / `#F0A030` dark) — Used for accent highlights, pulse indicators, and status tags.
+   - **Category-Specific Icon Tints**: Each tool category uses distinct pastel background/foreground tints for immediate visual differentiation:
+     - **Data**: Indigo (`rgba(99,102,241,0.12)`)
+     - **Network**: Amber (`var(--zd-accent-soft)`)
+     - **Encoding**: Sky (`rgba(56,189,248,0.1)`)
+     - **Security**: Coral (`rgba(225,112,85,0.1)`)
+     - **Text**: Emerald (`rgba(52,211,153,0.1)`)
+     - **Converters**: Cyan (`rgba(14,165,233,0.1)`)
+     - **Generators**: Pink (`rgba(236,72,153,0.1)`)
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+3. **Unified Single-Grid Layout**:
+   - Keep tool browsing uncluttered. Avoid multi-section fragmentation (e.g., separate Starred, Recent, Popular cards).
+   - Use a single unified grid with category filters and view toggles (grid/list).
+   - Featured tools lead the grid with a Bento hero layout (top tool spans 2 columns on desktop).
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+4. **Monospace Metadata & Stat-Driven UI**:
+   - Use `Roboto Mono` / `var(--font-mono)` for technical values, stats (`.zd-stat`), badges, keyboard shortcuts (`kbd`), and code snippets.
+   - Feature blocks lead with quantitative metrics (`0 bytes`, `< 50ms`, `0 accounts`).
+
+---
+
+## 🛠️ Design Tokens (CSS Variables)
+
+Always use established CSS custom properties instead of hardcoded raw Tailwind colors:
+
+```css
+/* Backgrounds */
+bg-[var(--zd-bg)]
+bg-[var(--zd-surface)]
+bg-[var(--zd-surface-raised)]
+
+/* Text Colors */
+text-[var(--zd-text-primary)]
+text-[var(--zd-text-secondary)]
+text-[var(--zd-text-muted)]
+
+/* Primary & Accent */
+text-[var(--zd-primary)]
+bg-[var(--zd-primary-soft)]
+text-[var(--zd-accent)]
+bg-[var(--zd-accent-soft)]
+
+/* Borders & Shadows */
+border-[var(--zd-border)]
+border-[var(--zd-border-hover)]
+shadow-[var(--zd-shadow-sm)]
+shadow-[var(--zd-shadow-md)]
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+---
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## 🏗️ 4 Pillars for Building New Tools
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Every new tool created for ZeroDock must adhere to these 4 pillars:
+
+1. **State Persistence (`createToolStore`)**:
+   - Store inputs and tool configurations using `createToolStore` in IndexedDB so work survives tab reloads.
+2. **URL Link Sharing (`updateURLWithState`)**:
+   - Sync interactive input parameters to the URL query string so configurations can be shared instantly.
+3. **Export & Download (`exportToFile`)**:
+   - Provide clean export/download functionality for generated text, code, or data payloads.
+4. **Pipeline Interoperability (`usePipelineStore`)**:
+   - Enable outputs to be passed seamlessly between tools (e.g., API Tester output passed to JSON Toolkit).
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Node.js >= 18
+- Yarn or npm
+
+### Local Development Setup
+
+```bash
+# Install dependencies
+yarn install
+
+# Start local development server (Vite + HMR)
+yarn dev
+
+# Run TypeScript type verification
+npx tsc --noEmit
+
+# Build production bundle
+yarn build
+```
+
+---
+
+## 📁 Repository Structure
+
+```
+src/
+├── assets/          # Static branding & graphics
+├── core/            # Registry, router, persistent Zustand stores
+├── landing/         # Landing page sections (Hero, ToolsGrid, Features, CTABanner, Footer)
+├── modules/         # Tool hubs & standalone tool implementations
+├── shared/          # Reusable UI primitives, hooks, utilities, context
+├── types/           # TypeScript contracts and tool metadata
+└── workers/         # Dedicated Web Workers for heavy compute
 ```

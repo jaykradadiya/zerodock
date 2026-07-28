@@ -78,7 +78,7 @@ function RootLayout() {
     >
       <SkipLink />
       {!zenMode && <Navbar />}
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', paddingTop: zenMode ? 0 : '4rem', minHeight: zenMode ? '100vh' : 'calc(100vh - 4rem)' }} className={!zenMode ? '2xl:pt-[4.5rem] 2xl:[min-height:calc(100vh-4.5rem)]' : ''}>
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', paddingTop: zenMode ? 0 : '3.5rem', minHeight: zenMode ? '100vh' : 'calc(100vh - 3.5rem)' }}>
         <div className="flex flex-1 min-h-0 flex-col">
           <Outlet />
         </div>

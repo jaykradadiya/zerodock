@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Link } from '@tanstack/react-router';
+import { Link, useLocation } from '@tanstack/react-router';
 import { usePreferenceStore } from '../../core/store/usePreferenceStore';
 import { useUIStore } from '../../core/store/useUIStore';
-import { Moon, Sun, Star, Search } from 'lucide-react';
+import { toolRegistry } from '../../core/registry/tools';
+import { Moon, Sun, Star, Search, ChevronRight, Lock } from 'lucide-react';
 import { Button } from '../../shared/components/ui';
 
 const GithubIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -16,6 +17,13 @@ export function Navbar() {
   const { setCommandPaletteOpen } = useUIStore();
   const [scrolled, setScrolled] = useState(false);
   const [stars, setStars] = useState<string>('Star');
+
+  const location = useLocation();
+  const currentPath = location.pathname;
+
+  const activeTool = toolRegistry.find(
+    (t) => t.route === currentPath || (t.route !== '/' && currentPath.startsWith(t.route))
+  );
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 16);
@@ -55,50 +63,74 @@ export function Navbar() {
   return (
     <>
       <header
-        className={`fixed top-0 left-0 right-0 z-50 h-16 2xl:h-18 flex items-center justify-between px-4 sm:px-8 md:px-12 2xl:px-16 3xl:px-24 transition-all duration-300 ${
-          scrolled
-            ? 'bg-[var(--zd-surface)]/80 backdrop-blur-md border-b border-[var(--zd-border)] shadow-sm'
+        className={`fixed top-0 left-0 right-0 z-50 h-14 2xl:h-16 flex items-center justify-between px-3 sm:px-6 md:px-8 transition-all duration-300 ${
+          scrolled || activeTool
+            ? 'bg-[var(--zd-surface)]/90 backdrop-blur-md border-b border-[var(--zd-border)] shadow-xs'
             : 'bg-transparent border-b border-transparent'
         }`}
       >
-        <Link to="/" className="flex items-center gap-2.5 no-underline group">
-          <div className="zd-icon-ring w-8 h-8 flex items-center justify-center shadow-[0_0_15px_var(--zd-glow)] transition-transform group-hover:scale-105">
-            <img
-              src="/favicon.svg"
-              alt="ZeroDock Logo"
-              width="20"
-              height="20"
-              className="object-contain"
-            />
-          </div>
-          <span className="text-lg font-extrabold tracking-tight text-[var(--zd-text-primary)] flex items-center">
-            Zero
-            <span className="bg-gradient-to-r from-[var(--zd-primary)] to-[var(--zd-accent)] bg-clip-text text-transparent">
-              Dock
+        {/* Left: Brand + Merged Active Tool Navigation */}
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <Link to="/" className="flex items-center gap-2 no-underline group shrink-0">
+            <div className="zd-icon-ring w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center shadow-[0_0_12px_var(--zd-glow)] transition-transform group-hover:scale-105">
+              <img
+                src="/favicon.svg"
+                alt="ZeroDock Logo"
+                width="18"
+                height="18"
+                className="object-contain"
+              />
+            </div>
+            <span className="text-base sm:text-lg font-extrabold tracking-tight text-[var(--zd-text-primary)] hidden sm:flex items-center">
+              Zero
+              <span className="bg-gradient-to-r from-[var(--zd-primary)] to-[var(--zd-accent)] bg-clip-text text-transparent">
+                Dock
+              </span>
             </span>
-          </span>
-        </Link>
+          </Link>
 
-        <div className="flex items-center gap-3">
+          {activeTool && (
+            <>
+              <ChevronRight className="w-3.5 h-3.5 text-[var(--zd-text-muted)] shrink-0" />
+              <div className="flex items-center gap-2 min-w-0">
+                {activeTool.icon && (
+                  <div className="w-6.5 h-6.5 rounded-lg bg-[var(--zd-primary-soft)] text-[var(--zd-primary)] flex items-center justify-center shrink-0">
+                    <activeTool.icon className="w-3.5 h-3.5" />
+                  </div>
+                )}
+                <span className="text-xs sm:text-sm font-bold text-[var(--zd-text-primary)] truncate tracking-tight">
+                  {activeTool.name}
+                </span>
+                <span className="hidden md:flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--zd-accent-soft)] border border-[var(--zd-accent)]/20 text-[var(--zd-accent)] text-[10px] font-semibold">
+                  <Lock className="w-3 h-3" />
+                  <span>100% Local</span>
+                </span>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Right: Actions */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <Button
             variant="secondary"
             size="sm"
             onClick={() => setCommandPaletteOpen(true)}
             aria-label="Search tools and commands"
-            className="!h-9 group"
+            className="!h-8 sm:!h-9 group text-xs"
           >
-              <Search className="w-3.5 h-3.5 text-[var(--zd-primary)] transition-transform group-hover:scale-110" />
-              <span className="hidden sm:inline">Search tools...</span>
-              <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--zd-surface)] border border-[var(--zd-border)] text-[var(--zd-text-muted)] group-hover:border-[var(--zd-primary)]/30">
-                ⌘K
-              </kbd>
-            </Button>
+            <Search className="w-3.5 h-3.5 text-[var(--zd-primary)] transition-transform group-hover:scale-110" />
+            <span className="hidden sm:inline">Search tools...</span>
+            <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--zd-surface)] border border-[var(--zd-border)] text-[var(--zd-text-muted)] group-hover:border-[var(--zd-primary)]/30">
+              ⌘K
+            </kbd>
+          </Button>
 
           <a
             href="https://github.com/jayradadiya/ZeroDock"
             target="_blank"
             rel="noopener noreferrer"
-            className="hidden sm:flex items-center no-underline h-9 rounded-xl border border-[var(--zd-border)] hover:border-[var(--zd-border-hover)] bg-[var(--zd-surface-raised)] text-[var(--zd-text-primary)] text-xs font-semibold overflow-hidden transition-all shadow-sm group"
+            className="hidden sm:flex items-center no-underline h-8 sm:h-9 rounded-xl border border-[var(--zd-border)] hover:border-[var(--zd-border-hover)] bg-[var(--zd-surface-raised)] text-[var(--zd-text-primary)] text-xs font-semibold overflow-hidden transition-all shadow-xs group"
           >
             <div className="flex items-center gap-1.5 px-2.5 group-hover:text-[var(--zd-primary)] transition-colors">
               <GithubIcon />
@@ -114,14 +146,14 @@ export function Navbar() {
             variant="icon"
             onClick={toggleTheme}
             aria-label="Toggle theme"
-            className="!w-9 !h-9 !rounded-xl border border-[var(--zd-border)] bg-[var(--zd-surface-raised)] hover:bg-[var(--zd-primary-soft)] hover:border-[var(--zd-primary)]/50 shadow-sm"
+            className="!w-8 !h-8 sm:!w-9 sm:!h-9 !rounded-xl border border-[var(--zd-border)] bg-[var(--zd-surface-raised)] hover:bg-[var(--zd-primary-soft)] hover:border-[var(--zd-primary)]/50 shadow-xs"
           >
-              {theme === 'dark' ? (
-                <Sun size={16} className="text-[#FDCB6E]" />
-              ) : (
-                <Moon size={16} className="text-[var(--zd-primary)]" />
-              )}
-            </Button>
+            {theme === 'dark' ? (
+              <Sun size={15} className="text-[#FDCB6E]" />
+            ) : (
+              <Moon size={15} className="text-[var(--zd-primary)]" />
+            )}
+          </Button>
         </div>
       </header>
     </>

@@ -1,5 +1,5 @@
 ---
-name: ZeroDock AI Developer Suite
+name: ZeroDock Developer Suite Design System
 colors:
   surface: '#0A0A0A'
   surface-dim: '#0A0A0A'
@@ -13,22 +13,22 @@ colors:
   on-surface-variant: '#A3A3A3'
   inverse-surface: '#FFFFFF'
   inverse-on-surface: '#1A1A1A'
-  outline: '#404040'
-  outline-variant: '#262626'
+  outline: '#262626'
+  outline-variant: '#404040'
   surface-tint: '#8B7CF7'
   primary: '#8B7CF7'
   on-primary: '#0A0A0A'
   primary-container: '#6C5CE7'
   on-primary-container: '#FFFFFF'
   inverse-primary: '#5A4BD6'
-  secondary: '#00DFB8'
-  on-secondary: '#00332A'
-  secondary-container: '#00C9A7'
-  on-secondary-container: '#001A15'
-  tertiary: '#00DFB8'
-  on-tertiary: '#00332A'
-  tertiary-container: '#00C9A7'
-  on-tertiary-container: '#001A15'
+  secondary: '#F0A030'
+  on-secondary: '#0A0A0A'
+  secondary-container: '#D4931F'
+  on-secondary-container: '#FFFFFF'
+  tertiary: '#F0A030'
+  on-tertiary: '#0A0A0A'
+  tertiary-container: '#D4931F'
+  on-tertiary-container: '#FFFFFF'
   error: '#FF7675'
   on-error: '#4D0000'
   error-container: '#93000A'
@@ -40,15 +40,15 @@ typography:
   display:
     fontFamily: Inter
     fontSize: 48px
-    fontWeight: '700'
-    lineHeight: '1.1'
-    letterSpacing: -0.03em
+    fontWeight: '800'
+    lineHeight: '1.04'
+    letterSpacing: -0.04em
   headline-lg:
     fontFamily: Inter
     fontSize: 32px
-    fontWeight: '600'
+    fontWeight: '700'
     lineHeight: '1.2'
-    letterSpacing: -0.02em
+    letterSpacing: -0.03em
   headline-sm:
     fontFamily: Inter
     fontSize: 20px
@@ -68,23 +68,23 @@ typography:
     lineHeight: '1.5'
     letterSpacing: 0em
   code-md:
-    fontFamily: Roboto Mono
+    fontFamily: JetBrains Mono
     fontSize: 13px
     fontWeight: '400'
     lineHeight: '1.6'
     letterSpacing: 0em
   code-sm:
-    fontFamily: Roboto Mono
+    fontFamily: JetBrains Mono
     fontSize: 11px
     fontWeight: '500'
     lineHeight: '1.4'
     letterSpacing: 0.02em
   label-caps:
-    fontFamily: Roboto Mono
+    fontFamily: JetBrains Mono
     fontSize: 11px
     fontWeight: '600'
     lineHeight: '1.2'
-    letterSpacing: 0.08em
+    letterSpacing: 0.14em
 rounded:
   sm: 0.5rem
   DEFAULT: 0.75rem
@@ -100,48 +100,52 @@ spacing:
   lg: 24px
   xl: 40px
   2xl: 64px
-  container-max: 1200px
+  container-max: 1600px
   gutter: 24px
 ---
 
 ## Brand & Style
-ZeroDock is a privacy-first, client-side-only suite of developer tools. The interface is engineered to feel like an ultra-responsive, high-fidelity precision instrument—drawing inspiration from top-tier engineering environments like Vercel, Linear, and macOS Dock.
 
-The style is **Premium Minimalist-Technical**. It utilizes a dark-mode-first architecture featuring obsidian depth, subtle glassmorphism (`backdrop-filter: blur(16px)`), and vibrant electric accents (`#8B7CF7` violet and `#00DFB8` cyan). Every tool panel and interactive element should provide immediate visual feedback through micro-animations and crisp 1px borders.
+ZeroDock is a privacy-first, client-side-only suite of developer tools. The interface is engineered to feel like an ultra-responsive, high-fidelity precision instrument—drawing inspiration from top-tier engineering environments like Vercel, Linear, and Raycast.
 
-## Colors
-The palette is built upon deep obsidian blacks and dark grays to eliminate eye strain during intense coding sessions, contrasted with glowing violet and emerald accents.
+The aesthetic style is **Minimalist-Technical & Anti-AI**. It deliberately avoids generic AI design tropes (excessive floating gradient blobs, rainbow gradient headers everywhere) in favor of obsidian depth, structural grid backgrounds (`.zd-hero-grid`), single-accent line highlights, and crisp 1px borders.
 
-- **Primary Violet (#8B7CF7 / #6C5CE7):** Used for primary actions, active state borders, glow effects, and focal points.
-- **Accent Cyan (#00DFB8 / #00C9A7):** Used for secondary accents, success metrics, and privacy-verified badges.
-- **Surfaces:** Tiered from base `#0A0A0A` to elevated `#121212` and `#1A1A1A` cards. Containers are delineated by thin `#262626` borders rather than heavy drop shadows.
+## Colors & Accents
+
+The palette balances dark obsidian surfaces with glowing primary violet and warm amber accents:
+
+- **Primary Violet (`--zd-primary` / `#8B7CF7` dark, `#6C5CE7` light):** Used for primary CTAs, active selection states, focus rings, and hero underlines.
+- **Warm Amber Accent (`--zd-accent` / `#F0A030` dark, `#D4931F` light):** Used for live status indicators, pulse dots, and secondary visual accents.
+- **Category Icon Tints:**
+  - **Data**: Indigo (`rgba(99,102,241,0.12)`)
+  - **Network**: Amber (`var(--zd-accent-soft)`)
+  - **Encoding**: Sky (`rgba(56,189,248,0.1)`)
+  - **Security**: Coral (`rgba(225,112,85,0.1)`)
+  - **Text**: Emerald (`rgba(52,211,153,0.1)`)
+  - **Converters**: Cyan (`rgba(14,165,233,0.1)`)
+  - **Generators**: Pink (`rgba(236,72,153,0.1)`)
+- **Surfaces:** Tiered from base `#0A0A0A` to elevated `#121212` (`--zd-surface`) and `#1A1A1A` (`--zd-surface-raised`). Containers are delineated by thin `#262626` borders.
 - **Text:** High-contrast `#F5F5F5` for primary content, `#A3A3A3` for secondary descriptions, and `#737373` for muted metadata.
 
 ## Typography
+
 ZeroDock balances clean sans-serif readability with technical monospace precision.
-- **Inter:** Utilized for all UI labels, navigation, headers, and body text.
-- **Roboto Mono:** Reserved for technical inputs, JSON/code editors, terminal outputs, badges, and system metadata.
+- **Inter:** Utilized for UI labels, navigation, headers, body text, and section copy.
+- **JetBrains Mono / Roboto Mono:** Reserved for technical inputs, JSON/code editors, terminal outputs, badges, keyboard shortcuts (`kbd`), stat numbers (`.zd-stat`), and uppercase section tags.
 
-## Layout & Spacing
+## Layout & Architecture
+
 Built on a mathematical 4px baseline grid.
-- **Desktop:** 12-column grid within a 1200px max-width container with 24px gutters.
-- **Tool Layouts:** Standard split-pane or multi-column layouts allowing developers to view inputs and generated outputs side-by-side without context switching.
-- **Mobile Adaptivity:** Seamlessly stacks panels vertically with 16px side margins and touch-friendly targets.
+- **Hero Grid (`.zd-hero-grid`):** Subtle CSS linear-gradient grid pattern masked with radial gradients.
+- **Unified Tool Grid:** One single grid with category filters and grid/list toggles. Top featured tools use a Bento hero layout (spanning 2 columns on desktop).
+- **Stat-Driven Features:** Feature sections present quantitative stats (`0 bytes`, `< 50ms`, `0 accounts`) rather than generic cards.
+- **Pre-Footer CTA Banner:** Focused statement ("Your browser is the server.") separated by gradient dividers (`.zd-section-divider`).
 
-## Elevation & Glassmorphism
-Depth is conveyed through tonal layering, 1px borders, and functional glassmorphism.
-- **Navbar & Command Palette:** Semi-transparent surface with `backdrop-filter: blur(16px) saturate(180%)` and a 1px border.
-- **Interactive Cards:** Hover states subtly brighten the border (`#404040`) and apply a soft violet glow (`0 0 40px rgba(139, 124, 247, 0.15)`).
-
-## Components
+## Component Guidelines
 
 ### Buttons
-- **Primary:** Solid `#8B7CF7` or gradient violet-to-cyan fill with high-contrast text and subtle hover lift.
-- **Secondary / Ghost:** Transparent background with `#262626` border, changing to `#404040` on hover with white text.
+- **Primary:** Solid `var(--zd-primary)` fill with white text, shadow, and soft glow hover lift.
+- **Secondary / Ghost:** `var(--zd-surface)` background with `var(--zd-border)` border, transitioning to `var(--zd-primary-soft)` on hover.
 
-### Tool Panels & Inputs
-- Dark surface (`#121212`), 1px border (`#262626`), rounded corners (`12px`), and monospace typography.
-- **Empty States:** Beautifully styled placeholders featuring Lucide icons and helpful prompts rather than blank textareas.
-
-### Badges & Chips
-- Monospace uppercase (`label-caps`) with soft transparent tinted backgrounds and matching text colors.
+### Tool Cards & Panels
+- Dark surface (`var(--zd-surface)`), 1px border (`var(--zd-border)`), rounded corners (`16px`), category-specific icon backgrounds, and monospace tags.

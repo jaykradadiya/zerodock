@@ -1,10 +1,10 @@
 import type { WorkerMessage } from '../../../workers/base.worker';
-import jmespath from 'jmespath';
+import { evaluateQuery, type FilterType } from './lib/queryEngine';
 
 type TransformPayload = {
   document: string;
   query: string;
-  type: 'jmespath' | 'javascript';
+  type: FilterType;
 };
 
 self.onmessage = (event: MessageEvent<WorkerMessage<TransformPayload>>) => {
@@ -13,31 +13,26 @@ self.onmessage = (event: MessageEvent<WorkerMessage<TransformPayload>>) => {
 
   try {
     const data = JSON.parse(payload.document);
-    let result: any;
+    const queryRes = evaluateQuery(data, payload.query, payload.type);
 
-    if (payload.type === 'jmespath') {
-      result = jmespath.search(data, payload.query);
-    } else if (payload.type === 'javascript') {
-      // Create a sandbox-like function
-      // The user code should return the new object, e.g. `return data.map(x => x.id)`
-      const fn = new Function('data', payload.query);
-      result = fn(data);
+    if (!queryRes.success) {
+      throw new Error(queryRes.error || 'Evaluation failed');
     }
 
-    if (result === undefined) {
+    if (queryRes.result === undefined) {
       throw new Error('Query returned undefined');
     }
 
-    self.postMessage({ 
-      id, 
-      type: 'SUCCESS', 
-      payload: JSON.stringify(result, null, 2) 
+    self.postMessage({
+      id,
+      type: 'SUCCESS',
+      payload: JSON.stringify(queryRes.result, null, 2),
     });
   } catch (error: any) {
-    self.postMessage({ 
-      id, 
-      type: 'ERROR', 
-      payload: { message: error.message } 
+    self.postMessage({
+      id,
+      type: 'ERROR',
+      payload: { message: error.message },
     });
   }
 };

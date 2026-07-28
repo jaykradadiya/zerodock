@@ -1,121 +1,111 @@
-import { motion } from 'framer-motion';
-import { ShieldCheck, Zap, UserX } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
-import { Card, IconBox, SectionLabel } from '../../shared/components/ui';
+import { motion, useInView } from 'framer-motion';
+import { useRef } from 'react';
 
 interface Feature {
-  icon: LucideIcon;
-  title: string;
+  stat: string;
+  label: string;
   description: string;
-  iconClassName: string;
+  accentColor: string;
 }
 
 const features: Feature[] = [
   {
-    icon: ShieldCheck,
-    title: 'Privacy by architecture',
+    stat: '0 bytes',
+    label: 'sent to any server',
     description:
-      'Every tool runs in your browser using Web Workers and local APIs. No data is transmitted, stored, or logged. Your files never touch a server.',
-    iconClassName: 'bg-[var(--zd-accent-soft)] text-[var(--zd-accent)]',
+      'Every tool runs in your browser using Web Workers and local APIs. Your data never touches a server. Not even ours.',
+    accentColor: 'var(--zd-primary)',
   },
   {
-    icon: Zap,
-    title: 'Instant performance',
+    stat: '< 50ms',
+    label: 'average operation time',
     description:
-      'No round-trips, no loading spinners. Tools process data in-memory at native speed. Large files are handled with streaming and chunking.',
-    iconClassName: 'bg-[var(--zd-primary-soft)] text-[var(--zd-primary)]',
+      'No round-trips, no spinners. Tools process data in-memory at native speed. Large files are handled with streaming.',
+    accentColor: 'var(--zd-accent)',
   },
   {
-    icon: UserX,
-    title: 'No accounts, ever',
+    stat: '0 accounts',
+    label: 'required, ever',
     description:
-      "No sign-up, no email, no tracking pixels. Open the page, use the tool, close the tab. It's that simple. Open-source and auditable.",
-    iconClassName: 'bg-[rgba(225,112,85,0.1)] text-[#E17055]',
+      'No sign-up, no email, no tracking pixels. Open the page, use the tool, close the tab. Open-source and auditable.',
+    accentColor: '#E17055',
   },
 ];
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.1, delayChildren: 0.1 },
-  },
-};
+function FeatureBlock({ feature, index }: { feature: Feature; index: number }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const isInView = useInView(ref, { once: true, margin: '-60px' });
 
-const itemVariants = {
-  hidden: { opacity: 0, y: 24 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: { type: 'spring', stiffness: 260, damping: 24 } as const,
-  },
-};
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, y: 20 }}
+      animate={isInView ? { opacity: 1, y: 0 } : {}}
+      transition={{ duration: 0.5, delay: index * 0.12, ease: [0.22, 1, 0.36, 1] }}
+      className="group relative p-6 sm:p-8 2xl:p-10 rounded-2xl border border-[var(--zd-border)] bg-[var(--zd-surface)] transition-[border-color,box-shadow] duration-200 hover:border-[var(--zd-border-hover)] hover:shadow-[var(--zd-shadow-md)]"
+    >
+      {/* Bottom accent line on hover */}
+      <div
+        className="absolute bottom-0 left-4 right-4 h-[2px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+        style={{ background: feature.accentColor }}
+        aria-hidden="true"
+      />
+
+      {/* Stat number */}
+      <div className="mb-4">
+        <span
+          className="zd-stat text-3xl sm:text-4xl 2xl:text-5xl"
+          style={{ color: feature.accentColor }}
+        >
+          {feature.stat}
+        </span>
+      </div>
+
+      {/* Label */}
+      <p className="text-sm font-semibold text-[var(--zd-text-primary)] tracking-tight mb-3">
+        {feature.label}
+      </p>
+
+      {/* Description */}
+      <p className="text-sm leading-relaxed text-[var(--zd-text-secondary)] m-0">
+        {feature.description}
+      </p>
+    </motion.div>
+  );
+}
 
 export function FeaturesSection() {
   return (
     <section className="relative py-20 sm:py-28 2xl:py-36 px-4 sm:px-8 md:px-12 2xl:px-16 overflow-hidden max-w-7xl 2xl:max-w-[1600px] 3xl:max-w-[1900px] mx-auto">
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[var(--zd-primary-soft)] to-transparent opacity-30 pointer-events-none" />
-
       <div className="relative z-10">
-        <div className="text-center mb-16 2xl:mb-20">
+        {/* Section header — left-aligned, opinionated */}
+        <div className="mb-14 2xl:mb-18">
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: '-80px' }}
             transition={{ duration: 0.5 }}
+            className="flex flex-col items-start gap-3"
           >
-            <SectionLabel className="text-[var(--zd-primary)] mb-3 block">Why ZeroDock</SectionLabel>
+            <span className="font-mono text-[11px] tracking-[0.14em] uppercase text-[var(--zd-primary)] font-semibold">
+              Zero compromises
+            </span>
+            <h2 className="text-3xl sm:text-5xl 2xl:text-6xl font-black tracking-[-0.03em] text-[var(--zd-text-primary)] leading-tight">
+              Built different, on purpose.
+            </h2>
+            <p className="text-base sm:text-lg text-[var(--zd-text-secondary)] max-w-lg leading-relaxed">
+              Not another SaaS. Just tools that respect your data and your time.
+            </p>
           </motion.div>
-          <motion.h2
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: '-80px' }}
-            transition={{ duration: 0.5, delay: 0.05 }}
-            className="text-3xl sm:text-5xl 2xl:text-6xl font-extrabold tracking-tight text-[var(--zd-text-primary)] mb-4"
-          >
-            Built different, on purpose
-          </motion.h2>
-          <motion.p
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: '-80px' }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-base sm:text-lg 2xl:text-xl text-[var(--zd-text-secondary)] max-w-lg 2xl:max-w-xl mx-auto leading-relaxed"
-          >
-            Not another SaaS. Just tools that respect your data and your time.
-          </motion.p>
         </div>
 
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, margin: '-60px' }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-6 2xl:gap-8"
-        >
-          {features.map((feature) => (
-            <FeatureCard key={feature.title} feature={feature} />
+        {/* Feature blocks — stat-driven, not generic icon cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 2xl:gap-6">
+          {features.map((feature, i) => (
+            <FeatureBlock key={feature.stat} feature={feature} index={i} />
           ))}
-        </motion.div>
+        </div>
       </div>
     </section>
-  );
-}
-
-function FeatureCard({ feature }: { feature: Feature }) {
-  return (
-    <motion.div variants={itemVariants}>
-      <Card glow padding className="!p-8 2xl:!p-10 flex flex-col h-full transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 hover:shadow-[var(--zd-shadow-md)]">
-        <IconBox icon={feature.icon} size="md" className={`mb-6 ${feature.iconClassName}`} />
-
-        <h3 className="text-lg font-bold text-[var(--zd-text-primary)] mb-3 tracking-tight">
-          {feature.title}
-        </h3>
-
-        <p className="text-sm sm:text-base leading-relaxed text-[var(--zd-text-secondary)] m-0">
-          {feature.description}
-        </p>
-      </Card>
-    </motion.div>
   );
 }

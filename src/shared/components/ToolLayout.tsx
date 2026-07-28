@@ -24,13 +24,13 @@ export function ToolPage({
 }: ToolPageProps) {
   const zenMode = useUIStore((s) => s.zenMode);
   const isCompact = compact || zenMode;
-  const padding = isCompact ? 'p-2' : 'p-3 sm:p-4 md:p-6 xl:p-8';
-  const maxWidth = fullWidth ? '' : 'max-w-7xl 2xl:max-w-[1440px] mx-auto';
+  const padding = isCompact ? 'p-1.5 sm:p-2.5' : 'p-3 sm:p-4 md:p-6 xl:p-8';
+  const maxWidth = fullWidth ? 'h-full flex-1 flex flex-col min-h-0' : 'max-w-7xl 2xl:max-w-[1440px] mx-auto h-full flex-1 flex flex-col min-h-0';
 
   return (
     <div
       id="main-content"
-      className={cn('zd-tool-fill relative', padding, maxWidth, className)}
+      className={cn('zd-tool-fill relative h-full flex-1 min-h-0', padding, maxWidth, className)}
     >
       {children}
     </div>
@@ -46,6 +46,7 @@ interface ToolHeaderProps {
   badges?: React.ReactNode;
   className?: string;
   showStandardActions?: boolean;
+  compact?: boolean;
 }
 
 export function ToolHeader({
@@ -57,53 +58,9 @@ export function ToolHeader({
   badges,
   className = '',
   showStandardActions = true,
+  compact = false,
 }: ToolHeaderProps) {
-  const zenMode = useUIStore((s) => s.zenMode);
-  const routeContext = useToolRoute();
-  const resolvedToolId = toolId ?? routeContext?.toolId;
-  if (zenMode) return null;
-
-  const tool = resolvedToolId ? toolRegistry.find((t) => t.id === resolvedToolId) : undefined;
-  const category = tool?.category;
-
-  return (
-    <div className={cn('w-full flex flex-col gap-3 mb-4 sm:mb-5 shrink-0', className)}>
-      {resolvedToolId && (
-        <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-[var(--zd-text-muted)]">
-          <Link to="/" className="hover:text-[var(--zd-primary)] transition-colors no-underline">
-            Home
-          </Link>
-          {category && (
-            <>
-              <ChevronRight className="w-3 h-3 shrink-0" aria-hidden />
-              <span>{category}</span>
-            </>
-          )}
-          <ChevronRight className="w-3 h-3 shrink-0" aria-hidden />
-          <span className="text-[var(--zd-text-secondary)] font-medium truncate">{title}</span>
-        </nav>
-      )}
-
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-          <IconBox icon={icon} />
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl sm:text-2xl font-bold text-[var(--zd-text-primary)] tracking-tight">{title}</h1>
-              {badges}
-            </div>
-            {description && (
-              <p className="text-[var(--zd-text-secondary)] mt-0.5 text-sm leading-relaxed max-w-2xl">{description}</p>
-            )}
-          </div>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap shrink-0">
-          {showStandardActions && <ToolStandardActions />}
-          {actions}
-        </div>
-      </div>
-    </div>
-  );
+  return null;
 }
 
 interface ToolWorkspaceProps {

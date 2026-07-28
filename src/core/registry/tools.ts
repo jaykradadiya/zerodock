@@ -5,10 +5,6 @@ import {
   Binary,
   GitCompare,
   Clock,
-  SearchCode,
-  Database,
-  Network,
-  BrainCircuit,
   Shield,
 } from 'lucide-react';
 
@@ -44,18 +40,6 @@ const rawToolRegistry: Tool[] = [
     },
   },
   {
-    id: 'http',
-    name: 'HTTP Workshop',
-    category: 'Network',
-    route: '/http',
-    icon: Network,
-    component: () => import('../../modules/hubs/http-hub'),
-    metadata: {
-      description: 'Test REST APIs and convert cURL commands to JavaScript, Python, or Go — all client-side.',
-      tags: ['api', 'rest', 'http', 'curl', 'fetch', 'tester', 'postman'],
-    },
-  },
-  {
     id: 'encode-decode',
     name: 'Encode / Decode',
     category: 'Encoding',
@@ -75,8 +59,8 @@ const rawToolRegistry: Tool[] = [
     icon: Shield,
     component: () => import('../../modules/hubs/security-hub'),
     metadata: {
-      description: 'Hash strings, decode JWTs, and generate RSA key pairs — privacy-first crypto tools.',
-      tags: ['hash', 'jwt', 'rsa', 'crypto', 'security', 'token', 'pem'],
+      description: 'Hash strings and decode JWTs — privacy-first crypto tools.',
+      tags: ['hash', 'jwt', 'crypto', 'security', 'token'],
     },
   },
   {
@@ -101,42 +85,6 @@ const rawToolRegistry: Tool[] = [
     metadata: {
       description: 'Convert Unix epoch timestamps to human-readable dates, local timezones, and UTC instantly.',
       tags: ['epoch', 'timestamp', 'date', 'time', 'unix', 'converter', 'timezone', 'utc'],
-    },
-  },
-  {
-    id: 'regex-tester',
-    name: 'Regex Tester',
-    category: 'Text',
-    route: '/regex-tester',
-    icon: SearchCode,
-    component: () => import('../../modules/tools/regex-tester'),
-    metadata: {
-      description: 'Test and debug regular expressions instantly with live match highlighting and group extraction.',
-      tags: ['regex', 'regular expression', 'test', 'match', 'debug'],
-    },
-  },
-  {
-    id: 'mock-data-generator',
-    name: 'Mock Data Generator',
-    category: 'Generators',
-    route: '/mock-data-generator',
-    icon: Database,
-    component: () => import('../../modules/tools/mock-data-generator'),
-    metadata: {
-      description: 'Generate realistic mock JSON data from custom schema definitions.',
-      tags: ['mock', 'faker', 'data', 'json', 'generator', 'schema', 'test data'],
-    },
-  },
-  {
-    id: 'token-counter',
-    name: 'LLM Token Counter',
-    category: 'Text',
-    route: '/token-counter',
-    icon: BrainCircuit,
-    component: () => import('../../modules/tools/token-counter'),
-    metadata: {
-      description: 'Count tokens and characters for LLM prompts using GPT tokenizer.',
-      tags: ['token', 'llm', 'gpt', 'counter', 'ai', 'prompt'],
     },
   },
 
@@ -177,32 +125,6 @@ const rawToolRegistry: Tool[] = [
     metadata: {
       description: 'Query JSON with JMESPath expressions.',
       tags: ['json', 'jmespath', 'query'],
-      hiddenFromBrowse: true,
-    },
-  },
-  {
-    id: 'api-tester',
-    name: 'API Tester',
-    category: 'Network',
-    route: '/api-tester',
-    icon: Network,
-    component: () => import('../../modules/hubs/http-hub'),
-    metadata: {
-      description: 'Client-side HTTP & REST API testing.',
-      tags: ['api', 'http', 'rest'],
-      hiddenFromBrowse: true,
-    },
-  },
-  {
-    id: 'curl-converter',
-    name: 'cURL Converter',
-    category: 'Network',
-    route: '/curl-converter',
-    icon: Network,
-    component: () => import('../../modules/hubs/http-hub').then((m) => ({ default: m.HttpHubCurl })),
-    metadata: {
-      description: 'Convert cURL to code snippets.',
-      tags: ['curl', 'http'],
       hiddenFromBrowse: true,
     },
   },
@@ -255,19 +177,6 @@ const rawToolRegistry: Tool[] = [
     metadata: {
       description: 'Decode JWT tokens offline.',
       tags: ['jwt', 'token'],
-      hiddenFromBrowse: true,
-    },
-  },
-  {
-    id: 'rsa-generator',
-    name: 'RSA Generator',
-    category: 'Security',
-    route: '/rsa-generator',
-    icon: Shield,
-    component: () => import('../../modules/hubs/security-hub').then((m) => ({ default: m.SecurityHubRsa })),
-    metadata: {
-      description: 'Generate RSA key pairs.',
-      tags: ['rsa', 'pem'],
       hiddenFromBrowse: true,
     },
   },

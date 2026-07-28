@@ -44,12 +44,24 @@ export const usePreferenceStore = create<PreferenceState>()(
             : [...state.favoriteTools, toolId]
         };
       }),
-      dismissTip: (tipId) => set((state) => ({
-        dismissedTips: state.dismissedTips.includes(tipId)
-          ? state.dismissedTips
-          : [...state.dismissedTips, tipId],
-      })),
-      hideAllTips: () => set({ tipsHidden: true }),
+      dismissTip: (tipId) => set((state) => {
+        try {
+          localStorage.setItem('zerodock_tips_hidden', 'true');
+          localStorage.setItem(`zerodock_dismissed_${tipId}`, 'true');
+        } catch {}
+        return {
+          tipsHidden: true,
+          dismissedTips: state.dismissedTips.includes(tipId)
+            ? state.dismissedTips
+            : [...state.dismissedTips, tipId],
+        };
+      }),
+      hideAllTips: () => set(() => {
+        try {
+          localStorage.setItem('zerodock_tips_hidden', 'true');
+        } catch {}
+        return { tipsHidden: true };
+      }),
     }),
     {
       name: 'zerodock-preferences',

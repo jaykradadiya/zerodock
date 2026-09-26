@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 
 export const TOOLKIT_PANELS = ['tree', 'table', 'yaml', 'types', 'path'] as const;
@@ -13,18 +13,11 @@ export function useToolkitPanel(defaultPanel: SidePanel = 'hidden'): [SidePanel,
   const navigate = useNavigate();
   const search = useSearch({ strict: false }) as { panel?: string };
 
-  const urlPanel: SidePanel =
+  const sidePanel: SidePanel =
     search.panel && isToolkitPanel(search.panel) ? search.panel : defaultPanel;
-
-  const [sidePanel, setSidePanelState] = useState<SidePanel>(urlPanel);
-
-  useEffect(() => {
-    setSidePanelState(urlPanel);
-  }, [urlPanel]);
 
   const setSidePanel = useCallback(
     (panel: SidePanel) => {
-      setSidePanelState(panel);
       navigate({
         to: '/json-toolkit',
         search: panel === 'hidden' ? {} : { panel },

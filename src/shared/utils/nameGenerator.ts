@@ -3,7 +3,7 @@
  * Generates human-friendly, Docker/Glitch-style memorable slugs and file names (e.g. cosmic-falcon.json)
  */
 
-export const ADJECTIVES = [
+const ADJECTIVES = [
   'amber',
   'astral',
   'atomic',
@@ -190,7 +190,7 @@ export const ADJECTIVES = [
   'yellow',
 ] as const;
 
-export const NOUNS = [
+const NOUNS = [
   'apex',
   'atlas',
   'aurora',
@@ -353,7 +353,7 @@ export const NOUNS = [
 /**
  * Returns a random adjective-noun slug (e.g., "cosmic-falcon")
  */
-export function generateMemorableSlug(): string {
+function generateMemorableSlug(): string {
   const adj = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
   const noun = NOUNS[Math.floor(Math.random() * NOUNS.length)];
   return `${adj}-${noun}`;

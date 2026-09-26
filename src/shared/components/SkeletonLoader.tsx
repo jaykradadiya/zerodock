@@ -1,8 +1,8 @@
-interface SkeletonProps {
+interface SkeletonLoaderProps {
   toolName?: string;
 }
 
-export function SkeletonLoader({ toolName: _toolName }: SkeletonProps) {
+export function SkeletonLoader({ toolName }: SkeletonLoaderProps = {}) {
   const baseColor = 'var(--zd-surface-raised)';
 
   return (
@@ -10,7 +10,13 @@ export function SkeletonLoader({ toolName: _toolName }: SkeletonProps) {
       <div className="w-full flex items-center gap-4 mb-6 shrink-0">
         <div className="w-12 h-12 rounded-xl zd-icon-ring animate-pulse opacity-60" />
         <div className="flex flex-col gap-2 flex-1">
-          <div className="w-48 h-7 rounded-lg animate-pulse" style={{ backgroundColor: baseColor }} />
+          {toolName ? (
+            <div className="text-xl sm:text-2xl font-bold text-[var(--zd-text-primary)] tracking-tight">
+              {toolName}
+            </div>
+          ) : (
+            <div className="w-48 h-7 rounded-lg animate-pulse" style={{ backgroundColor: baseColor }} />
+          )}
           <div className="w-72 h-4 rounded-md animate-pulse opacity-70" style={{ backgroundColor: baseColor }} />
         </div>
       </div>

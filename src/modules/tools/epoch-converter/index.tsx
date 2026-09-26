@@ -147,7 +147,7 @@ function parseDateString(
           date: parseInTimezone(year, month, day, hour, minute, second, ms, targetTz),
           isCustomParsed: true
         };
-      } catch (err) {
+      } catch {
         return {
           date: new Date(year, month, day, hour, minute, second, ms),
           isCustomParsed: true
@@ -297,14 +297,14 @@ export default function EpochConverter() {
               dateStyle: 'full',
               timeStyle: 'long'
             });
-          } catch (err) {
+          } catch {
             targetString = 'Invalid Timezone';
           }
         }
 
         isoString = dateObj.toISOString();
         relativeAge = getRelativeTime(parsedMs);
-      } catch (err) {
+      } catch {
         if (!epochError) setEpochError('Out of bounds timestamp date conversion.');
       }
     }

@@ -13,7 +13,7 @@ const textTargets = ['diff-checker', 'encode-decode', 'json-toolkit']
   .map(byId)
   .filter(Boolean) as { id: string; name: string; route: string }[];
 
-export const defaultPipelineTargets: Record<string, { id: string; name: string; route: string }[]> = {
+const defaultPipelineTargets: Record<string, { id: string; name: string; route: string }[]> = {
   'yaml-json-converter': jsonTargets,
   'json-type-converter': jsonTargets,
   'json-path': jsonTargets,

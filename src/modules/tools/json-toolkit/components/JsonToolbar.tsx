@@ -54,7 +54,6 @@ interface JsonToolbarProps {
   // Fullscreen
   isFullscreen: boolean;
   setIsFullscreen: (full: boolean) => void;
-  embedded?: boolean;
 }
 
 export function JsonToolbar({
@@ -84,7 +83,6 @@ export function JsonToolbar({
   onDownload,
   isFullscreen,
   setIsFullscreen,
-  embedded: _embedded = false,
 }: JsonToolbarProps) {
   const [showSettings, setShowSettings] = useState(false);
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);

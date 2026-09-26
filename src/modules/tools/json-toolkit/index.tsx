@@ -452,7 +452,7 @@ export default function JsonFormatter() {
         exportData = json2csv(parsed);
         mimeType = 'text/csv';
         ext = '.csv';
-      } catch (err: any) {
+      } catch {
         alert('Cannot convert to CSV: Invalid JSON or not an array of objects.');
         return;
       }
@@ -587,7 +587,6 @@ export default function JsonFormatter() {
         onDownload={handleDownload}
         isFullscreen={isFullscreen}
         setIsFullscreen={setIsFullscreen}
-        embedded={embedded}
       />
 
       {/* Workspace Editor Main Viewport */}

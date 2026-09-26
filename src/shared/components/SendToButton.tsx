@@ -26,7 +26,7 @@ export function SendToButton({ data, targets }: SendToButtonProps) {
 
   const handleSend = (route: string) => {
     setPipelineData(data);
-    navigate({ to: route as any });
+    navigate({ to: route as string as '/' });
   };
 
   const toggleDropdown = () => {

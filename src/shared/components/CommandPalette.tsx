@@ -74,7 +74,7 @@ export function CommandPalette() {
       icon: tool.icon,
       category: 'Tools',
       action: () => {
-        navigate({ to: tool.route as any });
+        navigate({ to: tool.route as string as '/' });
         setCommandPaletteOpen(false);
       },
     }))
@@ -94,7 +94,7 @@ export function CommandPalette() {
       icon: tool.icon,
       category: 'Recent',
       action: () => {
-        navigate({ to: tool.route as any });
+        navigate({ to: tool.route as string as '/' });
         setCommandPaletteOpen(false);
       },
     };
@@ -110,7 +110,7 @@ export function CommandPalette() {
       icon: tool.icon,
       category: 'Favorites',
       action: () => {
-        navigate({ to: tool.route as any });
+        navigate({ to: tool.route as string as '/' });
         setCommandPaletteOpen(false);
       },
     };
@@ -192,12 +192,7 @@ export function CommandPalette() {
       ? defaultVisibleItems
       : activeItems;
 
-  // Force reset index if bounds are exceeded due to search/filter changes
-  useEffect(() => {
-    if (selectedIndex >= filteredItems.length && filteredItems.length > 0) {
-      setSelectedIndex(0);
-    }
-  }, [filteredItems.length, selectedIndex]);
+  const activeIndex = selectedIndex < filteredItems.length ? selectedIndex : 0;
 
   // Keyboard navigation inside options list
   useEffect(() => {
@@ -212,7 +207,7 @@ export function CommandPalette() {
         setSelectedIndex((prev) => (prev - 1 + filteredItems.length) % filteredItems.length);
       } else if (e.key === 'Enter') {
         e.preventDefault();
-        filteredItems[selectedIndex]?.action();
+        filteredItems[activeIndex]?.action();
       } else if (e.key === 'Tab') {
         e.preventDefault();
         const cats = ['All', 'Favorites', 'Recent', 'Tools', 'Preferences', 'External'] as const;
@@ -223,13 +218,8 @@ export function CommandPalette() {
     };
     window.addEventListener('keydown', handleListKeyDown);
     return () => window.removeEventListener('keydown', handleListKeyDown);
-  }, [commandPaletteOpen, filteredItems, selectedIndex, activeCategory]);
+  }, [commandPaletteOpen, filteredItems, activeIndex, activeCategory]);
 
-  useEffect(() => {
-    setSelectedIndex(0);
-  }, [search, activeCategory]);
-
-  // Remove useEffect causing synchronous state updates and rely on derive state directly when rendering
   if (!commandPaletteOpen) return null;
 
   const palette = (
@@ -254,7 +244,10 @@ export function CommandPalette() {
             type="text"
             placeholder="Type a command or search tools..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setSelectedIndex(0);
+            }}
             className="flex-1 py-4 text-sm bg-transparent outline-none border-0 text-[var(--zd-text-primary)] placeholder:text-[var(--zd-text-muted)]"
             autoFocus
           />
@@ -268,7 +261,10 @@ export function CommandPalette() {
           {(['All', 'Favorites', 'Recent', 'Tools', 'Preferences', 'External'] as const).map(cat => (
             <button
               key={cat}
-              onClick={() => setActiveCategory(cat)}
+              onClick={() => {
+                setActiveCategory(cat);
+                setSelectedIndex(0);
+              }}
               className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
                 activeCategory === cat 
                   ? 'bg-[var(--zd-primary)] text-white shadow-sm' 
@@ -290,8 +286,8 @@ export function CommandPalette() {
             </div>
           ) : (
             filteredItems.map((item, index) => {
-              const Icon = (item.icon || Terminal) as React.ComponentType<any>;
-              const isSelected = index === selectedIndex;
+              const Icon = (item.icon || Terminal) as React.ComponentType<{ className?: string }>;
+              const isSelected = index === activeIndex;
               const showHeaders = activeCategory === 'All';
               const isFirstOfCategory = showHeaders && (index === 0 || filteredItems[index - 1].category !== item.category);
 

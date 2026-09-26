@@ -277,25 +277,6 @@ export function SwapButton({ onClick, title = 'Swap input and output', className
   );
 }
 
-interface EmptyStateProps {
-  icon: LucideIcon;
-  title: string;
-  description?: string;
-  action?: React.ReactNode;
-}
-
-export function EmptyState({ icon, title, description, action }: EmptyStateProps) {
-  return (
-    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-      <IconBox icon={icon} size="lg" className="!rounded-full mb-4" />
-      <h3 className="text-[var(--zd-text-primary)] font-semibold mb-2">{title}</h3>
-      {description && (
-        <p className="text-[var(--zd-text-muted)] text-sm max-w-[280px] mb-6 leading-relaxed">{description}</p>
-      )}
-      {action}
-    </div>
-  );
-}
 
 export { MobileSwapBar } from './MobileSwapBar';
 export { PrivacyBadge } from './PrivacyBadge';

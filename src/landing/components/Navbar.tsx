@@ -150,6 +150,7 @@ export function Navbar() {
             size="sm"
             onClick={() => setCommandPaletteOpen(true)}
             aria-label="Search tools and commands"
+            data-command-trigger
             className="!h-8 sm:!h-9 group text-xs"
           >
             <Search className="w-3.5 h-3.5 text-[var(--zd-primary)] transition-transform group-hover:scale-110" />

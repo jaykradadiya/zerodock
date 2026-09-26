@@ -5,6 +5,8 @@ import { motion, type Variants } from 'framer-motion';
 import { IconBox } from './IconBox';
 import { Badge } from './Badge';
 import { cn } from './cn';
+import { PrivacyBadge } from '../PrivacyBadge';
+import type { ToolProcessing } from '../../../types/tool';
 
 interface ToolCardProps {
   title: string;
@@ -19,6 +21,7 @@ interface ToolCardProps {
   className?: string;
   iconClassName?: string;
   variants?: Variants;
+  processing?: ToolProcessing;
 }
 
 export function ToolCard({
@@ -34,6 +37,7 @@ export function ToolCard({
   className = '',
   iconClassName,
   variants,
+  processing,
 }: ToolCardProps) {
   const isList = viewMode === 'list';
 
@@ -98,6 +102,7 @@ export function ToolCard({
         >
           <div className="flex items-center gap-1.5 flex-wrap">
             {category && <Badge variant="outline">{category}</Badge>}
+            {processing && <PrivacyBadge processing={processing} />}
             {tags?.map((tag) => (
               <span
                 key={tag}

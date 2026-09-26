@@ -44,6 +44,8 @@
   --zd-border-glow: rgba(108, 92, 231, 0.25);
   --zd-gradient-ring: linear-gradient(135deg, var(--zd-primary) 0%, var(--zd-accent) 100%);
   --zd-label-tracking: 0.12em;
+  --zd-success: #15803D;
+  --zd-error: #B42318;
 }
 
 /* ─── Dark Mode ─── */
@@ -70,6 +72,8 @@
   --zd-grid-opacity: 0.03;
   --zd-grain-opacity: 0.035;
   --zd-border-glow: rgba(139, 124, 247, 0.35);
+  --zd-success: #4ADE80;
+  --zd-error: #FCA5A5;
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -107,6 +111,15 @@
   ::selection {
     background-color: var(--zd-primary-soft);
     color: var(--zd-primary);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      scroll-behavior: auto !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
 

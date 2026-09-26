@@ -1,5 +1,5 @@
 import type { Tool, ToolTier } from '../../types/tool';
-import { FEATURED_TOOL_IDS } from '../../types/tool';
+import { FEATURED_TOOL_IDS, validateToolRegistry } from '../../types/tool';
 import {
   FileJson,
   Binary,
@@ -37,6 +37,9 @@ const rawToolRegistry: Tool[] = [
     metadata: {
       description: 'Format, validate, and explore JSON — convert YAML, generate types, and query with JMESPath in one workspace.',
       tags: ['json', 'format', 'yaml', 'types', 'jmespath', 'schema', 'convert'],
+      aliases: ['JSON formatter', 'JSON validator', 'format JSON'],
+      processing: { mode: 'MIXED', networkDetail: 'Fetching JSON from a URL sends that URL request over the network; local editing and transforms stay in your browser.' },
+      relatedToolIds: ['yaml-json-converter', 'json-type-converter', 'json-path', 'diff-checker'],
     },
   },
   {
@@ -49,6 +52,8 @@ const rawToolRegistry: Tool[] = [
     metadata: {
       description: 'Encode and decode Base64 strings and URL components entirely in your browser.',
       tags: ['base64', 'url', 'encode', 'decode', 'uri', 'percent encoding'],
+      processing: { mode: 'LOCAL' },
+      relatedToolIds: ['base64-codec', 'url-encoder'],
     },
   },
   {
@@ -61,6 +66,8 @@ const rawToolRegistry: Tool[] = [
     metadata: {
       description: 'Hash strings and decode JWTs — privacy-first crypto tools.',
       tags: ['hash', 'jwt', 'crypto', 'security', 'token'],
+      processing: { mode: 'LOCAL' },
+      relatedToolIds: ['hash-generator', 'jwt-decoder'],
     },
   },
   {
@@ -73,6 +80,9 @@ const rawToolRegistry: Tool[] = [
     metadata: {
       description: 'Compare two text files or code snippets side-by-side with real-time syntax highlighting and inline diff views.',
       tags: ['diff', 'compare', 'text', 'match', 'code', 'difference', 'checker'],
+      aliases: ['diff checker'],
+      processing: { mode: 'LOCAL' },
+      relatedToolIds: ['json-toolkit', 'encode-decode'],
     },
   },
   {
@@ -85,6 +95,9 @@ const rawToolRegistry: Tool[] = [
     metadata: {
       description: 'Convert Unix epoch timestamps to human-readable dates, local timezones, and UTC instantly.',
       tags: ['epoch', 'timestamp', 'date', 'time', 'unix', 'converter', 'timezone', 'utc'],
+      aliases: ['Unix timestamp converter'],
+      processing: { mode: 'LOCAL' },
+      relatedToolIds: ['json-toolkit'],
     },
   },
 
@@ -99,6 +112,9 @@ const rawToolRegistry: Tool[] = [
     metadata: {
       description: 'Convert between YAML and JSON formats.',
       tags: ['yaml', 'json', 'convert'],
+      aliases: ['YAML to JSON', 'JSON to YAML'],
+      processing: { mode: 'LOCAL' },
+      relatedToolIds: ['json-toolkit', 'json-type-converter', 'json-path'],
       hiddenFromBrowse: true,
     },
   },
@@ -112,6 +128,9 @@ const rawToolRegistry: Tool[] = [
     metadata: {
       description: 'Generate TypeScript, Go, and Rust types from JSON.',
       tags: ['json', 'types', 'typescript'],
+      aliases: ['JSON to TypeScript'],
+      processing: { mode: 'LOCAL' },
+      relatedToolIds: ['json-toolkit', 'yaml-json-converter'],
       hiddenFromBrowse: true,
     },
   },
@@ -125,6 +144,9 @@ const rawToolRegistry: Tool[] = [
     metadata: {
       description: 'Query JSON with JMESPath expressions.',
       tags: ['json', 'jmespath', 'query'],
+      aliases: ['JMESPath'],
+      processing: { mode: 'LOCAL' },
+      relatedToolIds: ['json-toolkit', 'yaml-json-converter'],
       hiddenFromBrowse: true,
     },
   },
@@ -138,6 +160,9 @@ const rawToolRegistry: Tool[] = [
     metadata: {
       description: 'Base64 encode and decode.',
       tags: ['base64'],
+      aliases: ['Base64 encoder', 'Base64 decoder'],
+      processing: { mode: 'LOCAL' },
+      relatedToolIds: ['encode-decode', 'url-encoder'],
       hiddenFromBrowse: true,
     },
   },
@@ -151,6 +176,9 @@ const rawToolRegistry: Tool[] = [
     metadata: {
       description: 'URL encode and decode.',
       tags: ['url'],
+      aliases: ['URL decoder'],
+      processing: { mode: 'LOCAL' },
+      relatedToolIds: ['encode-decode', 'base64-codec'],
       hiddenFromBrowse: true,
     },
   },
@@ -164,6 +192,9 @@ const rawToolRegistry: Tool[] = [
     metadata: {
       description: 'Generate cryptographic hashes.',
       tags: ['hash', 'sha'],
+      aliases: ['SHA generator'],
+      processing: { mode: 'LOCAL' },
+      relatedToolIds: ['security', 'jwt-decoder'],
       hiddenFromBrowse: true,
     },
   },
@@ -177,9 +208,14 @@ const rawToolRegistry: Tool[] = [
     metadata: {
       description: 'Decode JWT tokens offline.',
       tags: ['jwt', 'token'],
+      aliases: ['token decoder'],
+      processing: { mode: 'LOCAL' },
+      relatedToolIds: ['security', 'hash-generator'],
       hiddenFromBrowse: true,
     },
   },
 ];
 
 export const toolRegistry = rawToolRegistry.map(enrichTool);
+
+validateToolRegistry(toolRegistry);

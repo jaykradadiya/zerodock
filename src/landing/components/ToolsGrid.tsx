@@ -193,6 +193,7 @@ export function ToolsGrid() {
                   isFavorite={favoriteTools.includes(tool.id)}
                   onFavoriteToggle={handleFavoriteToggle(tool.id)}
                   iconClassName={CATEGORY_ICON_STYLES[tool.category]}
+                  processing={tool.metadata.processing}
                 />
               </motion.div>
             );

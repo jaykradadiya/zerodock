@@ -1,16 +1,18 @@
 import { motion } from 'framer-motion';
-import { ArrowRight, Sparkles, FileJson } from 'lucide-react';
+import { ArrowRight, Search, Sparkles, FileJson } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { toolRegistry } from '../../core/registry/tools';
 import { getLandingTools } from '../../types/tool';
 import { Button } from '../../shared/components/ui';
+import { useUIStore } from '../../core/store/useUIStore';
 
 export function HeroSection() {
   const navigate = useNavigate();
+  const setCommandPaletteOpen = useUIStore((state) => state.setCommandPaletteOpen);
   const toolCount = getLandingTools(toolRegistry).length;
 
   return (
-    <section className="relative overflow-hidden flex flex-col items-center justify-center text-center px-4 sm:px-8 md:px-12 pt-16 sm:pt-24 2xl:pt-32 pb-20 sm:pb-28 min-h-[calc(100vh-4rem)]">
+    <section className="relative overflow-hidden flex flex-col items-center justify-center text-center px-4 sm:px-8 md:px-12 pt-16 sm:pt-24 2xl:pt-32 pb-20 sm:pb-28 min-h-[100svh]">
       {/* Structural grid — not blurry orbs */}
       <div className="absolute inset-0 zd-hero-grid" aria-hidden="true" />
 
@@ -50,14 +52,14 @@ export function HeroSection() {
           transition={{ duration: 0.55, delay: 0.1 }}
           className="text-[2.5rem] sm:text-[3.5rem] lg:text-7xl 2xl:text-8xl font-black tracking-[-0.04em] text-[var(--zd-text-primary)] leading-[1.04] mb-7 2xl:mb-9"
         >
-          Developer tools that{' '}
+          Private developer tools that{' '}
           <span className="relative inline-block whitespace-nowrap">
             <span className="relative z-10">never leave</span>
             <motion.span
               initial={{ scaleX: 0 }}
               animate={{ scaleX: 1 }}
               transition={{ duration: 0.7, delay: 0.75, ease: [0.22, 1, 0.36, 1] }}
-              className="absolute bottom-[0.06em] left-0 right-0 h-[0.07em] bg-gradient-to-r from-[var(--zd-primary)] to-[var(--zd-accent)] origin-left rounded-full"
+              className="absolute bottom-[0.06em] left-0 right-0 h-[0.07em] bg-[var(--zd-primary)] origin-left rounded-full"
               aria-hidden="true"
             />
           </span>
@@ -72,29 +74,21 @@ export function HeroSection() {
           transition={{ duration: 0.5, delay: 0.2 }}
           className="text-base sm:text-lg 2xl:text-xl text-[var(--zd-text-secondary)] max-w-xl 2xl:max-w-2xl leading-relaxed mb-12 2xl:mb-14 font-normal"
         >
-          Format JSON, test APIs, hash strings, diff code, decode JWTs — a full
-          engineering toolkit that runs in your browser. No servers. No accounts.
+          Format JSON, hash strings, compare code, and decode tokens in your browser.
+          No account friction; network activity is identified when a tool needs it.
         </motion.p>
 
-        {/* CTAs — clean, no search bar competing for attention */}
+        {/* Search is the fastest path into the toolkit. */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.3 }}
           className="flex flex-wrap items-center justify-center gap-4"
         >
-          <Button
-            variant="primary"
-            size="lg"
-            onClick={() => {
-              const el = document.getElementById('tools');
-              if (el) el.scrollIntoView({ behavior: 'smooth' });
-            }}
-            className="!px-7 !py-3 !text-[15px] !font-bold shadow-[var(--zd-shadow-md)] hover:shadow-[var(--zd-shadow-glow)]"
-          >
-            <Sparkles className="w-4 h-4" />
-            Explore Tools
-            <ArrowRight className="w-4 h-4 ml-0.5" />
+          <Button variant="primary" size="lg" onClick={() => setCommandPaletteOpen(true)} className="!px-7 !py-3 !text-[15px] !font-bold shadow-[var(--zd-shadow-md)]">
+            <Search className="w-4 h-4" />
+            Search tools
+            <kbd className="rounded border border-white/25 bg-white/10 px-1.5 py-0.5 font-mono text-[10px]">⌘K</kbd>
           </Button>
 
           <Button
@@ -105,6 +99,12 @@ export function HeroSection() {
           >
             <FileJson className="w-4 h-4 text-[var(--zd-primary)]" />
             JSON Toolkit
+          </Button>
+
+          <Button variant="ghost" size="lg" onClick={() => document.getElementById('tools')?.scrollIntoView({ behavior: 'smooth' })} className="!px-5 !py-3 !text-sm">
+            <Sparkles className="w-4 h-4" />
+            Browse tools
+            <ArrowRight className="w-4 h-4" />
           </Button>
 
           <Button

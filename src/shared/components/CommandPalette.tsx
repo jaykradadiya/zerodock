@@ -5,7 +5,7 @@ import { Search, Terminal, Sun, Moon, Volume2, VolumeX, CornerDownLeft, Sparkles
 import { toolRegistry } from '../../core/registry/tools';
 import { usePreferenceStore } from '../../core/store/usePreferenceStore';
 import { useUIStore } from '../../core/store/useUIStore';
-import { fuzzyFilter } from '../utils/fuzzySearch';
+import { searchTools } from '../utils/toolSearch';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 
 const GithubIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -24,16 +24,20 @@ export function CommandPalette() {
   const navigate = useNavigate();
   const paletteRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
 
   useFocusTrap(commandPaletteOpen, paletteRef);
 
   // Reset search when opening
   useEffect(() => {
     if (commandPaletteOpen) {
+      returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       setSearch('');
       setSelectedIndex(0);
       setActiveCategory('All');
       setTimeout(() => inputRef.current?.focus(), 0);
+    } else if (returnFocusRef.current) {
+      setTimeout(() => returnFocusRef.current?.focus(), 0);
     }
   }, [commandPaletteOpen]);
 
@@ -159,7 +163,10 @@ export function CommandPalette() {
     }
   }));
 
-  const allItems = [...contextItems, ...favoriteItems, ...recentItems, ...toolItems, ...actionItems];
+  const rankedToolItems = search.trim()
+    ? searchTools(toolRegistry, search).map((tool) => toolItems.find((item) => item.id === tool.id)!).filter(Boolean)
+    : toolItems;
+  const allItems = [...contextItems, ...favoriteItems, ...recentItems, ...rankedToolItems, ...actionItems];
 
 
   // Derive active items first
@@ -178,7 +185,9 @@ export function CommandPalette() {
   ];
 
   const filteredItems = search.trim()
-    ? fuzzyFilter(activeItems, search, (item) => `${item.name} ${item.description ?? ''}`)
+    ? activeCategory === 'All' || activeCategory === 'Tools'
+      ? rankedToolItems
+      : activeItems.filter((item) => item.category !== 'Tools')
     : activeCategory === 'All'
       ? defaultVisibleItems
       : activeItems;
@@ -273,6 +282,7 @@ export function CommandPalette() {
 
         {/* Results List */}
         <div className="flex-1 overflow-y-auto p-2 custom-scrollbar">
+          <p className="sr-only" aria-live="polite">{filteredItems.length} results available.</p>
           {filteredItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center text-[var(--zd-text-muted)]">
               <Sparkles className="w-8 h-8 mb-3 text-[var(--zd-text-muted)] animate-pulse" />

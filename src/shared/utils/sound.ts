@@ -1,8 +1,13 @@
 export type SoundType = 'pop' | 'tick' | 'swoosh';
 
-const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+type LegacyAudioWindow = Window & { webkitAudioContext?: typeof AudioContext };
+const AudioContextConstructor = typeof window === 'undefined'
+  ? undefined
+  : window.AudioContext || (window as LegacyAudioWindow).webkitAudioContext;
+const audioCtx = AudioContextConstructor ? new AudioContextConstructor() : null;
 
 export function playSound(type: SoundType) {
+  if (!audioCtx) return;
   if (audioCtx.state === 'suspended') {
     audioCtx.resume();
   }

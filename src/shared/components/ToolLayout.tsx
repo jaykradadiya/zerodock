@@ -7,6 +7,7 @@ import { useToolRoute } from '../context/ToolRouteContext';
 import { cn, Button, IconBox } from './ui';
 import { ToolStandardActions } from './ToolStandardActions';
 import { MobileSwapBar } from './MobileSwapBar';
+import { PrivacyBadge } from './PrivacyBadge';
 
 interface ToolPageProps {
   children: React.ReactNode;
@@ -102,6 +103,7 @@ export function ToolHeader({
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-xl sm:text-2xl font-bold text-[var(--zd-text-primary)] tracking-tight">{title}</h1>
+              {tool && <PrivacyBadge processing={tool.metadata.processing} />}
               {badges}
             </div>
             {description && (
@@ -296,3 +298,4 @@ export function EmptyState({ icon, title, description, action }: EmptyStateProps
 }
 
 export { MobileSwapBar } from './MobileSwapBar';
+export { PrivacyBadge } from './PrivacyBadge';

@@ -6,10 +6,12 @@ import {
   ModeToggleGroup, ModeToggle, SplitPanels, SwapButton, ToolEmbedFrame,
 } from '../../../shared/components/ToolLayout';
 import { useToolEmbed } from '../../../shared/context/ToolEmbedContext';
-import { usePipelineStore } from '../../../core/store/usePipelineStore';
+import { usePipelineStore, type PipelinePayload } from '../../../core/store/usePipelineStore';
+import { useToastStore } from '../../../core/store/useToastStore';
 import { useConverterShortcuts } from '../../../shared/hooks/useConverterShortcuts';
 import { createToolStore } from '../../../core/store/useToolState';
 import { useSyncToolUrl } from '../../../shared/hooks/useSyncToolUrl';
+import { PipelineCollisionBanner } from '../../../shared/components/PipelineCollisionBanner';
 
 const useBase64Store = createToolStore('base64-codec', {
   input: '',
@@ -25,12 +27,22 @@ export default function Base64Codec() {
   
   const [output, setOutput] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [incomingPipeline, setIncomingPipeline] = useState<PipelinePayload | null>(null);
 
+  // Non-destructive pipeline consumer
   useEffect(() => {
-    const pipedData = usePipelineStore.getState().consumePipelineData();
-    if (pipedData) {
+    const payload = usePipelineStore.getState().consumePipelinePayload();
+    if (!payload?.data) return;
+
+    if (!input.trim()) {
+      // Input buffer is currently empty: apply immediately
       setMode('encode');
-      setInput(pipedData);
+      setInput(payload.data);
+      const sourceName = payload.sourceToolName || 'pipeline';
+      useToastStore.getState().addToast(`Loaded data from ${sourceName}`, 'info');
+    } else {
+      // Input buffer has existing unsaved text: preserve it and prompt with collision banner
+      setIncomingPipeline(payload);
     }
   }, []);
 
@@ -108,26 +120,41 @@ export default function Base64Codec() {
   );
 
   const panels = (
-    <SplitPanels>
-      <CodePanel
-        title={mode === 'encode' ? 'Plain Text' : 'Base64 String'}
-        useTextarea
-        value={input}
-        onChange={setInput}
-        placeholder={mode === 'encode' ? 'Enter text to encode...' : 'Enter Base64 to decode...'}
-        onClear={() => setInput('')}
-        borderRight
+    <div className="flex flex-col flex-1 min-h-0 w-full">
+      <PipelineCollisionBanner
+        incomingData={incomingPipeline?.data ?? null}
+        sourceToolName={incomingPipeline?.sourceToolName}
+        onApply={() => {
+          if (incomingPipeline) {
+            setInput(incomingPipeline.data);
+            setMode('encode');
+            setIncomingPipeline(null);
+          }
+        }}
+        onDismiss={() => setIncomingPipeline(null)}
+        applyLabel="Replace Current Input"
       />
-      <CodePanel
-        title={mode === 'encode' ? 'Base64 String' : 'Plain Text'}
-        useTextarea
-        value={output}
-        readOnly
-        placeholder="Result will appear here..."
-        error={error}
-      />
-      <SwapButton onClick={handleSwap} />
-    </SplitPanels>
+      <SplitPanels>
+        <CodePanel
+          title={mode === 'encode' ? 'Plain Text' : 'Base64 String'}
+          useTextarea
+          value={input}
+          onChange={setInput}
+          placeholder={mode === 'encode' ? 'Enter text to encode...' : 'Enter Base64 to decode...'}
+          onClear={() => setInput('')}
+          borderRight
+        />
+        <CodePanel
+          title={mode === 'encode' ? 'Base64 String' : 'Plain Text'}
+          useTextarea
+          value={output}
+          readOnly
+          placeholder="Result will appear here..."
+          error={error}
+        />
+        <SwapButton onClick={handleSwap} />
+      </SplitPanels>
+    </div>
   );
 
   if (embedded) {

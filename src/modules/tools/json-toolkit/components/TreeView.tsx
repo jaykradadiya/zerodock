@@ -1,12 +1,15 @@
 import { useState, useMemo } from 'react';
+import { Columns2, Maximize2 } from 'lucide-react';
 import { TreeNode } from './TreeNode';
 
 interface TreeViewProps {
   jsonString: string;
   tabId?: string;
+  panelLayout?: 'full' | 'split';
+  onToggleLayout?: () => void;
 }
 
-export function TreeView({ jsonString, tabId }: TreeViewProps) {
+export function TreeView({ jsonString, tabId, panelLayout = 'full', onToggleLayout }: TreeViewProps) {
   const [expandAllKey, setExpandAllKey] = useState(0); // changing this forces re-mount of tree with new initial state
 
   const { parsedData, error } = useMemo(() => {
@@ -48,6 +51,30 @@ export function TreeView({ jsonString, tabId }: TreeViewProps) {
           >
             Reset view
           </button>
+          {onToggleLayout && (
+            <button
+              type="button"
+              onClick={onToggleLayout}
+              title={
+                panelLayout === 'full'
+                  ? 'Switch to Split View (show Editor alongside)'
+                  : 'Switch to Full Mode (hide Editor)'
+              }
+              className="flex items-center gap-1 text-xs font-medium text-[var(--zd-text-secondary)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)] bg-[var(--zd-surface)] border border-[var(--zd-border)] px-2.5 py-1 rounded shadow-sm transition-colors"
+            >
+              {panelLayout === 'full' ? (
+                <>
+                  <Columns2 className="w-3.5 h-3.5 text-[var(--zd-primary)]" />
+                  <span>Split View</span>
+                </>
+              ) : (
+                <>
+                  <Maximize2 className="w-3.5 h-3.5 text-[var(--zd-primary)]" />
+                  <span>Full View</span>
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
 

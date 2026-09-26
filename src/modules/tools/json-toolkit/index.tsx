@@ -15,11 +15,11 @@ import { ErrorBoundary } from '../../../shared/components/ErrorBoundary';
 import type { ValidationError } from './validate.worker';
 import { useWorkspaceStore } from './store/workspaceStore';
 import { usePipelineStore } from '../../../core/store/usePipelineStore';
+import { useToastStore } from '../../../core/store/useToastStore';
 import { updateURLWithState, getStateFromURL } from '../../../shared/utils/state-share';
 import { exportToFile } from '../../../shared/utils/export';
-import { YamlPanel } from './panels/YamlPanel';
-import { TypesPanel } from './panels/TypesPanel';
 import { PathPanel } from './panels/PathPanel';
+import { jsonToSchema } from './lib/jsonToTypes';
 import { JsonTabBar } from './components/JsonTabBar';
 import { JsonToolbar } from './components/JsonToolbar';
 import { JsonStatusBar } from './components/JsonStatusBar';
@@ -32,6 +32,7 @@ export default function JsonFormatter() {
   const workspace = useWorkspaceStore();
   const { tabs, activeTabId, addTab, removeTab, setActiveTab, getFileContent, updateTabContent, renameTab, isLoading } = workspace;
   const [sidePanel, setSidePanel] = useToolkitPanel('hidden');
+  const [panelLayout, setPanelLayout] = useState<'full' | 'split'>('full');
   const [mobileFocus, setMobileFocus] = useState<'input' | 'output'>('input');
 
   const [error, setError] = useState<WorkerError | null>(null);
@@ -97,21 +98,39 @@ export default function JsonFormatter() {
     activeTabIdRef.current = activeTabId;
   }, [activeTabId]);
 
-  // Apply pipelined JSON from other tools and open types panel
+  // Apply pipelined JSON from other tools non-destructively
   useEffect(() => {
-    const pipedData = usePipelineStore.getState().consumePipelineData();
-    if (pipedData && activeTabId) {
-      const applyPiped = async () => {
+    const payload = usePipelineStore.getState().consumePipelinePayload();
+    if (!payload?.data) return;
+
+    const applyPiped = async () => {
+      const pipedData = payload.data;
+      const currentContent = activeTabId ? await getFileContent(activeTabId) : '';
+      const isCurrentEmpty = !currentContent || currentContent.trim() === '';
+
+      let targetTabId = activeTabId;
+
+      if (isCurrentEmpty && activeTabId) {
+        // Active tab is empty: safe to populate directly
         await updateTabContent(activeTabId, pipedData);
-        setActiveTabContent(pipedData);
-        if (editorRef.current?.setValue) {
-          editorRef.current.setValue(pipedData);
-        }
-        await handleSidePanelChange('types');
-      };
-      applyPiped();
-    }
-  }, [activeTabId, updateTabContent]);
+        renameTab(activeTabId, 'piped.json');
+      } else {
+        // Active tab has unsaved content: create a new tab to avoid data loss
+        targetTabId = await addTab('piped.json', pipedData);
+        setActiveTab(targetTabId);
+      }
+
+      setActiveTabContent(pipedData);
+      if (editorRef.current?.setValue) {
+        editorRef.current.setValue(pipedData);
+      }
+
+      const sourceName = payload.sourceToolName || 'pipeline';
+      useToastStore.getState().addToast(`Loaded data from ${sourceName} into "piped.json"`, 'info');
+    };
+
+    applyPiped();
+  }, [activeTabId, addTab, getFileContent, renameTab, setActiveTab, updateTabContent]);
 
   const handleSidePanelChange = async (panel: SidePanel) => {
     try {
@@ -325,6 +344,48 @@ export default function JsonFormatter() {
     }
   }, [schema, showSchema, activeTabId, activeTabContent, getFileContent]);
 
+  const handleInferSchema = useCallback(async () => {
+    try {
+      const content =
+        editorRef.current && typeof editorRef.current.getValue === 'function'
+          ? editorRef.current.getValue()
+          : activeTabId
+            ? await getFileContent(activeTabId)
+            : activeTabContent;
+      if (!content || !content.trim()) {
+        useToastStore.getState().addToast('No JSON document to infer schema from', 'info');
+        return;
+      }
+      const parsed = JSON.parse(content);
+      const generated = jsonToSchema(parsed);
+      setSchema(generated);
+      useToastStore.getState().addToast('Schema generated from current JSON', 'success');
+    } catch {
+      useToastStore.getState().addToast('Invalid JSON: unable to infer schema', 'error');
+    }
+  }, [activeTabId, activeTabContent, getFileContent]);
+
+  const handleToggleSchema = useCallback(async (open: boolean) => {
+    if (open && !schema.trim()) {
+      try {
+        const content =
+          editorRef.current && typeof editorRef.current.getValue === 'function'
+            ? editorRef.current.getValue()
+            : activeTabId
+              ? await getFileContent(activeTabId)
+              : activeTabContent;
+        if (content && content.trim()) {
+          const parsed = JSON.parse(content);
+          const generated = jsonToSchema(parsed);
+          setSchema(generated);
+        }
+      } catch {
+        // ignore
+      }
+    }
+    setShowSchema(open);
+  }, [schema, activeTabId, activeTabContent, getFileContent]);
+
   const processJson = useCallback(async (
     action: 'format' | 'minify',
     overrides?: { indent?: number | 'tab'; sortKeys?: boolean; smartFormat?: boolean }
@@ -463,35 +524,6 @@ export default function JsonFormatter() {
     exportToFile(exportData, filename, mimeType);
   };
 
-  const handleFetchUrl = async () => {
-    const url = prompt('Enter a URL to fetch JSON from:');
-    if (!url) return;
-    try {
-      setIsProcessing(true);
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`HTTP error ${res.status}`);
-      const text = await res.text();
-      const tabName = url.split('/').pop() || 'fetched.json';
-      await addTab(tabName, text);
-      setError(null);
-    } catch (err: any) {
-      setError({ message: `Failed to fetch: ${err.message}` });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const applyJsonToEditor = async (json: string) => {
-    if (!activeTabId) {
-      await addTab('converted.json', json);
-      return;
-    }
-    if (editorRef.current?.setValue) {
-      editorRef.current.setValue(json);
-    }
-    await updateTabContent(activeTabId, json);
-    setActiveTabContent(json);
-  };
 
   const embedded = useToolEmbed();
   const sidePanelOpen = sidePanel !== 'hidden' && viewMode === 'editor';
@@ -565,12 +597,14 @@ export default function JsonFormatter() {
         setViewMode={setViewMode}
         sidePanel={sidePanel}
         onSidePanelChange={handleSidePanelChange}
+        panelLayout={panelLayout}
+        onTogglePanelLayout={() => setPanelLayout(panelLayout === 'full' ? 'split' : 'full')}
         isProcessing={isProcessing}
         activeTabId={activeTabId}
         onProcessJson={processJson}
         onRepairJson={repairJson}
         showSchema={showSchema}
-        setShowSchema={setShowSchema}
+        setShowSchema={handleToggleSchema}
         indent={indent}
         sortKeys={sortKeys}
         smartFormat={smartFormat}
@@ -583,7 +617,6 @@ export default function JsonFormatter() {
         setOrigDiffId={setOrigDiffId}
         setModDiffId={setModDiffId}
         onOpenFileClick={() => fileInputRef.current?.click()}
-        onFetchUrl={handleFetchUrl}
         onDownload={handleDownload}
         isFullscreen={isFullscreen}
         setIsFullscreen={setIsFullscreen}
@@ -608,6 +641,7 @@ export default function JsonFormatter() {
               errors={validationErrors}
               isValidating={isValidating}
               onClose={() => setShowSchema(false)}
+              onInferSchema={handleInferSchema}
             />
           )}
 
@@ -623,51 +657,55 @@ export default function JsonFormatter() {
             </ErrorBoundary>
           ) : (
             <>
-              {/* Main Editor Pane */}
-              <div
-                className={cn(
-                  'flex-1 flex flex-col min-h-0 min-w-0',
-                  sidePanelOpen && mobileFocus === 'output' && 'hidden md:flex'
-                )}
-              >
-                {activeTabId ? (
-                  <CodeEditor
-                    modelId={activeTabId}
-                    language="json"
-                    editorRef={editorRef}
-                    onChange={handleEditorChange}
-                  />
-                ) : (
-                  <div className="flex-1 flex items-center justify-center text-[var(--zd-text-muted)] bg-[var(--zd-surface)] min-w-0">
-                    No open tabs. Drag and drop JSON files here or click +
-                  </div>
-                )}
-              </div>
+              {/* Main Editor Pane: hidden in Full Mode when Tree or Table is active */}
+              {(!sidePanelOpen || (panelLayout === 'split' || sidePanel === 'path')) && (
+                <div
+                  className={cn(
+                    'flex-1 flex flex-col min-h-0 min-w-0',
+                    sidePanelOpen && panelLayout === 'split' && 'md:w-1/2',
+                    sidePanelOpen && mobileFocus === 'output' && 'hidden md:flex'
+                  )}
+                >
+                  {activeTabId ? (
+                    <CodeEditor
+                      modelId={activeTabId}
+                      language="json"
+                      editorRef={editorRef}
+                      onChange={handleEditorChange}
+                    />
+                  ) : (
+                    <div className="flex-1 flex items-center justify-center text-[var(--zd-text-muted)] bg-[var(--zd-surface)] min-w-0">
+                      No open tabs. Drag and drop JSON files here or click +
+                    </div>
+                  )}
+                </div>
+              )}
 
-              {/* Right Side Panel */}
+              {/* Right Side Panel / Full Panel (Tree, Table, Path) */}
               {sidePanelOpen && (
                 <div
                   className={cn(
-                    'w-full md:w-1/2 flex flex-col min-h-0 border-t md:border-t-0 md:border-l border-[var(--zd-border)] bg-[var(--zd-surface)]',
+                    'flex flex-col min-h-0 bg-[var(--zd-surface)]',
+                    panelLayout === 'full' && (sidePanel === 'table' || sidePanel === 'tree')
+                      ? 'flex-1 w-full'
+                      : 'w-full md:w-1/2 border-t md:border-t-0 md:border-l border-[var(--zd-border)]',
                     mobileFocus === 'input' && 'hidden md:flex'
                   )}
                 >
                   <ErrorBoundary>
                     {sidePanel === 'tree' && (
-                      <TreeView jsonString={activeTabContent} tabId={activeTabId || undefined} />
-                    )}
-                    {sidePanel === 'table' && <TableView jsonString={activeTabContent} />}
-                    {sidePanel === 'yaml' && (
-                      <YamlPanel
-                        sourceJson={activeTabContent}
-                        onApplyJson={applyJsonToEditor}
-                        onClose={() => handleSidePanelChange('hidden')}
+                      <TreeView
+                        jsonString={activeTabContent}
+                        tabId={activeTabId || undefined}
+                        panelLayout={panelLayout}
+                        onToggleLayout={() => setPanelLayout(panelLayout === 'full' ? 'split' : 'full')}
                       />
                     )}
-                    {sidePanel === 'types' && (
-                      <TypesPanel
-                        sourceJson={activeTabContent}
-                        onClose={() => handleSidePanelChange('hidden')}
+                    {sidePanel === 'table' && (
+                      <TableView
+                        jsonString={activeTabContent}
+                        panelLayout={panelLayout}
+                        onToggleLayout={() => setPanelLayout(panelLayout === 'full' ? 'split' : 'full')}
                       />
                     )}
                     {sidePanel === 'path' && (

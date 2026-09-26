@@ -69,18 +69,37 @@ shadow-[var(--zd-shadow-md)]
 
 ---
 
-## 🏗️ 4 Pillars for Building New Tools
+## 🏗️ 4 Pillars & Non-Destructive Pipeline Strategy
 
-Every new tool created for ZeroDock must adhere to these 4 pillars:
+Every new tool created for ZeroDock must adhere to these 4 architectural pillars:
 
 1. **State Persistence (`createToolStore`)**:
-   - Store inputs and tool configurations using `createToolStore` in IndexedDB so work survives tab reloads.
-2. **URL Link Sharing (`updateURLWithState`)**:
-   - Sync interactive input parameters to the URL query string so configurations can be shared instantly.
+   - Store configurations using `createToolStore` with IndexedDB/sessionStorage. Sensitive security tools (`jwt-decoder`, `hash-generator`) explicitly run in **Ephemeral Mode** to prevent persistent storage of secrets.
+2. **URL Link Sharing (`useSyncToolUrl`)**:
+   - Sync interactive input parameters to the URL query string so configurations can be shared instantly. Never sync auth tokens or crypto secrets.
 3. **Export & Download (`exportToFile`)**:
    - Provide clean export/download functionality for generated text, code, or data payloads.
-4. **Pipeline Interoperability (`usePipelineStore`)**:
-   - Enable outputs to be passed seamlessly between tools (e.g., API Tester output passed to JSON Toolkit).
+4. **Non-Destructive Inter-Tool Pipeline (`usePipelineStore`)**:
+   - Inter-tool data transfer must **never overwrite existing user work**:
+     * **Multi-Tab Workspaces (JSON Toolkit)**: If the active tab has unsaved content, incoming piped data automatically creates a new tab (`piped.json`) without mutating the existing tab.
+     * **Single-Buffer Tools (Base64 Codec, URL Encoder)**: If the input already contains text, displays a [`PipelineCollisionBanner`](file:///Users/jayradadiya/company/personal/ZeroDock/src/shared/components/PipelineCollisionBanner.tsx) prompting the user to *"Replace Current Input"* or *"Dismiss"*.
+     * **Dual-Pane Tools (Diff Checker)**: Automatically fills empty sides (Left vs Right), or prompts which buffer to compare against.
+
+---
+
+## 🔒 Privacy, Security & Storage Disclosure
+
+ZeroDock makes privacy provable, not just a marketing claim:
+
+1. **100% In-Browser Execution**: All transformations, hashing, formatting, and diffing execute strictly in the client runtime or local background Web Workers.
+2. **Offline Monaco Editor**: The Monaco code editor is bundled directly into client chunks with local workers. It never downloads assets from external CDNs (`cdn.jsdelivr.net`).
+3. **Strict Content Security Policy (CSP)**: Enforced via `_headers` and `<meta>` tags:
+   * Restricts `connect-src` strictly to same-origin and verified endpoints (`api.github.com` for stars, `cloudflareinsights.com` for analytics).
+   * Blocks arbitrary outgoing network requests.
+4. **Automated CI Network Audit**: `npm run audit:network` verifies on every build that zero unauthorized remote endpoints or tracking beacons exist in the distribution bundle.
+5. **Storage & Ephemeral Mode**:
+   * **Security Tools (`jwt-decoder`, `hash-generator`)**: Operate in **Ephemeral Mode**. Sensitive JWT credentials and HMAC secret keys are kept strictly in memory and are **never** persisted to disk (IndexedDB/Storage) or serialized into URL search strings.
+   * **Productivity Tools (`json-toolkit`, `diff-checker`, `epoch-converter`)**: Persist non-sensitive workspaces to local browser storage (`idb-keyval` / `sessionStorage`) so edits survive browser restarts.
 
 ---
 

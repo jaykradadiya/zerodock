@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "npm run build && wrangler dev",
-    "deploy": "npm run build && wrangler deploy"
+    "deploy": "npm run build && wrangler deploy",
+    "audit:network": "node scripts/audit-network.mjs"
   },
   "dependencies": {
     "@faker-js/faker": "^9.3.0",
@@ -25,6 +26,7 @@
     "lossless-json": "^4.0.1",
     "lucide-react": "^1.17.0",
     "lz-string": "^1.5.0",
+    "monaco-editor": "^0.55.1",
     "pdf-lib": "^1.17.1",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
@@ -53,7 +55,6 @@
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
     "jsdom": "^29.1.1",
-    "monaco-editor": "^0.55.1",
     "postcss": "^8.5.15",
     "tailwindcss": "^4.3.0",
     "typescript": "~6.0.2",

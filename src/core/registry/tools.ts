@@ -8,7 +8,7 @@ import {
   Shield,
 } from 'lucide-react';
 
-const NO_SHARE_IDS = new Set<string>();
+const NO_SHARE_IDS = new Set<string>(['jwt-decoder', 'security']);
 
 function enrichTool(tool: Tool): Tool {
   const tier: ToolTier = (FEATURED_TOOL_IDS as readonly string[]).includes(tool.id)
@@ -35,11 +35,11 @@ const rawToolRegistry: Tool[] = [
     component: () => import('../../modules/hubs/json-hub'),
     worker: () => new Worker(new URL('../../modules/tools/json-toolkit/json.worker.ts', import.meta.url), { type: 'module' }),
     metadata: {
-      description: 'Format, validate, and explore JSON — convert YAML, generate types, and query with JMESPath in one workspace.',
-      tags: ['json', 'format', 'yaml', 'types', 'jmespath', 'schema', 'convert'],
+      description: 'Format, validate, and explore JSON — tree, table, and JMESPath query tools in one workspace.',
+      tags: ['json', 'format', 'tree', 'table', 'jmespath', 'schema', 'validate'],
       aliases: ['JSON formatter', 'JSON validator', 'format JSON'],
-      processing: { mode: 'MIXED', networkDetail: 'Fetching JSON from a URL sends that URL request over the network; local editing and transforms stay in your browser.' },
-      relatedToolIds: ['yaml-json-converter', 'json-type-converter', 'json-path', 'diff-checker'],
+      processing: { mode: 'LOCAL' },
+      relatedToolIds: ['json-path', 'diff-checker'],
     },
   },
   {
@@ -101,39 +101,7 @@ const rawToolRegistry: Tool[] = [
     },
   },
 
-  // ── Hub children (deep links only, hidden from landing) ──
-  {
-    id: 'yaml-json-converter',
-    name: 'YAML ↔ JSON',
-    category: 'Data',
-    route: '/yaml-json-converter',
-    icon: FileJson,
-    component: () => import('../../modules/hubs/json-hub').then((m) => ({ default: m.JsonHubYaml })),
-    metadata: {
-      description: 'Convert between YAML and JSON formats.',
-      tags: ['yaml', 'json', 'convert'],
-      aliases: ['YAML to JSON', 'JSON to YAML'],
-      processing: { mode: 'LOCAL' },
-      relatedToolIds: ['json-toolkit', 'json-type-converter', 'json-path'],
-      hiddenFromBrowse: true,
-    },
-  },
-  {
-    id: 'json-type-converter',
-    name: 'JSON to Types',
-    category: 'Data',
-    route: '/json-type-converter',
-    icon: FileJson,
-    component: () => import('../../modules/hubs/json-hub').then((m) => ({ default: m.JsonHubTypes })),
-    metadata: {
-      description: 'Generate TypeScript, Go, and Rust types from JSON.',
-      tags: ['json', 'types', 'typescript'],
-      aliases: ['JSON to TypeScript'],
-      processing: { mode: 'LOCAL' },
-      relatedToolIds: ['json-toolkit', 'yaml-json-converter'],
-      hiddenFromBrowse: true,
-    },
-  },
+
   {
     id: 'json-path',
     name: 'JSON Path',
@@ -146,7 +114,7 @@ const rawToolRegistry: Tool[] = [
       tags: ['json', 'jmespath', 'query'],
       aliases: ['JMESPath'],
       processing: { mode: 'LOCAL' },
-      relatedToolIds: ['json-toolkit', 'yaml-json-converter'],
+      relatedToolIds: ['json-toolkit', 'diff-checker'],
       hiddenFromBrowse: true,
     },
   },

@@ -11,6 +11,9 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+      workbox: {
+        maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
+      },
       manifest: {
         name: 'ZeroDock',
         short_name: 'ZeroDock',
@@ -41,14 +44,8 @@ export default defineConfig({
           if (id.includes('node_modules/@tanstack/react-router/')) {
             return 'router-vendor';
           }
-          if (id.includes('node_modules/@monaco-editor/react/')) {
+          if (id.includes('node_modules/@monaco-editor/react/') || id.includes('node_modules/monaco-editor/')) {
             return 'monaco-vendor';
-          }
-          if (id.includes('node_modules/gpt-tokenizer')) {
-            return 'gpt-tokenizer';
-          }
-          if (id.includes('node_modules/@faker-js/faker')) {
-            return 'faker-vendor';
           }
         }
       }

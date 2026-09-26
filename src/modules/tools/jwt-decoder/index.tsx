@@ -6,10 +6,11 @@ import { useToolEmbed } from '../../../shared/context/ToolEmbedContext';
 import { Badge } from '../../../shared/components/ui';
 import { createToolStore } from '../../../core/store/useToolState';
 import { useConverterShortcuts } from '../../../shared/hooks/useConverterShortcuts';
-import { useSyncToolUrl } from '../../../shared/hooks/useSyncToolUrl';
 
 const useJwtStore = createToolStore('jwt-decoder', {
   token: '',
+}, {
+  storageType: 'memory',
 });
 
 const JWT_COLORS = {
@@ -46,7 +47,7 @@ export default function JWTDecoder() {
   const setToken = (val: string) => setValues({ token: val });
   const [hoveredSection, setHoveredSection] = useState<Section>(null);
 
-  useSyncToolUrl(() => useJwtStore.getState(), setValues, [token]);
+  // Note: JWT tokens are strictly in-memory only and never synced to the URL or storage
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -268,6 +269,12 @@ export default function JWTDecoder() {
         icon={KeyRound}
         title="JWT Decoder"
         description="Decode JSON Web Tokens instantly"
+        badges={
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            <ShieldCheck className="w-3.5 h-3.5" />
+            Ephemeral (Memory-Only)
+          </span>
+        }
       />
       <ToolWorkspace>{panels}</ToolWorkspace>
     </ToolPage>

@@ -39,6 +39,4 @@ function JsonHub() {
 }
 
 export default JsonHub;
-export const JsonHubYaml = () => <JsonToolkitRedirect panel="yaml" />;
-export const JsonHubTypes = () => <JsonToolkitRedirect panel="types" />;
 export const JsonHubPath = () => <JsonToolkitRedirect panel="path" />;

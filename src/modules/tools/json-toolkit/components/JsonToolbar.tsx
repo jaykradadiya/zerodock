@@ -7,18 +7,17 @@ import {
   LayoutTemplate,
   TableProperties,
   Filter,
-  FileCode,
-  Code2,
   ShieldCheck,
   Settings2,
   Upload,
-  Link as LinkIcon,
   Download,
   GitCompare,
   FileJson,
   Maximize,
   Minimize,
   ChevronDown,
+  Columns2,
+  Maximize2,
 } from 'lucide-react';
 import type { SidePanel } from '../../../../shared/hooks/useToolkitPanel';
 import { cn } from '../../../../shared/components/ui';
@@ -28,6 +27,8 @@ interface JsonToolbarProps {
   setViewMode: (mode: 'editor' | 'compare') => void;
   sidePanel: SidePanel;
   onSidePanelChange: (panel: SidePanel) => Promise<void>;
+  panelLayout?: 'full' | 'split';
+  onTogglePanelLayout?: () => void;
   isProcessing: boolean;
   activeTabId: string | null;
   onProcessJson: (action: 'format' | 'minify') => void;
@@ -49,7 +50,6 @@ interface JsonToolbarProps {
   setModDiffId: (id: string) => void;
   // File IO
   onOpenFileClick: () => void;
-  onFetchUrl: () => void;
   onDownload: (format: 'json' | 'csv') => void;
   // Fullscreen
   isFullscreen: boolean;
@@ -61,6 +61,8 @@ export function JsonToolbar({
   setViewMode,
   sidePanel,
   onSidePanelChange,
+  panelLayout = 'full',
+  onTogglePanelLayout,
   isProcessing,
   activeTabId,
   onProcessJson,
@@ -79,7 +81,6 @@ export function JsonToolbar({
   setOrigDiffId,
   setModDiffId,
   onOpenFileClick,
-  onFetchUrl,
   onDownload,
   isFullscreen,
   setIsFullscreen,
@@ -87,7 +88,9 @@ export function JsonToolbar({
   const [showSettings, setShowSettings] = useState(false);
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
   const [optionsCoords, setOptionsCoords] = useState({ top: 0, left: 0 });
+  const [downloadCoords, setDownloadCoords] = useState({ top: 0, left: 0 });
   const optionsButtonRef = useRef<HTMLButtonElement | null>(null);
+  const downloadButtonRef = useRef<HTMLButtonElement | null>(null);
 
   const toggleOptions = useCallback(() => {
     if (!showSettings && optionsButtonRef.current) {
@@ -99,6 +102,17 @@ export function JsonToolbar({
     }
     setShowSettings(!showSettings);
   }, [showSettings]);
+
+  const toggleDownloadMenu = useCallback(() => {
+    if (!showDownloadMenu && downloadButtonRef.current) {
+      const rect = downloadButtonRef.current.getBoundingClientRect();
+      setDownloadCoords({
+        top: rect.bottom + 6,
+        left: Math.max(10, Math.min(rect.right - 144, window.innerWidth - 160)),
+      });
+    }
+    setShowDownloadMenu((prev) => !prev);
+  }, [showDownloadMenu]);
 
   return (
     <div className="px-2.5 py-1.5 border-b border-[var(--zd-border)] bg-[var(--zd-surface-raised)]/60 shrink-0 overflow-x-auto scrollbar-none select-none">
@@ -150,15 +164,12 @@ export function JsonToolbar({
                     { id: 'tree' as const, label: 'Tree', Icon: LayoutTemplate, title: 'Tree View Explorer' },
                     { id: 'table' as const, label: 'Table', Icon: TableProperties, title: 'Table View' },
                     { id: 'path' as const, label: 'Path', Icon: Filter, title: 'JMESPath Query Tool' },
-                    { id: 'yaml' as const, label: 'YAML', Icon: FileCode, title: 'YAML Converter' },
-                    { id: 'types' as const, label: 'Types', Icon: Code2, title: 'TypeScript & Type Generator' },
                   ] as const
                 ).map(({ id, label, Icon, title }) => (
                   <button
                     key={id}
                     type="button"
                     onClick={() => onSidePanelChange(id)}
-                    disabled={id === 'types' && !activeTabId}
                     title={`${title}${sidePanel === id ? ' (click again to close)' : ''}`}
                     className={cn(
                       'flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all disabled:opacity-50',
@@ -172,6 +183,32 @@ export function JsonToolbar({
                   </button>
                 ))}
               </div>
+
+              {/* Layout Switcher (Full / Split) when in Tree or Table mode */}
+              {onTogglePanelLayout && (sidePanel === 'tree' || sidePanel === 'table') && (
+                <button
+                  type="button"
+                  onClick={onTogglePanelLayout}
+                  title={
+                    panelLayout === 'full'
+                      ? 'Switch to Split View (show JSON Editor alongside)'
+                      : 'Switch to Full Mode (hide JSON Editor)'
+                  }
+                  className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-medium border border-[var(--zd-border)] bg-[var(--zd-surface)] hover:bg-[var(--zd-primary-soft)] hover:text-[var(--zd-primary)] text-[var(--zd-text-secondary)] transition-colors shadow-xs"
+                >
+                  {panelLayout === 'full' ? (
+                    <>
+                      <Columns2 className="w-3.5 h-3.5 text-[var(--zd-primary)]" />
+                      <span className="hidden sm:inline">Split View</span>
+                    </>
+                  ) : (
+                    <>
+                      <Maximize2 className="w-3.5 h-3.5 text-[var(--zd-primary)]" />
+                      <span className="hidden sm:inline">Full View</span>
+                    </>
+                  )}
+                </button>
+              )}
 
               <div className="h-4 w-px bg-[var(--zd-border)] mx-0.5" />
 
@@ -317,59 +354,64 @@ export function JsonToolbar({
               <Upload className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Open</span>
             </button>
-            <button
-              type="button"
-              onClick={onFetchUrl}
-              title="Fetch remote JSON"
-              className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-[var(--zd-text-secondary)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)] transition-colors"
-            >
-              <LinkIcon className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">URL</span>
-            </button>
 
             {/* Export Dropdown */}
             <div className="relative">
               <button
+                ref={downloadButtonRef}
                 type="button"
-                onClick={() => setShowDownloadMenu(!showDownloadMenu)}
+                onClick={toggleDownloadMenu}
                 title="Export or Download"
-                className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-[var(--zd-text-secondary)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)] transition-colors"
+                className={cn(
+                  'flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors',
+                  showDownloadMenu
+                    ? 'text-[var(--zd-primary)] bg-[var(--zd-primary-soft)]'
+                    : 'text-[var(--zd-text-secondary)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]'
+                )}
               >
                 <Download className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Export</span>
                 <ChevronDown className="w-3 h-3 opacity-60" />
               </button>
-              {showDownloadMenu && (
-                <>
-                  <div
-                    className="fixed inset-0 z-[45]"
-                    onClick={() => setShowDownloadMenu(false)}
-                    aria-hidden
-                  />
-                  <div className="absolute right-0 top-full mt-1 w-36 bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] rounded-xl shadow-[var(--zd-shadow-md)] z-[50] p-1.5 flex flex-col gap-0.5">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onDownload('json');
-                        setShowDownloadMenu(false);
+              {showDownloadMenu &&
+                createPortal(
+                  <>
+                    <div
+                      className="fixed inset-0 z-[90]"
+                      onClick={() => setShowDownloadMenu(false)}
+                      aria-hidden
+                    />
+                    <div
+                      style={{
+                        top: `${downloadCoords.top}px`,
+                        left: `${downloadCoords.left}px`,
                       }}
-                      className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-[var(--zd-text-primary)] hover:bg-[var(--zd-primary-soft)] hover:text-[var(--zd-primary)] font-medium text-left transition-colors"
+                      className="fixed w-36 bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] rounded-xl shadow-[var(--zd-shadow-md)] z-[100] p-1.5 flex flex-col gap-0.5 animate-in fade-in zoom-in-95 duration-100"
                     >
-                      <span>Save as JSON</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onDownload('csv');
-                        setShowDownloadMenu(false);
-                      }}
-                      className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-[var(--zd-text-primary)] hover:bg-[var(--zd-primary-soft)] hover:text-[var(--zd-primary)] font-medium text-left transition-colors"
-                    >
-                      <span>Export as CSV</span>
-                    </button>
-                  </div>
-                </>
-              )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onDownload('json');
+                          setShowDownloadMenu(false);
+                        }}
+                        className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-[var(--zd-text-primary)] hover:bg-[var(--zd-primary-soft)] hover:text-[var(--zd-primary)] font-medium text-left transition-colors"
+                      >
+                        <span>Save as JSON</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onDownload('csv');
+                          setShowDownloadMenu(false);
+                        }}
+                        className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs text-[var(--zd-text-primary)] hover:bg-[var(--zd-primary-soft)] hover:text-[var(--zd-primary)] font-medium text-left transition-colors"
+                      >
+                        <span>Export as CSV</span>
+                      </button>
+                    </div>
+                  </>,
+                  document.body
+                )}
             </div>
           </div>
 

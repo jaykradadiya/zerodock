@@ -14,9 +14,10 @@ interface TargetTool {
 interface SendToButtonProps {
   data: string;
   targets: TargetTool[];
+  sourceName?: string;
 }
 
-export function SendToButton({ data, targets }: SendToButtonProps) {
+export function SendToButton({ data, targets, sourceName }: SendToButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [coords, setCoords] = useState({ top: 0, right: 0 });
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -24,9 +25,12 @@ export function SendToButton({ data, targets }: SendToButtonProps) {
   const { setPipelineData } = usePipelineStore();
   const navigate = useNavigate();
 
-  const handleSend = (route: string) => {
-    setPipelineData(data);
-    navigate({ to: route as string as '/' });
+  const handleSend = (target: TargetTool) => {
+    setPipelineData(data, {
+      sourceToolId: target.id,
+      sourceToolName: sourceName,
+    });
+    navigate({ to: target.route as string as '/' });
   };
 
   const toggleDropdown = () => {
@@ -68,7 +72,7 @@ export function SendToButton({ data, targets }: SendToButtonProps) {
                     key={target.id}
                     variant="ghost"
                     onClick={() => {
-                      handleSend(target.route);
+                      handleSend(target);
                       setIsOpen(false);
                     }}
                     className="w-full !justify-start !rounded-none !border-0 px-3 py-2 text-sm"

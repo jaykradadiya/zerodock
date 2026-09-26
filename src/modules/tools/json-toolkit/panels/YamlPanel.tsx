@@ -98,6 +98,7 @@ export function YamlPanel({ sourceJson, onApplyJson, onClose }: ToolkitPanelProp
             onChange={(val) => setYamlInput(val || '')}
             onClear={() => setYamlInput('')}
             borderBottom={false}
+            showSendTo={false}
             className="flex-1"
           />
         ) : null}
@@ -106,6 +107,9 @@ export function YamlPanel({ sourceJson, onApplyJson, onClose }: ToolkitPanelProp
           language={mode === 'json2yaml' ? 'yaml' : 'json'}
           value={output}
           readOnly
+          showSendTo={false}
+          downloadFileName={mode === 'json2yaml' ? 'converted.yaml' : 'converted.json'}
+          downloadMimeType={mode === 'json2yaml' ? 'text/yaml' : 'application/json'}
           error={error}
           placeholder="Result will appear here..."
           className="flex-1"

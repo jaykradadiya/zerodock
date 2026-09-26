@@ -263,29 +263,139 @@ export function jsonToRust(obj: unknown, name = 'RootObject'): string {
 }
 
 export function jsonToSchema(obj: unknown): string {
-  function generateSchema(val: unknown): Record<string, unknown> {
-    if (val === null) return { type: 'null' };
-    const type = typeof val;
-    if (type !== 'object') {
-      return { type: type === 'number' ? 'number' : type === 'boolean' ? 'boolean' : 'string' };
+  function inferScalarType(val: unknown): string {
+    if (val === null) return 'null';
+    if (Array.isArray(val)) return 'array';
+    const t = typeof val;
+    if (t === 'number') {
+      return Number.isInteger(val) ? 'integer' : 'number';
     }
-    if (Array.isArray(val)) {
-      if (val.length > 0) {
-        return { type: 'array', items: generateSchema(val[0]) };
+    if (t === 'boolean') return 'boolean';
+    if (t === 'string') return 'string';
+    if (t === 'object') return 'object';
+    return 'string';
+  }
+
+  function mergeSchemas(schemas: Record<string, unknown>[]): Record<string, unknown> {
+    if (schemas.length === 0) return {};
+    if (schemas.length === 1) return schemas[0];
+
+    const types = new Set<string>();
+    for (const s of schemas) {
+      if (Array.isArray(s.type)) {
+        s.type.forEach((t) => types.add(String(t)));
+      } else if (typeof s.type === 'string') {
+        types.add(s.type);
       }
-      return { type: 'array', items: {} };
     }
 
-    const properties: Record<string, unknown> = {};
-    const keys = Object.keys(val as Record<string, unknown>);
-    for (const key of keys) {
-      properties[key] = generateSchema((val as Record<string, unknown>)[key]);
+    if (types.has('integer') && types.has('number')) {
+      types.delete('integer');
     }
-    return {
-      type: 'object',
-      properties,
-      required: keys,
+
+    const typeArr = Array.from(types);
+    const resultType = typeArr.length === 1 ? typeArr[0] : typeArr.length > 1 ? typeArr : 'string';
+
+    const merged: Record<string, unknown> = {
+      type: resultType,
     };
+
+    // If objects are present, merge properties
+    const objectSchemas = schemas.filter((s) => {
+      if (Array.isArray(s.type)) return s.type.includes('object');
+      return s.type === 'object';
+    });
+
+    if (objectSchemas.length > 0) {
+      const allPropKeys = new Set<string>();
+      const keyCount = new Map<string, number>();
+
+      for (const os of objectSchemas) {
+        const props = (os.properties as Record<string, Record<string, unknown>>) || {};
+        for (const k of Object.keys(props)) {
+          allPropKeys.add(k);
+          keyCount.set(k, (keyCount.get(k) || 0) + 1);
+        }
+      }
+
+      const mergedProps: Record<string, unknown> = {};
+      const requiredKeys: string[] = [];
+
+      for (const k of allPropKeys) {
+        const propSchemas: Record<string, unknown>[] = [];
+        for (const os of objectSchemas) {
+          const props = (os.properties as Record<string, Record<string, unknown>>) || {};
+          if (props[k]) {
+            propSchemas.push(props[k]);
+          }
+        }
+        mergedProps[k] = mergeSchemas(propSchemas);
+
+        // Required only if present in ALL object schemas
+        if (keyCount.get(k) === objectSchemas.length) {
+          requiredKeys.push(k);
+        }
+      }
+
+      merged.properties = mergedProps;
+      if (requiredKeys.length > 0) {
+        merged.required = requiredKeys;
+      }
+    }
+
+    // If arrays are present, merge items
+    const arraySchemas = schemas.filter((s) => {
+      if (Array.isArray(s.type)) return s.type.includes('array');
+      return s.type === 'array';
+    });
+
+    if (arraySchemas.length > 0) {
+      const itemSchemas = arraySchemas
+        .map((as) => as.items as Record<string, unknown>)
+        .filter(Boolean);
+      if (itemSchemas.length > 0) {
+        merged.items = mergeSchemas(itemSchemas);
+      }
+    }
+
+    return merged;
+  }
+
+  function generateSchema(val: unknown): Record<string, unknown> {
+    if (val === null) {
+      return { type: ['string', 'null'] };
+    }
+
+    if (Array.isArray(val)) {
+      if (val.length === 0) {
+        return { type: 'array', items: {} };
+      }
+      const itemSchemas = val.map((item) => generateSchema(item));
+      return {
+        type: 'array',
+        items: mergeSchemas(itemSchemas),
+      };
+    }
+
+    if (typeof val === 'object' && val !== null) {
+      const properties: Record<string, unknown> = {};
+      const required: string[] = [];
+      const keys = Object.keys(val as Record<string, unknown>);
+
+      for (const key of keys) {
+        const propVal = (val as Record<string, unknown>)[key];
+        properties[key] = generateSchema(propVal);
+        required.push(key);
+      }
+
+      return {
+        type: 'object',
+        properties,
+        required,
+      };
+    }
+
+    return { type: inferScalarType(val) };
   }
 
   const schemaObj = {

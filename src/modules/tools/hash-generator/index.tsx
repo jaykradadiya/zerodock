@@ -18,6 +18,8 @@ const useHashStore = createToolStore<HashState>('hash-generator', {
   input: 'Hello World',
   secret: '',
   isHmac: false,
+}, {
+  omitKeys: ['secret'],
 });
 
 export default function HashGenerator() {
@@ -26,7 +28,8 @@ export default function HashGenerator() {
   const setSecret = (val: string) => setValues({ secret: val });
   const setIsHmac = (val: boolean) => setValues({ isHmac: val });
 
-  useSyncToolUrl(() => ({ input, secret, isHmac }), setValues, [input, secret, isHmac]);
+  // Sync input and mode to URL, but never leak the HMAC secret key
+  useSyncToolUrl<{ input: string; isHmac: boolean }>(() => ({ input, isHmac }), setValues, [input, isHmac]);
 
   const [hashes, setHashes] = useState<Record<string, string>>({});
 
@@ -125,6 +128,10 @@ export default function HashGenerator() {
                     />
                     <KeyRound className="w-4 h-4 text-[var(--zd-text-muted)] absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                   </div>
+                  <p className="text-[11px] text-[var(--zd-text-muted)] flex items-center gap-1.5 pt-0.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <span>Ephemeral secret: kept strictly in memory, never saved to disk or URL</span>
+                  </p>
                 </div>
               )}
             </div>

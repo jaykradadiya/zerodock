@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 
-export const TOOLKIT_PANELS = ['tree', 'table', 'yaml', 'types', 'path'] as const;
+export const TOOLKIT_PANELS = ['tree', 'table', 'path'] as const;
 export type ToolkitPanel = (typeof TOOLKIT_PANELS)[number];
 export type SidePanel = 'hidden' | ToolkitPanel;
 

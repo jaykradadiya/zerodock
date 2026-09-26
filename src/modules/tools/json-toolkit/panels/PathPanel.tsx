@@ -96,6 +96,7 @@ export function PathPanel({ sourceJson, onClose }: ToolkitPanelProps) {
         language="json"
         value={output}
         readOnly
+        showSendTo={false}
         error={error}
         placeholder={`Enter a ${activeOption.label} expression above...`}
         downloadFileName="filtered_query.json"

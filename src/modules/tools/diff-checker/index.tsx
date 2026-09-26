@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import '../../../core/monaco/setup';
 import { DiffEditor } from '@monaco-editor/react';
 import { usePreferenceStore } from '../../../core/store/usePreferenceStore';
 import { GitCompare, Columns, Split } from 'lucide-react';
@@ -7,6 +8,10 @@ import { createToolStore } from '../../../core/store/useToolState';
 import { useConverterShortcuts } from '../../../shared/hooks/useConverterShortcuts';
 import { useSyncToolUrl } from '../../../shared/hooks/useSyncToolUrl';
 import { useMeasuredHeight } from '../../../shared/hooks/useMeasuredHeight';
+import { usePipelineStore, type PipelinePayload } from '../../../core/store/usePipelineStore';
+import { useToastStore } from '../../../core/store/useToastStore';
+import { PipelineCollisionBanner } from '../../../shared/components/PipelineCollisionBanner';
+import { Button } from '../../../shared/components/ui';
 
 const useDiffStore = createToolStore('diff-checker', {
   originalText: '',
@@ -60,6 +65,25 @@ export default function DiffChecker() {
   const setModifiedText = (val: string) => setValues({ modifiedText: val });
 
   useSyncToolUrl(() => useDiffStore.getState(), setValues, [originalText, modifiedText]);
+
+  const [incomingPipeline, setIncomingPipeline] = useState<PipelinePayload | null>(null);
+
+  useEffect(() => {
+    const payload = usePipelineStore.getState().consumePipelinePayload();
+    if (!payload?.data) return;
+
+    if (!originalText.trim()) {
+      setOriginalText(payload.data);
+      const source = payload.sourceToolName || 'pipeline';
+      useToastStore.getState().addToast(`Loaded data from ${source} into Left (Original)`, 'info');
+    } else if (!modifiedText.trim()) {
+      setModifiedText(payload.data);
+      const source = payload.sourceToolName || 'pipeline';
+      useToastStore.getState().addToast(`Loaded data from ${source} into Right (Modified)`, 'info');
+    } else {
+      setIncomingPipeline(payload);
+    }
+  }, []);
 
   const editorRef = useRef<any>(null);
   const monacoRef = useRef<any>(null);
@@ -213,6 +237,41 @@ export default function DiffChecker() {
       />
 
       <ToolWorkspace>
+        <PipelineCollisionBanner
+          incomingData={incomingPipeline?.data ?? null}
+          sourceToolName={incomingPipeline?.sourceToolName}
+          customActions={
+            <>
+              <Button
+                size="sm"
+                variant="primary"
+                onClick={() => {
+                  if (incomingPipeline) {
+                    setOriginalText(incomingPipeline.data);
+                    setIncomingPipeline(null);
+                  }
+                }}
+                className="!py-1 !px-2.5 text-xs font-semibold"
+              >
+                Load into Left
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => {
+                  if (incomingPipeline) {
+                    setModifiedText(incomingPipeline.data);
+                    setIncomingPipeline(null);
+                  }
+                }}
+                className="!py-1 !px-2.5 text-xs font-semibold"
+              >
+                Load into Right
+              </Button>
+            </>
+          }
+          onDismiss={() => setIncomingPipeline(null)}
+        />
         <div ref={editorContainerRef} className="zd-tool-fill w-full overflow-hidden">
           {editorHeight > 0 && (
             <DiffEditor

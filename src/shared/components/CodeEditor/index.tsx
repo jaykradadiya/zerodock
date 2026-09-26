@@ -1,4 +1,5 @@
 import { useRef, useEffect } from 'react';
+import '../../../core/monaco/setup';
 import Editor from '@monaco-editor/react';
 import type { EditorProps } from '@monaco-editor/react';
 import { usePreferenceStore } from '../../../core/store/usePreferenceStore';

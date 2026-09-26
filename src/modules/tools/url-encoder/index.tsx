@@ -9,6 +9,9 @@ import { useToolEmbed } from '../../../shared/context/ToolEmbedContext';
 import { createToolStore } from '../../../core/store/useToolState';
 import { useConverterShortcuts } from '../../../shared/hooks/useConverterShortcuts';
 import { useSyncToolUrl } from '../../../shared/hooks/useSyncToolUrl';
+import { usePipelineStore, type PipelinePayload } from '../../../core/store/usePipelineStore';
+import { useToastStore } from '../../../core/store/useToastStore';
+import { PipelineCollisionBanner } from '../../../shared/components/PipelineCollisionBanner';
 
 const useUrlStore = createToolStore('url-encoder', {
   input: '',
@@ -24,6 +27,22 @@ export default function URLEncoder() {
   
   const [output, setOutput] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [incomingPipeline, setIncomingPipeline] = useState<PipelinePayload | null>(null);
+
+  // Non-destructive pipeline consumer
+  useEffect(() => {
+    const payload = usePipelineStore.getState().consumePipelinePayload();
+    if (!payload?.data) return;
+
+    if (!input.trim()) {
+      setMode('encode');
+      setInput(payload.data);
+      const sourceName = payload.sourceToolName || 'pipeline';
+      useToastStore.getState().addToast(`Loaded data from ${sourceName}`, 'info');
+    } else {
+      setIncomingPipeline(payload);
+    }
+  }, []);
 
   useEffect(() => {
     setError(null);
@@ -78,27 +97,42 @@ export default function URLEncoder() {
   );
 
   const panels = (
-    <SplitPanels>
-      <CodePanel
-        title={mode === 'encode' ? 'Plain Text' : 'URL Encoded'}
-        useTextarea
-        value={input}
-        onChange={setInput}
-        placeholder={mode === 'encode' ? 'Enter string to URL encode...' : 'Enter encoded string to decode...'}
-        onClear={() => setInput('')}
-        borderRight
+    <div className="flex flex-col flex-1 min-h-0 w-full">
+      <PipelineCollisionBanner
+        incomingData={incomingPipeline?.data ?? null}
+        sourceToolName={incomingPipeline?.sourceToolName}
+        onApply={() => {
+          if (incomingPipeline) {
+            setInput(incomingPipeline.data);
+            setMode('encode');
+            setIncomingPipeline(null);
+          }
+        }}
+        onDismiss={() => setIncomingPipeline(null)}
+        applyLabel="Replace Current Input"
       />
-      <CodePanel
-        title={mode === 'encode' ? 'URL Encoded' : 'Plain Text'}
-        useTextarea
-        value={output}
-        readOnly
-        placeholder="Result will appear here..."
-        error={error}
-        contentClassName="[&_textarea]:break-all"
-      />
-      <SwapButton onClick={handleSwap} />
-    </SplitPanels>
+      <SplitPanels>
+        <CodePanel
+          title={mode === 'encode' ? 'Plain Text' : 'URL Encoded'}
+          useTextarea
+          value={input}
+          onChange={setInput}
+          placeholder={mode === 'encode' ? 'Enter string to URL encode...' : 'Enter encoded string to decode...'}
+          onClear={() => setInput('')}
+          borderRight
+        />
+        <CodePanel
+          title={mode === 'encode' ? 'URL Encoded' : 'Plain Text'}
+          useTextarea
+          value={output}
+          readOnly
+          placeholder="Result will appear here..."
+          error={error}
+          contentClassName="[&_textarea]:break-all"
+        />
+        <SwapButton onClick={handleSwap} />
+      </SplitPanels>
+    </div>
   );
 
   if (embedded) {
@@ -114,7 +148,7 @@ export default function URLEncoder() {
       <ToolHeader
         icon={Link2}
         title="URL Encoder / Decoder"
-        description="Safely encode or decode URL parameters"
+        description="Encode or decode URI components safely offline"
       />
       <ToolWorkspace toolbar={toolToolbar}>{panels}</ToolWorkspace>
     </ToolPage>

@@ -14,8 +14,6 @@ const textTargets = ['diff-checker', 'encode-decode', 'json-toolkit']
   .filter(Boolean) as { id: string; name: string; route: string }[];
 
 const defaultPipelineTargets: Record<string, { id: string; name: string; route: string }[]> = {
-  'yaml-json-converter': jsonTargets,
-  'json-type-converter': jsonTargets,
   'json-path': jsonTargets,
   'base64-codec': textTargets,
   'url-encoder': textTargets,

@@ -31,7 +31,7 @@ export function Footer() {
             </div>
             <p className="text-xs text-[var(--zd-text-muted)] flex items-center gap-1.5 font-normal m-0">
               © {year} · Made with
-              <Heart size={11} className="text-[#E17055] fill-[#E17055] zd-heartbeat" />
+              <Heart size={11} className="text-[var(--zd-primary)] fill-[var(--zd-primary)] zd-heartbeat" />
               for privacy
             </p>
           </div>

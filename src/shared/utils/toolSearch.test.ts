@@ -10,9 +10,7 @@ describe('tool registry discovery metadata', () => {
   });
 
   it('ranks verified aliases and keywords deterministically', () => {
-    expect(searchTools(toolRegistry, 'jwt')[0]?.id).toBe('jwt-decoder');
-    expect(searchTools(toolRegistry, 'token')[0]?.id).toBe('jwt-decoder');
     expect(searchTools(toolRegistry, 'format json')[0]?.id).toBe('json-toolkit');
-    expect(searchTools(toolRegistry, 'unix')[0]?.id).toBe('epoch-converter');
+    expect(searchTools(toolRegistry, 'jmespath')[0]?.id).toBe('json-path');
   });
 });

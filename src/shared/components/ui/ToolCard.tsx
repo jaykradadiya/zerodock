@@ -61,7 +61,7 @@ export function ToolCard({
               icon={icon}
               size="sm"
               className={cn(
-                'transition-colors duration-150 group-hover:bg-[var(--zd-primary)] group-hover:text-white',
+                'transition-colors duration-150 group-hover:bg-[var(--zd-primary)] group-hover:text-[var(--zd-bg)]',
                 iconClassName
               )}
             />

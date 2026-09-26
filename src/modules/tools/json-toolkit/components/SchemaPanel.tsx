@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { CodeEditor } from '../../../../shared/components/CodeEditor';
-import { ShieldCheck, XCircle, CheckCircle2, X, Sparkles, Copy, Check } from 'lucide-react';
+import { ShieldCheck, XCircle, CheckCircle2, X, Sparkles, Copy, Check, ArrowUpRight } from 'lucide-react';
 import type { ValidationError } from '../validate.worker';
 import { useToastStore } from '../../../../core/store/useToastStore';
 import { usePreferenceStore } from '../../../../core/store/usePreferenceStore';
@@ -13,6 +13,7 @@ interface SchemaPanelProps {
   isValidating: boolean;
   onClose: () => void;
   onInferSchema?: () => void;
+  onErrorClick?: (err: ValidationError) => void;
 }
 
 export function SchemaPanel({
@@ -22,6 +23,7 @@ export function SchemaPanel({
   isValidating,
   onClose,
   onInferSchema,
+  onErrorClick,
 }: SchemaPanelProps) {
   const [copied, setCopied] = useState(false);
   const { soundEnabled } = usePreferenceStore();
@@ -69,7 +71,7 @@ export function SchemaPanel({
               title="Copy JSON Schema"
               className="p-1 rounded text-[var(--zd-text-muted)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)] transition-colors"
             >
-              {copied ? <Check className="w-3.5 h-3.5 text-[var(--zd-accent)]" /> : <Copy className="w-3.5 h-3.5" />}
+              {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
             </button>
           )}
 
@@ -112,32 +114,56 @@ export function SchemaPanel({
               No schema defined. Click "Infer from JSON" to generate one.
             </div>
           ) : errors.length === 0 ? (
-            <div className="flex items-center gap-2 text-[var(--zd-accent)] bg-[var(--zd-accent-soft)] p-2.5 rounded-lg border border-[var(--zd-accent)]/20">
-              <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <div className="flex items-center gap-3 text-emerald-400 bg-emerald-500/10 p-3 rounded-lg border border-emerald-500/25 shadow-xs">
+              <div className="p-1 rounded-full bg-emerald-500/20 text-emerald-400 shrink-0">
+                <CheckCircle2 className="w-4 h-4" />
+              </div>
               <div className="text-xs">
-                <span className="font-semibold block">Valid Document</span>
-                <span className="text-[11px] opacity-80">JSON matches schema successfully.</span>
+                <span className="font-semibold block text-emerald-300">Valid Document</span>
+                <span className="text-[11px] text-emerald-400/80">JSON matches schema successfully.</span>
               </div>
             </div>
           ) : (
             <div className="flex flex-col gap-1.5">
-              <div className="flex items-center gap-1.5 text-rose-500 mb-1">
-                <XCircle className="w-4 h-4 shrink-0" />
-                <span className="text-xs font-semibold">Found {errors.length} validation {errors.length === 1 ? 'error' : 'errors'}</span>
+              <div className="flex items-center justify-between gap-1.5 mb-1">
+                <div className="flex items-center gap-1.5 text-rose-400 font-semibold text-xs">
+                  <XCircle className="w-4 h-4 shrink-0" />
+                  <span>Found {errors.length} validation {errors.length === 1 ? 'error' : 'errors'}</span>
+                </div>
+                {onErrorClick && (
+                  <span className="text-[10px] text-[var(--zd-text-muted)]">Click error to jump</span>
+                )}
               </div>
               {errors.map((err, i) => (
-                <div
+                <button
                   key={i}
-                  className="text-xs bg-[var(--zd-surface)] text-[var(--zd-text-primary)] p-2 rounded-md border border-[var(--zd-border)] flex flex-col gap-0.5"
+                  type="button"
+                  onClick={() => onErrorClick?.(err)}
+                  className="w-full text-left text-xs bg-[var(--zd-surface)] text-[var(--zd-text-primary)] p-2.5 rounded-lg border border-[var(--zd-border)] hover:border-rose-500/50 hover:bg-[var(--zd-surface-raised)] transition-all flex flex-col gap-1 group cursor-pointer shadow-xs focus:outline-none focus:ring-1 focus:ring-rose-500/40"
                 >
-                  <div className="flex items-center gap-1 font-mono text-[11px] text-[var(--zd-primary)]">
-                    <span>Path:</span>
-                    <span className="font-semibold bg-[var(--zd-primary-soft)] px-1 rounded">
-                      {err.path || '/'}
-                    </span>
+                  <div className="flex items-center justify-between gap-1.5 w-full">
+                    <div className="flex items-center gap-1.5 font-mono text-[11px] min-w-0">
+                      <span className="text-[var(--zd-text-muted)] text-[10px] uppercase font-sans font-medium">Path</span>
+                      <span
+                        className="font-semibold bg-[var(--zd-primary-soft)] text-[var(--zd-primary)] px-1.5 py-0.5 rounded truncate max-w-[200px]"
+                        title={err.path || '/'}
+                      >
+                        {err.path || '/'}
+                      </span>
+                    </div>
+
+                    {err.line !== undefined && (
+                      <div className="flex items-center gap-0.5 text-[10px] font-mono font-medium px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 group-hover:bg-rose-500/20 transition-colors shrink-0">
+                        <span>Line {err.line}</span>
+                        <ArrowUpRight className="w-3 h-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                      </div>
+                    )}
                   </div>
-                  <div className="text-[var(--zd-text-secondary)]">{err.message}</div>
-                </div>
+                  <div className="text-[11.5px] text-[var(--zd-text-secondary)] group-hover:text-[var(--zd-text-primary)] transition-colors flex items-start gap-1.5 leading-snug">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500 mt-1 shrink-0" />
+                    <span>{err.message}</span>
+                  </div>
+                </button>
               ))}
             </div>
           )}

@@ -3,7 +3,7 @@ import { Link, useLocation } from '@tanstack/react-router';
 import { usePreferenceStore } from '../../core/store/usePreferenceStore';
 import { useUIStore } from '../../core/store/useUIStore';
 import { toolRegistry } from '../../core/registry/tools';
-import { Moon, Sun, Star, Search, ChevronRight, Lock, FileJson, Maximize } from 'lucide-react';
+import { Moon, Sun, Star, Search, ChevronRight, Lock, FileJson, Palette } from 'lucide-react';
 import { Button } from '../../shared/components/ui';
 import { ShareLinkButton } from '../../shared/components/ShareLinkButton';
 
@@ -15,7 +15,7 @@ const GithubIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 export function Navbar() {
   const { theme, toggleTheme } = usePreferenceStore();
-  const { setCommandPaletteOpen, setZenMode } = useUIStore();
+  const { setCommandPaletteOpen, setThemeModalOpen } = useUIStore();
   const [scrolled, setScrolled] = useState(false);
   const [stars, setStars] = useState<string>('Star');
 
@@ -64,7 +64,7 @@ export function Navbar() {
   return (
     <>
       <header
-        className={`fixed top-0 left-0 right-0 z-50 h-14 2xl:h-16 flex items-center justify-between px-3 sm:px-6 md:px-8 transition-all duration-300 ${
+        className={`fixed top-0 left-0 right-0 z-50 h-14 flex items-center justify-between px-3 sm:px-6 md:px-8 transition-all duration-300 ${
           scrolled || activeTool
             ? 'bg-[var(--zd-surface)]/90 backdrop-blur-md border-b border-[var(--zd-border)] shadow-xs'
             : 'bg-transparent border-b border-transparent'
@@ -113,21 +113,10 @@ export function Navbar() {
 
         {/* Right: Actions */}
         <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-          {/* Tool Actions: Share & Focus */}
+          {/* Tool Actions: Share */}
           {activeTool && (
             <div className="flex items-center gap-1 sm:gap-1.5">
               <ShareLinkButton className="!h-8 sm:!h-9 text-xs font-semibold" />
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setZenMode(true)}
-                title="Focus mode (⌘.)"
-                aria-label="Enter focus mode"
-                className="!h-8 sm:!h-9 group text-xs font-semibold"
-              >
-                <Maximize className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Focus</span>
-              </Button>
               <div className="h-4 w-px bg-[var(--zd-border)] mx-0.5 hidden sm:block" />
             </div>
           )}
@@ -178,8 +167,19 @@ export function Navbar() {
 
           <Button
             variant="icon"
+            onClick={() => setThemeModalOpen(true, 'browse')}
+            aria-label="Customize theme and workbench colors (Cmd+K Cmd+T)"
+            title="Theme & Workbench Customizer (⌘K ⌘T)"
+            className="!w-8 !h-8 sm:!w-9 sm:!h-9 !rounded-xl border border-[var(--zd-border)] bg-[var(--zd-surface-raised)] hover:bg-[var(--zd-primary-soft)] hover:border-[var(--zd-primary)]/50 shadow-xs text-[var(--zd-text-secondary)] hover:text-[var(--zd-primary)]"
+          >
+            <Palette size={15} />
+          </Button>
+
+          <Button
+            variant="icon"
             onClick={toggleTheme}
-            aria-label="Toggle theme"
+            aria-label="Toggle theme mode"
+            title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} mode`}
             className="!w-8 !h-8 sm:!w-9 sm:!h-9 !rounded-xl border border-[var(--zd-border)] bg-[var(--zd-surface-raised)] hover:bg-[var(--zd-primary-soft)] hover:border-[var(--zd-primary)]/50 shadow-xs"
           >
             {theme === 'dark' ? (

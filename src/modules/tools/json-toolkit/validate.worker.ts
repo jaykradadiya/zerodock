@@ -1,5 +1,6 @@
 import Ajv from 'ajv';
 import type { WorkerMessage } from '../../../workers/base.worker';
+import { buildJsonPathMap, locateError } from './lib/jsonPathLocation';
 
 const ajv = new Ajv({ allErrors: true, strict: false, strictSchema: false });
 
@@ -22,6 +23,10 @@ export interface ValidationError {
   path: string;
   message: string;
   keyword: string;
+  line?: number;
+  column?: number;
+  endLine?: number;
+  endColumn?: number;
 }
 
 self.onmessage = (event: MessageEvent<WorkerMessage<{ document: string; schema: string }>>) => {
@@ -48,14 +53,61 @@ self.onmessage = (event: MessageEvent<WorkerMessage<{ document: string; schema: 
     if (valid) {
       self.postMessage({ id, type: 'SUCCESS', payload: [] }); // Empty array means valid
     } else {
-      const errors: ValidationError[] = (validate.errors || []).map(err => ({
-        path: err.instancePath || '/',
-        message: err.message || 'Validation error',
-        keyword: err.keyword,
-      }));
+      let pathMap: Map<string, any>;
+      try {
+        pathMap = buildJsonPathMap(payload.document);
+      } catch {
+        pathMap = new Map();
+      }
+
+      const errors: ValidationError[] = (validate.errors || []).map(err => {
+        const missingProp = err.params?.missingProperty as string | undefined;
+        const loc = locateError(pathMap, err.instancePath || '/', missingProp);
+
+        let formattedMessage = err.message || 'Validation error';
+        if (err.keyword === 'required' && missingProp) {
+          formattedMessage = `Missing required property '${missingProp}'`;
+        } else if (err.keyword === 'additionalProperties' && err.params?.additionalProperty) {
+          formattedMessage = `Unexpected property '${err.params.additionalProperty}'`;
+        }
+
+        return {
+          path: err.instancePath || '/',
+          message: formattedMessage,
+          keyword: err.keyword,
+          line: loc.startLineNumber,
+          column: loc.startColumn,
+          endLine: loc.endLineNumber,
+          endColumn: loc.endColumn,
+        };
+      });
+
       self.postMessage({ id, type: 'SUCCESS', payload: errors });
     }
   } catch (error: any) {
-    self.postMessage({ id, type: 'ERROR', payload: { message: `Parse Error: ${error.message}` } });
+    let line = 1;
+    let column = 1;
+    const match = error.message?.match(/line (\d+) column (\d+)/i) || error.message?.match(/position (\d+)/i);
+    if (match) {
+      if (match[2]) {
+        line = parseInt(match[1], 10);
+        column = parseInt(match[2], 10);
+      } else {
+        const pos = parseInt(match[1], 10);
+        const lines = payload.document.slice(0, pos).split('\n');
+        line = lines.length;
+        column = lines[lines.length - 1].length + 1;
+      }
+    }
+
+    self.postMessage({
+      id,
+      type: 'ERROR',
+      payload: {
+        message: `Parse Error: ${error.message}`,
+        line,
+        column,
+      }
+    });
   }
 };

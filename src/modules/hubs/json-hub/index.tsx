@@ -17,7 +17,7 @@ function JsonToolkitRedirect({ panel }: { panel: ToolkitPanel }) {
 
 function JsonHub() {
   return (
-    <ToolPage fullWidth compact className="!p-0 sm:!p-1 md:!p-1.5">
+    <ToolPage fullWidth compact className="!p-0 h-full">
       <ToolEmbedProvider embedded>
         <ErrorBoundary>
           <Suspense
@@ -28,7 +28,7 @@ function JsonHub() {
               </div>
             }
           >
-            <div className="zd-tool-fill min-h-0">
+            <div className="zd-tool-fill min-h-0 h-full">
               <JsonToolkit />
             </div>
           </Suspense>

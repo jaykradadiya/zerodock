@@ -4,6 +4,7 @@ import Editor from '@monaco-editor/react';
 import type { EditorProps } from '@monaco-editor/react';
 import { usePreferenceStore } from '../../../core/store/usePreferenceStore';
 import { useWorkspaceStore } from '../../../modules/tools/json-toolkit/store/workspaceStore';
+import { MONACO_THEME_ID, applyTheme } from '../../../core/theme/themeEngine';
 import { cn } from '../ui/cn';
 
 interface CodeEditorProps extends Omit<EditorProps, 'theme' | 'onChange'> {
@@ -26,7 +27,6 @@ export function CodeEditor({
   className,
   ...props
 }: CodeEditorProps) {
-  const { theme } = usePreferenceStore();
   const getFileContent = useWorkspaceStore(s => s.getFileContent);
   const updateTabContent = useWorkspaceStore(s => s.updateTabContent);
   const tabs = useWorkspaceStore(s => s.tabs);
@@ -104,6 +104,10 @@ export function CodeEditor({
         'editorLineNumber.foreground': '#8E8EA0',
       }
     });
+
+    const prefState = usePreferenceStore.getState();
+    const activeTheme = prefState.getActiveTheme();
+    applyTheme(activeTheme, prefState.themeOverrides);
 
     if (!monaco.languages.getLanguages().some((l: any) => l.id === 'json-hover-registered')) {
       monaco.languages.register({ id: 'json-hover-registered' });
@@ -199,7 +203,7 @@ export function CodeEditor({
         width="100%"
         language={language}
         defaultValue={!modelId ? value : undefined}
-        theme={theme === 'dark' ? 'zerodock-dark' : 'zerodock-light'}
+        theme={MONACO_THEME_ID}
         beforeMount={handleEditorWillMount}
         onMount={handleEditorDidMount}
         options={{
@@ -216,8 +220,16 @@ export function CodeEditor({
           colorDecorators: true,
           largeFileOptimizations: true,
           scrollbar: {
-            alwaysConsumeMouseWheel: false
-          }
+            alwaysConsumeMouseWheel: true,
+            vertical: 'visible',
+            horizontal: 'auto',
+            verticalScrollbarSize: 10,
+            horizontalScrollbarSize: 10,
+            useShadows: false,
+          },
+          overviewRulerLanes: 0,
+          hideCursorInOverviewRuler: true,
+          smoothScrolling: true,
         }}
         loading={
           <div className="h-full flex items-center justify-center text-[var(--zd-text-muted)] text-sm">

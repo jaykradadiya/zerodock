@@ -18,6 +18,7 @@ import {
   ChevronDown,
   Columns2,
   Maximize2,
+  Rows,
 } from 'lucide-react';
 import type { SidePanel } from '../../../../shared/hooks/useToolkitPanel';
 import { cn } from '../../../../shared/components/ui';
@@ -48,6 +49,10 @@ interface JsonToolbarProps {
   modDiffId: string;
   setOrigDiffId: (id: string) => void;
   setModDiffId: (id: string) => void;
+  diffSideBySide?: boolean;
+  setDiffSideBySide?: (sideBySide: boolean) => void;
+  diffIgnoreWhitespace?: boolean;
+  setDiffIgnoreWhitespace?: (ignore: boolean) => void;
   // File IO
   onOpenFileClick: () => void;
   onDownload: (format: 'json' | 'csv') => void;
@@ -80,6 +85,10 @@ export function JsonToolbar({
   modDiffId,
   setOrigDiffId,
   setModDiffId,
+  diffSideBySide = true,
+  setDiffSideBySide,
+  diffIgnoreWhitespace = false,
+  setDiffIgnoreWhitespace,
   onOpenFileClick,
   onDownload,
   isFullscreen,
@@ -184,8 +193,8 @@ export function JsonToolbar({
                 ))}
               </div>
 
-              {/* Layout Switcher (Full / Split) when in Tree or Table mode */}
-              {onTogglePanelLayout && (sidePanel === 'tree' || sidePanel === 'table') && (
+              {/* Layout Switcher (Full / Split) when in Tree, Table, or Path mode */}
+              {onTogglePanelLayout && (sidePanel === 'tree' || sidePanel === 'table' || sidePanel === 'path') && (
                 <button
                   type="button"
                   onClick={onTogglePanelLayout}
@@ -311,32 +320,59 @@ export function JsonToolbar({
               </div>
             </>
           ) : (
-            /* Compare Selectors */
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-[var(--zd-text-muted)] font-medium">Base:</span>
-              <select
-                value={origDiffId}
-                onChange={(e) => setOrigDiffId(e.target.value)}
-                className="text-xs bg-[var(--zd-surface)] border border-[var(--zd-border)] rounded-lg px-2 py-1 outline-none focus:border-[var(--zd-primary)] text-[var(--zd-text-primary)]"
-              >
-                {tabs.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-              <span className="text-xs text-[var(--zd-primary)] font-medium ml-1">Diff:</span>
-              <select
-                value={modDiffId}
-                onChange={(e) => setModDiffId(e.target.value)}
-                className="text-xs bg-[var(--zd-surface)] border border-[var(--zd-border)] rounded-lg px-2 py-1 outline-none focus:border-[var(--zd-primary)] text-[var(--zd-text-primary)]"
-              >
-                {tabs.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
+            /* Compare Layout and Options */
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Split vs Inline Toggle */}
+              {setDiffSideBySide && (
+                <div className="flex items-center gap-0.5 bg-[var(--zd-surface)] border border-[var(--zd-border)] p-0.5 rounded-lg shadow-2xs">
+                  <button
+                    type="button"
+                    onClick={() => setDiffSideBySide(true)}
+                    title="Split (Side-by-Side) View"
+                    className={cn(
+                      'flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer',
+                      diffSideBySide
+                        ? 'bg-[var(--zd-surface-raised)] text-[var(--zd-primary)] font-semibold shadow-xs'
+                        : 'text-[var(--zd-text-muted)] hover:text-[var(--zd-text-primary)]'
+                    )}
+                  >
+                    <Columns2 className="w-3.5 h-3.5" />
+                    <span>Split View</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDiffSideBySide(false)}
+                    title="Unified (Inline) View"
+                    className={cn(
+                      'flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer',
+                      !diffSideBySide
+                        ? 'bg-[var(--zd-surface-raised)] text-[var(--zd-primary)] font-semibold shadow-xs'
+                        : 'text-[var(--zd-text-muted)] hover:text-[var(--zd-text-primary)]'
+                    )}
+                  >
+                    <Rows className="w-3.5 h-3.5" />
+                    <span>Inline View</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Ignore Whitespace Toggle */}
+              {setDiffIgnoreWhitespace && (
+                <button
+                  type="button"
+                  onClick={() => setDiffIgnoreWhitespace(!diffIgnoreWhitespace)}
+                  title={diffIgnoreWhitespace ? 'Whitespace changes ignored' : 'Whitespace changes included'}
+                  className={cn(
+                    'px-2.5 py-1 rounded-lg border text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer',
+                    diffIgnoreWhitespace
+                      ? 'bg-[var(--zd-primary-soft)] text-[var(--zd-primary)] border-[var(--zd-primary)]/40 shadow-xs font-semibold'
+                      : 'bg-[var(--zd-surface)] text-[var(--zd-text-muted)] border-[var(--zd-border)] hover:text-[var(--zd-text-primary)] hover:border-[var(--zd-border-hover)]'
+                  )}
+                >
+                  <span className="font-mono text-xs font-bold">␣</span>
+                  <span>Ignore Whitespace</span>
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -457,12 +493,18 @@ export function JsonToolbar({
             </button>
           </div>
 
-          {/* Fullscreen Toggle */}
+          {/* Focus Mode Toggle */}
           <button
             type="button"
             onClick={() => setIsFullscreen(!isFullscreen)}
-            title={isFullscreen ? 'Exit Fullscreen (Esc)' : 'Expand Fullscreen'}
-            className="p-1.5 rounded-lg text-[var(--zd-text-muted)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)] transition-colors"
+            title={isFullscreen ? 'Exit Focus Mode (Esc)' : 'Focus Mode (⌘.)'}
+            aria-label={isFullscreen ? 'Exit Focus Mode' : 'Enter Focus Mode'}
+            className={cn(
+              'p-1.5 rounded-lg transition-colors',
+              isFullscreen
+                ? 'text-[var(--zd-primary)] bg-[var(--zd-primary-soft)] border border-[var(--zd-primary)]/40 shadow-xs'
+                : 'text-[var(--zd-text-muted)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]'
+            )}
           >
             {isFullscreen ? <Minimize className="w-3.5 h-3.5" /> : <Maximize className="w-3.5 h-3.5" />}
           </button>

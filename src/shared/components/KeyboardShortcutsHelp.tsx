@@ -6,6 +6,7 @@ import { Button } from './ui';
 
 const shortcuts = [
   { keys: '⌘ K', action: 'Open command palette' },
+  { keys: '⌘ K ⌘ T', action: 'Change Color Theme (VS Code)' },
   { keys: '⌘ ↵', action: 'Primary action (format, convert, send)' },
   { keys: '⌘ ⇧ C', action: 'Copy output' },
   { keys: '⌘ ⌫', action: 'Clear input' },

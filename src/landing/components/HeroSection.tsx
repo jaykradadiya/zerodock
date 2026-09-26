@@ -1,15 +1,12 @@
 import { motion } from 'framer-motion';
 import { ArrowRight, Search, Sparkles, FileJson } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
-import { toolRegistry } from '../../core/registry/tools';
-import { getLandingTools } from '../../types/tool';
 import { Button } from '../../shared/components/ui';
 import { useUIStore } from '../../core/store/useUIStore';
 
 export function HeroSection() {
   const navigate = useNavigate();
   const setCommandPaletteOpen = useUIStore((state) => state.setCommandPaletteOpen);
-  const toolCount = getLandingTools(toolRegistry).length;
 
   return (
     <section className="relative overflow-hidden flex flex-col items-center justify-center text-center px-4 sm:px-8 md:px-12 pt-16 sm:pt-24 2xl:pt-32 pb-20 sm:pb-28 min-h-[100svh]">
@@ -36,12 +33,8 @@ export function HeroSection() {
           transition={{ duration: 0.5 }}
           className="flex items-center gap-3 mb-10 sm:mb-12"
         >
-          <span className="flex items-center gap-2.5 font-mono text-[11px] sm:text-xs tracking-[0.14em] uppercase text-[var(--zd-text-muted)]">
-            <span className="relative flex items-center justify-center w-2 h-2">
-              <span className="absolute inset-0 rounded-full bg-[var(--zd-accent)] animate-ping opacity-40" />
-              <span className="relative w-1.5 h-1.5 rounded-full bg-[var(--zd-accent)]" />
-            </span>
-            {toolCount} tools · 100% local · open source
+          <span className="font-mono text-[11px] sm:text-xs tracking-[0.14em] uppercase text-[var(--zd-text-muted)]">
+            100% local · open source
           </span>
         </motion.div>
 
@@ -74,8 +67,8 @@ export function HeroSection() {
           transition={{ duration: 0.5, delay: 0.2 }}
           className="text-base sm:text-lg 2xl:text-xl text-[var(--zd-text-secondary)] max-w-xl 2xl:max-w-2xl leading-relaxed mb-12 2xl:mb-14 font-normal"
         >
-          Format JSON, hash strings, compare code, and decode tokens in your browser.
-          No account friction; network activity is identified when a tool needs it.
+          Format, validate, query, explore, and compare JSON directly in your browser.
+          No account friction; 100% private, client-side, and offline.
         </motion.p>
 
         {/* Search is the fastest path into the toolkit. */}

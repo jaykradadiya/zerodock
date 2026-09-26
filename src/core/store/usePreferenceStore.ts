@@ -1,16 +1,32 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { idbStorage } from './idbStorage';
+import type { ThemeDefinition, ThemeTokens } from '../theme/types';
+import { applyTheme, findThemeById, resolveEffectiveTokens } from '../theme/themeEngine';
+import { BUILTIN_THEMES } from '../theme/presets';
 
 interface PreferenceState {
   theme: 'light' | 'dark';
+  activeThemeId: string;
+  customThemes: Record<string, ThemeDefinition>;
+  themeOverrides: Partial<ThemeTokens>;
   viewMode: 'grid' | 'list';
   soundEnabled: boolean;
   recentTools: string[];
   favoriteTools: string[];
   dismissedTips: string[];
   tipsHidden: boolean;
+
+  // Actions
   toggleTheme: () => void;
+  setThemeId: (themeId: string) => void;
+  setThemeOverride: (key: keyof ThemeTokens, value: string) => void;
+  resetThemeOverrides: () => void;
+  saveCustomTheme: (theme: ThemeDefinition) => void;
+  deleteCustomTheme: (themeId: string) => void;
+  getActiveTheme: () => ThemeDefinition;
+  getEffectiveTokens: () => ThemeTokens;
+
   toggleSound: () => void;
   setViewMode: (mode: 'grid' | 'list') => void;
   addRecentTool: (toolId: string) => void;
@@ -21,49 +37,153 @@ interface PreferenceState {
 
 export const usePreferenceStore = create<PreferenceState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       theme: 'dark',
+      activeThemeId: 'zerodock-dark',
+      customThemes: {},
+      themeOverrides: {},
       viewMode: 'grid',
       soundEnabled: true,
       recentTools: [],
       favoriteTools: [],
       dismissedTips: [],
       tipsHidden: false,
-      toggleTheme: () => set((state) => ({ theme: state.theme === 'light' ? 'dark' : 'light' })),
+
+      getActiveTheme: () => {
+        const { activeThemeId, customThemes } = get();
+        return findThemeById(activeThemeId, customThemes);
+      },
+
+      getEffectiveTokens: () => {
+        const theme = get().getActiveTheme();
+        return resolveEffectiveTokens(theme, get().themeOverrides);
+      },
+
+      toggleTheme: () =>
+        set((state) => {
+          const currentTheme = findThemeById(state.activeThemeId, state.customThemes);
+          const nextMode: 'light' | 'dark' = currentTheme.mode === 'dark' ? 'light' : 'dark';
+          const nextThemeId = nextMode === 'light' ? 'zerodock-light' : 'zerodock-dark';
+          const nextTheme = findThemeById(nextThemeId, state.customThemes);
+
+          applyTheme(nextTheme, {});
+          return {
+            theme: nextMode,
+            activeThemeId: nextThemeId,
+            themeOverrides: {},
+          };
+        }),
+
+      setThemeId: (themeId: string) =>
+        set((state) => {
+          const targetTheme = findThemeById(themeId, state.customThemes);
+          applyTheme(targetTheme, {});
+          return {
+            activeThemeId: themeId,
+            theme: targetTheme.mode,
+            themeOverrides: {},
+          };
+        }),
+
+      setThemeOverride: (key: keyof ThemeTokens, value: string) =>
+        set((state) => {
+          const newOverrides = {
+            ...state.themeOverrides,
+            [key]: value,
+          };
+          const targetTheme = findThemeById(state.activeThemeId, state.customThemes);
+          applyTheme(targetTheme, newOverrides);
+          return {
+            themeOverrides: newOverrides,
+          };
+        }),
+
+      resetThemeOverrides: () =>
+        set((state) => {
+          const targetTheme = findThemeById(state.activeThemeId, state.customThemes);
+          applyTheme(targetTheme, {});
+          return {
+            themeOverrides: {},
+          };
+        }),
+
+      saveCustomTheme: (customTheme: ThemeDefinition) =>
+        set((state) => {
+          const updatedCustomThemes = {
+            ...state.customThemes,
+            [customTheme.id]: customTheme,
+          };
+          applyTheme(customTheme, {});
+          return {
+            customThemes: updatedCustomThemes,
+            activeThemeId: customTheme.id,
+            theme: customTheme.mode,
+            themeOverrides: {},
+          };
+        }),
+
+      deleteCustomTheme: (themeId: string) =>
+        set((state) => {
+          const updated = { ...state.customThemes };
+          delete updated[themeId];
+          const fallbackId = 'zerodock-dark';
+          const fallbackTheme = BUILTIN_THEMES[0];
+          if (state.activeThemeId === themeId) {
+            applyTheme(fallbackTheme, {});
+            return {
+              customThemes: updated,
+              activeThemeId: fallbackId,
+              theme: fallbackTheme.mode,
+              themeOverrides: {},
+            };
+          }
+          return { customThemes: updated };
+        }),
+
       toggleSound: () => set((state) => ({ soundEnabled: !state.soundEnabled })),
       setViewMode: (mode) => set({ viewMode: mode }),
-      addRecentTool: (toolId) => set((state) => {
-        const filtered = state.recentTools.filter(id => id !== toolId);
-        return { recentTools: [toolId, ...filtered].slice(0, 10) };
-      }),
-      toggleFavoriteTool: (toolId) => set((state) => {
-        const isFavorite = state.favoriteTools.includes(toolId);
-        return {
-          favoriteTools: isFavorite
-            ? state.favoriteTools.filter(id => id !== toolId)
-            : [...state.favoriteTools, toolId]
-        };
-      }),
-      dismissTip: (tipId) => set((state) => {
-        try {
-          localStorage.setItem(`zerodock_dismissed_${tipId}`, 'true');
-        } catch {}
-        return {
-          dismissedTips: state.dismissedTips.includes(tipId)
-            ? state.dismissedTips
-            : [...state.dismissedTips, tipId],
-        };
-      }),
-      hideAllTips: () => set(() => {
-        try {
-          localStorage.setItem('zerodock_tips_hidden', 'true');
-        } catch {}
-        return { tipsHidden: true };
-      }),
+      addRecentTool: (toolId) =>
+        set((state) => {
+          const filtered = state.recentTools.filter((id) => id !== toolId);
+          return { recentTools: [toolId, ...filtered].slice(0, 10) };
+        }),
+      toggleFavoriteTool: (toolId) =>
+        set((state) => {
+          const isFavorite = state.favoriteTools.includes(toolId);
+          return {
+            favoriteTools: isFavorite
+              ? state.favoriteTools.filter((id) => id !== toolId)
+              : [...state.favoriteTools, toolId],
+          };
+        }),
+      dismissTip: (tipId) =>
+        set((state) => {
+          try {
+            localStorage.setItem(`zerodock_dismissed_${tipId}`, 'true');
+          } catch {}
+          return {
+            dismissedTips: state.dismissedTips.includes(tipId)
+              ? state.dismissedTips
+              : [...state.dismissedTips, tipId],
+          };
+        }),
+      hideAllTips: () =>
+        set(() => {
+          try {
+            localStorage.setItem('zerodock_tips_hidden', 'true');
+          } catch {}
+          return { tipsHidden: true };
+        }),
     }),
     {
       name: 'zerodock-preferences',
       storage: createJSONStorage(() => idbStorage),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          const active = findThemeById(state.activeThemeId || 'zerodock-dark', state.customThemes || {});
+          applyTheme(active, state.themeOverrides || {});
+        }
+      },
     }
   )
 );

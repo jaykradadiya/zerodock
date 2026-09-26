@@ -4,6 +4,7 @@ import {
   createRootRoute,
   RouterProvider,
   Outlet,
+  useLocation,
 } from '@tanstack/react-router';
 import { toolRegistry } from '../registry/tools';
 import { Suspense, lazy, useEffect } from 'react';
@@ -42,6 +43,7 @@ const lazyRetry = (componentImport: () => Promise<any>) =>
 
 const LazyCommandPalette = lazyRetry(() => import('../../shared/components/CommandPalette').then(m => ({ default: m.CommandPalette })));
 const LazyStorageWarningModal = lazyRetry(() => import('../../shared/components/StorageWarningModal').then(m => ({ default: m.StorageWarningModal })));
+const LazyThemeModal = lazyRetry(() => import('../../shared/components/ThemeModal').then(m => ({ default: m.ThemeModal })));
 
 /*
  * RootLayout — site-wide shell.
@@ -49,25 +51,45 @@ const LazyStorageWarningModal = lazyRetry(() => import('../../shared/components/
  * Tool pages get a self-contained layout; the landing page renders its own footer.
  */
 function RootLayout() {
-  const { theme } = usePreferenceStore();
-  const { commandPaletteOpen, setCommandPaletteOpen, storageWarning, zenMode, setZenMode } = useUIStore();
+  const {
+    commandPaletteOpen,
+    setCommandPaletteOpen,
+    themeModalOpen,
+    setThemeModalOpen,
+    storageWarning,
+    zenMode,
+    setZenMode,
+  } = useUIStore();
+  const location = useLocation();
+  const isLandingPage = location.pathname === '/';
 
-  // Toggle Command Palette globally
+  // Toggle Command Palette globally & VS Code Cmd+K Cmd+T theme chord
   useEffect(() => {
+    let kPressedTimestamp = 0;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      const isMeta = e.metaKey || e.ctrlKey;
+      if (isMeta && e.key.toLowerCase() === 'k') {
+        kPressedTimestamp = Date.now();
         e.preventDefault();
         setCommandPaletteOpen(!commandPaletteOpen);
+      } else if (isMeta && e.key.toLowerCase() === 't' && Date.now() - kPressedTimestamp < 1500) {
+        e.preventDefault();
+        kPressedTimestamp = 0;
+        setCommandPaletteOpen(false);
+        setThemeModalOpen(true, 'browse');
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [commandPaletteOpen, setCommandPaletteOpen]);
+  }, [commandPaletteOpen, setCommandPaletteOpen, setThemeModalOpen]);
 
   return (
     <div
       style={{
         minHeight: '100vh',
+        height: isLandingPage ? undefined : '100vh',
+        maxHeight: isLandingPage ? undefined : '100vh',
+        overflow: isLandingPage ? 'visible' : 'hidden',
         display: 'flex',
         flexDirection: 'column',
         fontFamily: 'var(--font-sans)',
@@ -75,7 +97,7 @@ function RootLayout() {
         color: 'var(--zd-text-secondary)',
         transition: 'background-color 0.3s ease, color 0.3s ease',
       }}
-      className={theme === 'dark' ? 'dark' : ''}
+      className="w-full flex-1 flex flex-col min-h-0"
     >
       <SkipLink />
       {!zenMode && <Navbar />}
@@ -92,8 +114,20 @@ function RootLayout() {
           <kbd className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--zd-bg)] border border-[var(--zd-border)] text-[var(--zd-text-muted)] font-mono ml-0.5">Esc</kbd>
         </button>
       )}
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', paddingTop: zenMode ? 0 : '3.5rem', minHeight: zenMode ? '100vh' : 'calc(100vh - 3.5rem)' }}>
-        <div className="flex flex-1 min-h-0 flex-col">
+      <main
+        style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: 0,
+          boxSizing: 'border-box',
+          paddingTop: zenMode ? 0 : '3.5rem',
+          height: isLandingPage ? undefined : '100vh',
+          maxHeight: isLandingPage ? undefined : '100vh',
+          overflow: isLandingPage ? 'visible' : 'hidden',
+        }}
+      >
+        <div className="flex flex-1 min-h-0 flex-col h-full overflow-hidden">
           <Outlet />
         </div>
       </main>
@@ -105,6 +139,11 @@ function RootLayout() {
       {storageWarning?.isOpen && (
         <Suspense fallback={null}>
           <LazyStorageWarningModal />
+        </Suspense>
+      )}
+      {themeModalOpen && (
+        <Suspense fallback={null}>
+          <LazyThemeModal />
         </Suspense>
       )}
       <ToastContainer />
@@ -179,8 +218,8 @@ const indexRoute = createRoute({
   path: '/',
   component: () => (
     <SEOWrapper
-      title="Privacy-First Web Utility & Developer Toolbox"
-      description="Format JSON, test APIs, convert epochs, encode URLs, check diffs, and inspect JWT tokens — all processed 100% locally in your browser."
+      title="Privacy-First JSON Developer Workspace & Toolkit"
+      description="Format, validate, explore, query, and diff JSON with real-time feedback — all processed 100% locally in your browser."
     >
       <LandingPage />
     </SEOWrapper>

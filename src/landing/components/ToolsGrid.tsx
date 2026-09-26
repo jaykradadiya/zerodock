@@ -23,21 +23,17 @@ const itemVariants = {
 
 const FEATURED_ORDER = [
   'json-toolkit',
-  'encode-decode',
-  'security',
-  'diff-checker',
-  'epoch-converter',
 ];
 
 /** Category → icon color so each tool visually stands apart */
 const CATEGORY_ICON_STYLES: Record<string, string> = {
-  Data: '!bg-[rgba(99,102,241,0.12)] !text-[#818CF8]',
+  Data: '!bg-[var(--zd-primary-soft)] !text-[var(--zd-primary)]',
   Network: '!bg-[var(--zd-accent-soft)] !text-[var(--zd-accent)]',
-  Encoding: '!bg-[rgba(56,189,248,0.1)] !text-[#38BDF8]',
-  Security: '!bg-[rgba(225,112,85,0.1)] !text-[#E17055]',
-  Text: '!bg-[rgba(52,211,153,0.1)] !text-[#34D399]',
-  Converters: '!bg-[rgba(14,165,233,0.1)] !text-[#0EA5E9]',
-  Generators: '!bg-[rgba(236,72,153,0.1)] !text-[#EC4899]',
+  Encoding: '!bg-[var(--zd-primary-soft)] !text-[var(--zd-primary)]',
+  Security: '!bg-[var(--zd-accent-soft)] !text-[var(--zd-accent)]',
+  Text: '!bg-[var(--zd-primary-soft)] !text-[var(--zd-primary)]',
+  Converters: '!bg-[var(--zd-accent-soft)] !text-[var(--zd-accent)]',
+  Generators: '!bg-[var(--zd-primary-soft)] !text-[var(--zd-primary)]',
 };
 
 const allLandingTools = getLandingTools(toolRegistry);

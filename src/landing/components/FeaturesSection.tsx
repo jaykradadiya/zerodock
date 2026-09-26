@@ -28,7 +28,7 @@ const features: Feature[] = [
     label: 'required, ever',
     description:
       'No sign-up, no email, no tracking pixels. Open the page, use the tool, close the tab. Open-source and auditable.',
-    accentColor: '#E17055',
+    accentColor: 'var(--zd-success)',
   },
 ];
 

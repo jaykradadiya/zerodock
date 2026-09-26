@@ -436,6 +436,29 @@
   .gutter.gutter-horizontal {
     background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAeCAYAAADkftS9AAAAIklEQVQoU2M4c+bMfxAGAgYYmwGrIIIDA9NBRg0gAA8gMQAA+xccqQx5/JIAAAAASUVORK5CYII=');
   }
+
+  /* Monaco Diff Editor Soft & Readable Colors Override */
+  .monaco-diff-editor .line-delete,
+  .monaco-diff-editor .ced-diff-delete-line,
+  .monaco-diff-editor .diffDeleteInline {
+    background-color: rgba(244, 63, 94, 0.16) !important;
+  }
+  .monaco-diff-editor .char-delete {
+    background-color: rgba(244, 63, 94, 0.32) !important;
+    border-radius: 2px !important;
+  }
+  .monaco-diff-editor .line-insert,
+  .monaco-diff-editor .ced-diff-insert-line,
+  .monaco-diff-editor .diffInsertInline {
+    background-color: rgba(16, 185, 129, 0.16) !important;
+  }
+  .monaco-diff-editor .char-insert {
+    background-color: rgba(16, 185, 129, 0.32) !important;
+    border-radius: 2px !important;
+  }
+  .monaco-diff-editor .diagonal-fill {
+    opacity: 0.15 !important;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

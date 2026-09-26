@@ -40,10 +40,6 @@ export interface Tool {
 
 export const FEATURED_TOOL_IDS = [
   'json-toolkit',
-  'encode-decode',
-  'security',
-  'diff-checker',
-  'epoch-converter',
 ] as const;
 
 export function getFeaturedTools(tools: Tool[]) {

@@ -5,23 +5,13 @@ const byId = (id: string) => {
   return tool ? { id: tool.id, name: tool.name, route: tool.route } : null;
 };
 
-const jsonTargets = ['json-toolkit', 'security']
-  .map(byId)
-  .filter(Boolean) as { id: string; name: string; route: string }[];
-
-const textTargets = ['diff-checker', 'encode-decode', 'json-toolkit']
+const jsonTargets = ['json-toolkit']
   .map(byId)
   .filter(Boolean) as { id: string; name: string; route: string }[];
 
 const defaultPipelineTargets: Record<string, { id: string; name: string; route: string }[]> = {
   'json-path': jsonTargets,
-  'base64-codec': textTargets,
-  'url-encoder': textTargets,
-  'encode-decode': textTargets,
-  'hash-generator': textTargets,
-  'jwt-decoder': jsonTargets,
-  'security': jsonTargets,
-  'diff-checker': textTargets,
+  'json-toolkit': jsonTargets,
 };
 
 export function getPipelineTargets(toolId: string) {

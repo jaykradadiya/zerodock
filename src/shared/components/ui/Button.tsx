@@ -12,13 +12,13 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
-    'bg-[var(--zd-primary)] hover:bg-[var(--zd-primary-hover)] text-white border-transparent shadow-[var(--zd-shadow-sm)] hover:shadow-[var(--zd-shadow-glow)]',
+    'bg-[var(--zd-primary)] hover:bg-[var(--zd-primary-hover)] text-[var(--zd-primary-foreground,#FFFFFF)] border-transparent shadow-[var(--zd-shadow-sm)] hover:shadow-[var(--zd-shadow-glow)]',
   secondary:
     'bg-[var(--zd-surface)] text-[var(--zd-text-secondary)] border-[var(--zd-border)] hover:bg-[var(--zd-primary-soft)] hover:text-[var(--zd-primary)] hover:border-[var(--zd-border-glow)]',
   ghost:
     'bg-transparent text-[var(--zd-text-secondary)] border-transparent hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]',
   destructive:
-    'bg-[var(--zd-surface)] text-red-600 dark:text-red-400 border-[var(--zd-border)] hover:bg-red-50 dark:hover:bg-red-950/30 hover:border-red-200 dark:hover:border-red-900/50',
+    'bg-[var(--zd-surface)] text-[var(--zd-error)] border-[var(--zd-border)] hover:bg-[var(--zd-error)]/10 hover:border-[var(--zd-error)]/40',
   icon:
     'bg-transparent text-[var(--zd-text-muted)] border-transparent hover:text-[var(--zd-text-primary)] hover:bg-[var(--zd-surface-raised)] p-2',
 };

@@ -10,6 +10,8 @@ export interface ContextCommand {
   action: () => void;
 }
 
+export type ThemeModalTab = 'browse' | 'customize' | 'vscode';
+
 interface UIState {
   commandPaletteOpen: boolean;
   zenMode: boolean;
@@ -21,6 +23,9 @@ interface UIState {
     message: string;
     suggestions: string[];
   } | null;
+  themeModalOpen: boolean;
+  themeModalTab: ThemeModalTab;
+  setThemeModalOpen: (open: boolean, tab?: ThemeModalTab) => void;
   setCommandPaletteOpen: (open: boolean) => void;
   setZenMode: (open: boolean) => void;
   setToolActions: (actions: ToolShortcutHandlers) => void;
@@ -38,13 +43,21 @@ export const useUIStore = create<UIState>((set) => ({
   contextCommands: [],
   storageWarning: null,
   shortcutsOpen: false,
+  themeModalOpen: false,
+  themeModalTab: 'browse',
+  setThemeModalOpen: (themeModalOpen, tab) =>
+    set((state) => ({
+      themeModalOpen,
+      themeModalTab: tab !== undefined ? tab : state.themeModalTab,
+    })),
   setCommandPaletteOpen: (commandPaletteOpen) => set({ commandPaletteOpen }),
   setZenMode: (zenMode) => set({ zenMode }),
   setToolActions: (toolActions) => set({ toolActions }),
   setContextCommands: (contextCommands) => set({ contextCommands }),
-  showStorageWarning: (title, message, suggestions = []) => set({
-    storageWarning: { isOpen: true, title, message, suggestions }
-  }),
+  showStorageWarning: (title, message, suggestions = []) =>
+    set({
+      storageWarning: { isOpen: true, title, message, suggestions },
+    }),
   closeStorageWarning: () => set({ storageWarning: null }),
   setShortcutsOpen: (shortcutsOpen) => set({ shortcutsOpen }),
 }));

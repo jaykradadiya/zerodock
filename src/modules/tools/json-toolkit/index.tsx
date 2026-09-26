@@ -23,6 +23,7 @@ import { jsonToSchema } from './lib/jsonToTypes';
 import { JsonTabBar } from './components/JsonTabBar';
 import { JsonToolbar } from './components/JsonToolbar';
 import { JsonStatusBar } from './components/JsonStatusBar';
+import { monaco } from '../../../core/monaco/setup';
 
 import JsonWorker from './json.worker.ts?worker';
 import RepairWorker from './repair.worker.ts?worker';
@@ -53,6 +54,15 @@ export default function JsonFormatter() {
   const [viewMode, setViewMode] = useState<'editor' | 'compare'>('editor');
   const [origDiffId, setOrigDiffId] = useState<string>('');
   const [modDiffId, setModDiffId] = useState<string>('');
+  const [diffSideBySide, setDiffSideBySide] = useState<boolean>(true);
+  const [diffIgnoreWhitespace, setDiffIgnoreWhitespace] = useState<boolean>(false);
+
+  const handleSwapDiff = useCallback(() => {
+    setOrigDiffId((prevOrig) => {
+      setModDiffId(prevOrig);
+      return modDiffId;
+    });
+  }, [modDiffId]);
 
   // Output Mode (Right Pane)
   const [activeTabContent, setActiveTabContent] = useState<string>('');
@@ -72,13 +82,17 @@ export default function JsonFormatter() {
   const activeTabIdRef = useRef(activeTabId);
 
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
+    const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isFullscreen) {
         setIsFullscreen(false);
       }
+      if ((e.metaKey || e.ctrlKey) && e.key === '.') {
+        e.preventDefault();
+        setIsFullscreen((prev) => !prev);
+      }
     };
-    window.addEventListener('keydown', handleEscape);
-    return () => window.removeEventListener('keydown', handleEscape);
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
   }, [isFullscreen]);
 
   // Global keyboard shortcuts
@@ -309,7 +323,13 @@ export default function JsonFormatter() {
         if (e.data.type === 'SUCCESS') {
           setValidationErrors(e.data.payload);
         } else if (e.data.type === 'ERROR') {
-          setValidationErrors([{ path: '/', message: e.data.payload.message, keyword: 'error' }]);
+          setValidationErrors([{
+            path: '/',
+            message: e.data.payload.message,
+            keyword: 'error',
+            line: e.data.payload.line || 1,
+            column: e.data.payload.column || 1,
+          }]);
         }
       };
     } catch (err) {
@@ -343,6 +363,60 @@ export default function JsonFormatter() {
       setIsValidating(false);
     }
   }, [schema, showSchema, activeTabId, activeTabContent, getFileContent]);
+
+  // Synchronize Monaco editor error squiggly markers with validation results
+  useEffect(() => {
+    if (!editorRef.current) return;
+    const model = editorRef.current.getModel();
+    if (!model) return;
+
+    if (!showSchema || validationErrors.length === 0) {
+      monaco.editor.setModelMarkers(model, 'json-schema-validation', []);
+      return;
+    }
+
+    const lineCount = model.getLineCount();
+    const markers = validationErrors
+      .filter(err => err.line !== undefined && err.line > 0)
+      .map(err => {
+        const line = Math.min(err.line!, lineCount);
+        const maxCol = model.getLineMaxColumn(line);
+        const startCol = Math.min(Math.max(err.column || 1, 1), maxCol);
+        const rawEndCol = err.endColumn || (startCol + 1);
+        const endCol = Math.min(Math.max(rawEndCol, startCol + 1), maxCol);
+        const endLine = err.endLine && err.endLine >= line ? Math.min(err.endLine, lineCount) : line;
+
+        return {
+          severity: monaco.MarkerSeverity.Error,
+          message: `${err.path && err.path !== '/' ? err.path + ': ' : ''}${err.message}`,
+          startLineNumber: line,
+          startColumn: startCol,
+          endLineNumber: endLine,
+          endColumn: endCol,
+        };
+      });
+
+    monaco.editor.setModelMarkers(model, 'json-schema-validation', markers);
+
+    return () => {
+      if (!model.isDisposed()) {
+        monaco.editor.setModelMarkers(model, 'json-schema-validation', []);
+      }
+    };
+  }, [showSchema, validationErrors, activeTabId]);
+
+  const handleJumpToError = useCallback((err: ValidationError) => {
+    if (!err.line) return;
+    setMobileFocus('input');
+    if (editorRef.current) {
+      editorRef.current.revealLineInCenter(err.line);
+      editorRef.current.setPosition({
+        lineNumber: err.line,
+        column: err.column || 1,
+      });
+      editorRef.current.focus();
+    }
+  }, []);
 
   const handleInferSchema = useCallback(async () => {
     try {
@@ -616,6 +690,10 @@ export default function JsonFormatter() {
         modDiffId={modDiffId}
         setOrigDiffId={setOrigDiffId}
         setModDiffId={setModDiffId}
+        diffSideBySide={diffSideBySide}
+        setDiffSideBySide={setDiffSideBySide}
+        diffIgnoreWhitespace={diffIgnoreWhitespace}
+        setDiffIgnoreWhitespace={setDiffIgnoreWhitespace}
         onOpenFileClick={() => fileInputRef.current?.click()}
         onDownload={handleDownload}
         isFullscreen={isFullscreen}
@@ -642,13 +720,23 @@ export default function JsonFormatter() {
               isValidating={isValidating}
               onClose={() => setShowSchema(false)}
               onInferSchema={handleInferSchema}
+              onErrorClick={handleJumpToError}
             />
           )}
 
           {viewMode === 'compare' ? (
             <ErrorBoundary>
               {origDiffId && modDiffId ? (
-                <DiffView originalModelId={origDiffId} modifiedModelId={modDiffId} />
+                <DiffView
+                  originalModelId={origDiffId}
+                  modifiedModelId={modDiffId}
+                  setOrigDiffId={setOrigDiffId}
+                  setModDiffId={setModDiffId}
+                  sideBySide={diffSideBySide}
+                  ignoreWhitespace={diffIgnoreWhitespace}
+                  tabs={tabs}
+                  onSwap={handleSwapDiff}
+                />
               ) : (
                 <div className="flex-1 flex items-center justify-center text-[var(--zd-text-muted)] bg-[var(--zd-surface)]">
                   Please open at least two tabs to compare
@@ -657,11 +745,11 @@ export default function JsonFormatter() {
             </ErrorBoundary>
           ) : (
             <>
-              {/* Main Editor Pane: hidden in Full Mode when Tree or Table is active */}
-              {(!sidePanelOpen || (panelLayout === 'split' || sidePanel === 'path')) && (
+              {/* Main Editor Pane: hidden in Full Mode when Tree, Table, or Path is active */}
+              {(!sidePanelOpen || panelLayout === 'split') && (
                 <div
                   className={cn(
-                    'flex-1 flex flex-col min-h-0 min-w-0',
+                    'flex-1 flex flex-col min-h-0 min-w-0 h-full',
                     sidePanelOpen && panelLayout === 'split' && 'md:w-1/2',
                     sidePanelOpen && mobileFocus === 'output' && 'hidden md:flex'
                   )}
@@ -672,6 +760,7 @@ export default function JsonFormatter() {
                       language="json"
                       editorRef={editorRef}
                       onChange={handleEditorChange}
+                      className="h-full"
                     />
                   ) : (
                     <div className="flex-1 flex items-center justify-center text-[var(--zd-text-muted)] bg-[var(--zd-surface)] min-w-0">
@@ -685,8 +774,8 @@ export default function JsonFormatter() {
               {sidePanelOpen && (
                 <div
                   className={cn(
-                    'flex flex-col min-h-0 bg-[var(--zd-surface)]',
-                    panelLayout === 'full' && (sidePanel === 'table' || sidePanel === 'tree')
+                    'flex flex-col min-h-0 bg-[var(--zd-surface)] h-full',
+                    panelLayout === 'full' && (sidePanel === 'table' || sidePanel === 'tree' || sidePanel === 'path')
                       ? 'flex-1 w-full'
                       : 'w-full md:w-1/2 border-t md:border-t-0 md:border-l border-[var(--zd-border)]',
                     mobileFocus === 'input' && 'hidden md:flex'
@@ -712,6 +801,8 @@ export default function JsonFormatter() {
                       <PathPanel
                         sourceJson={activeTabContent}
                         onClose={() => handleSidePanelChange('hidden')}
+                        panelLayout={panelLayout}
+                        onToggleLayout={() => setPanelLayout(panelLayout === 'full' ? 'split' : 'full')}
                       />
                     )}
                   </ErrorBoundary>
@@ -739,17 +830,17 @@ export default function JsonFormatter() {
   const workspaceContent = (
     <>
       {embedded ? (
-        <div className={workspaceShellClass}>{workspaceBody}</div>
+        <div className={cn(workspaceShellClass, 'h-full')}>{workspaceBody}</div>
       ) : (
-        <ToolWorkspace className={workspaceShellClass}>{workspaceBody}</ToolWorkspace>
+        <ToolWorkspace className={cn(workspaceShellClass, 'h-full')}>{workspaceBody}</ToolWorkspace>
       )}
     </>
   );
 
-  if (embedded) return <div className="zd-tool-fill">{workspaceContent}</div>;
+  if (embedded) return <div className="zd-tool-fill h-full">{workspaceContent}</div>;
 
   return (
-    <ToolPage fullWidth compact className="relative flex-1 min-h-0">
+    <ToolPage fullWidth compact className="relative flex-1 min-h-0 h-full !p-0">
       {workspaceContent}
     </ToolPage>
   );

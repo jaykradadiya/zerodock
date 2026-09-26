@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from '@tanstack/react-router';
-import { Search, Terminal, Sun, Moon, Volume2, VolumeX, CornerDownLeft, Sparkles } from 'lucide-react';
+import { Search, Terminal, Sun, Moon, Volume2, VolumeX, CornerDownLeft, Sparkles, Palette, Sliders, FileCode } from 'lucide-react';
 import { toolRegistry } from '../../core/registry/tools';
 import { usePreferenceStore } from '../../core/store/usePreferenceStore';
 import { useUIStore } from '../../core/store/useUIStore';
+import { BUILTIN_THEMES } from '../../core/theme/presets';
 import { searchTools } from '../utils/toolSearch';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 
@@ -15,8 +16,8 @@ const GithubIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 export function CommandPalette() {
-  const { theme, toggleTheme, recentTools, favoriteTools, soundEnabled, toggleSound } = usePreferenceStore();
-  const { commandPaletteOpen, setCommandPaletteOpen, contextCommands } = useUIStore();
+  const { theme, toggleTheme, setThemeId, recentTools, favoriteTools, soundEnabled, toggleSound } = usePreferenceStore();
+  const { commandPaletteOpen, setCommandPaletteOpen, setThemeModalOpen, contextCommands } = useUIStore();
   const [search, setSearch] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [activeCategory, setActiveCategory] = useState<'All' | 'Favorites' | 'Recent' | 'Tools' | 'Preferences' | 'External'>('All');
@@ -117,8 +118,41 @@ export function CommandPalette() {
   }).filter(Boolean) as typeof toolItems;
   const actionItems = [
     {
+      id: 'preferences-color-theme',
+      name: 'Preferences: Color Theme',
+      description: 'Switch between color themes or browse gallery (⌘K ⌘T)',
+      icon: Palette,
+      category: 'Preferences',
+      action: () => {
+        setThemeModalOpen(true, 'browse');
+        setCommandPaletteOpen(false);
+      },
+    },
+    {
+      id: 'preferences-customize-theme',
+      name: 'Preferences: Customize Theme Colors',
+      description: 'Fine-tune individual UI and Monaco editor tokens',
+      icon: Sliders,
+      category: 'Preferences',
+      action: () => {
+        setThemeModalOpen(true, 'customize');
+        setCommandPaletteOpen(false);
+      },
+    },
+    {
+      id: 'preferences-vscode-sync',
+      name: 'Preferences: Import / Export Theme (VS Code)',
+      description: 'Sync with VS Code settings.json or download theme JSON',
+      icon: FileCode,
+      category: 'Preferences',
+      action: () => {
+        setThemeModalOpen(true, 'vscode');
+        setCommandPaletteOpen(false);
+      },
+    },
+    {
       id: 'toggle-theme',
-      name: `Toggle Theme`,
+      name: `Toggle Theme Mode`,
       description: `Switch to ${theme === 'dark' ? 'Light' : 'Dark'} mode`,
       icon: theme === 'dark' ? Sun : Moon,
       category: 'Preferences',
@@ -127,6 +161,17 @@ export function CommandPalette() {
         setCommandPaletteOpen(false);
       },
     },
+    ...BUILTIN_THEMES.map((t) => ({
+      id: `theme-select-${t.id}`,
+      name: `Theme: ${t.name}`,
+      description: `${t.description} (${t.mode})`,
+      icon: Palette,
+      category: 'Preferences',
+      action: () => {
+        setThemeId(t.id);
+        setCommandPaletteOpen(false);
+      },
+    })),
     {
       id: 'toggle-sound',
       name: `Toggle Sound Effects`,

@@ -3,8 +3,9 @@ import { Link, useLocation } from '@tanstack/react-router';
 import { usePreferenceStore } from '../../core/store/usePreferenceStore';
 import { useUIStore } from '../../core/store/useUIStore';
 import { toolRegistry } from '../../core/registry/tools';
-import { Moon, Sun, Star, Search, ChevronRight, Lock } from 'lucide-react';
+import { Moon, Sun, Star, Search, ChevronRight, Lock, FileJson, Maximize } from 'lucide-react';
 import { Button } from '../../shared/components/ui';
+import { ShareLinkButton } from '../../shared/components/ShareLinkButton';
 
 const GithubIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24" {...props}>
@@ -14,7 +15,7 @@ const GithubIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 export function Navbar() {
   const { theme, toggleTheme } = usePreferenceStore();
-  const { setCommandPaletteOpen } = useUIStore();
+  const { setCommandPaletteOpen, setZenMode } = useUIStore();
   const [scrolled, setScrolled] = useState(false);
   const [stars, setStars] = useState<string>('Star');
 
@@ -42,7 +43,7 @@ export function Navbar() {
           return;
         }
 
-        const res = await fetch('https://api.github.com/repos/jayradadiya/ZeroDock');
+        const res = await fetch('https://api.github.com/repos/jaykradadiya/zerodock');
         if (res.ok) {
           const data = await res.json();
           const starCount =
@@ -111,7 +112,39 @@ export function Navbar() {
         </div>
 
         {/* Right: Actions */}
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+          {/* Tool Actions: Share & Focus */}
+          {activeTool && (
+            <div className="flex items-center gap-1 sm:gap-1.5">
+              <ShareLinkButton className="!h-8 sm:!h-9 text-xs font-semibold" />
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setZenMode(true)}
+                title="Focus mode (⌘.)"
+                aria-label="Enter focus mode"
+                className="!h-8 sm:!h-9 group text-xs font-semibold"
+              >
+                <Maximize className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Focus</span>
+              </Button>
+              <div className="h-4 w-px bg-[var(--zd-border)] mx-0.5 hidden sm:block" />
+            </div>
+          )}
+
+          <Link
+            to="/json-toolkit"
+            className={`flex items-center gap-1.5 h-8 sm:h-9 px-2.5 sm:px-3 rounded-xl border text-xs font-semibold no-underline transition-all shadow-xs ${
+              currentPath.startsWith('/json-toolkit')
+                ? 'bg-[var(--zd-primary-soft)] border-[var(--zd-primary)] text-[var(--zd-primary)]'
+                : 'bg-[var(--zd-surface-raised)] border-[var(--zd-border)] hover:border-[var(--zd-primary)]/50 hover:bg-[var(--zd-primary-soft)]/50 text-[var(--zd-text-primary)] hover:text-[var(--zd-primary)]'
+            }`}
+            title="Go to JSON Toolkit"
+          >
+            <FileJson className="w-3.5 h-3.5 text-[var(--zd-primary)] shrink-0" />
+            <span className="hidden sm:inline">JSON Toolkit</span>
+          </Link>
+
           <Button
             variant="secondary"
             size="sm"
@@ -127,7 +160,7 @@ export function Navbar() {
           </Button>
 
           <a
-            href="https://github.com/jayradadiya/ZeroDock"
+            href="https://github.com/jaykradadiya/zerodock"
             target="_blank"
             rel="noopener noreferrer"
             className="hidden sm:flex items-center no-underline h-8 sm:h-9 rounded-xl border border-[var(--zd-border)] hover:border-[var(--zd-border-hover)] bg-[var(--zd-surface-raised)] text-[var(--zd-text-primary)] text-xs font-semibold overflow-hidden transition-all shadow-xs group"

@@ -147,77 +147,32 @@ export function JsonToolbar({
 
               {/* View Panels Segmented Switcher */}
               <div className="flex items-center gap-0.5 bg-[var(--zd-surface)] border border-[var(--zd-border)] p-0.5 rounded-lg">
-                <button
-                  type="button"
-                  onClick={() => onSidePanelChange('tree')}
-                  title="Tree View Explorer"
-                  className={cn(
-                    'flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all',
-                    sidePanel === 'tree'
-                      ? 'bg-[var(--zd-surface-raised)] text-[var(--zd-primary)] font-semibold shadow-xs border border-[var(--zd-border)]/50'
-                      : 'text-[var(--zd-text-secondary)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]/40'
-                  )}
-                >
-                  <LayoutTemplate className="w-3.5 h-3.5" />
-                  <span>Tree</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onSidePanelChange('table')}
-                  title="Table View"
-                  className={cn(
-                    'flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all',
-                    sidePanel === 'table'
-                      ? 'bg-[var(--zd-surface-raised)] text-[var(--zd-primary)] font-semibold shadow-xs border border-[var(--zd-border)]/50'
-                      : 'text-[var(--zd-text-secondary)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]/40'
-                  )}
-                >
-                  <TableProperties className="w-3.5 h-3.5" />
-                  <span>Table</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onSidePanelChange('path')}
-                  title="JMESPath Query Tool"
-                  className={cn(
-                    'flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all',
-                    sidePanel === 'path'
-                      ? 'bg-[var(--zd-surface-raised)] text-[var(--zd-primary)] font-semibold shadow-xs border border-[var(--zd-border)]/50'
-                      : 'text-[var(--zd-text-secondary)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]/40'
-                  )}
-                >
-                  <Filter className="w-3.5 h-3.5" />
-                  <span>Path</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onSidePanelChange('yaml')}
-                  title="YAML Converter"
-                  className={cn(
-                    'flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all',
-                    sidePanel === 'yaml'
-                      ? 'bg-[var(--zd-surface-raised)] text-[var(--zd-primary)] font-semibold shadow-xs border border-[var(--zd-border)]/50'
-                      : 'text-[var(--zd-text-secondary)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]/40'
-                  )}
-                >
-                  <FileCode className="w-3.5 h-3.5" />
-                  <span>YAML</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onSidePanelChange('types')}
-                  disabled={!activeTabId}
-                  title="TypeScript & Type Generator"
-                  className={cn(
-                    'flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all disabled:opacity-50',
-                    sidePanel === 'types'
-                      ? 'bg-[var(--zd-surface-raised)] text-[var(--zd-primary)] font-semibold shadow-xs border border-[var(--zd-border)]/50'
-                      : 'text-[var(--zd-text-secondary)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]/40'
-                  )}
-                >
-                  <Code2 className="w-3.5 h-3.5" />
-                  <span>Types</span>
-                </button>
+                {(
+                  [
+                    { id: 'tree' as const, label: 'Tree', Icon: LayoutTemplate, title: 'Tree View Explorer' },
+                    { id: 'table' as const, label: 'Table', Icon: TableProperties, title: 'Table View' },
+                    { id: 'path' as const, label: 'Path', Icon: Filter, title: 'JMESPath Query Tool' },
+                    { id: 'yaml' as const, label: 'YAML', Icon: FileCode, title: 'YAML Converter' },
+                    { id: 'types' as const, label: 'Types', Icon: Code2, title: 'TypeScript & Type Generator' },
+                  ] as const
+                ).map(({ id, label, Icon, title }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => onSidePanelChange(id)}
+                    disabled={id === 'types' && !activeTabId}
+                    title={`${title}${sidePanel === id ? ' (click again to close)' : ''}`}
+                    className={cn(
+                      'flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all disabled:opacity-50',
+                      sidePanel === id
+                        ? 'bg-[var(--zd-surface-raised)] text-[var(--zd-primary)] font-semibold shadow-xs border border-[var(--zd-border)]/50'
+                        : 'text-[var(--zd-text-secondary)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]/40'
+                    )}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    <span>{label}</span>
+                  </button>
+                ))}
               </div>
 
               <div className="h-4 w-px bg-[var(--zd-border)] mx-0.5" />

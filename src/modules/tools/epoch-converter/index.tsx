@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Clock, Copy, Play, Pause, RefreshCw, Calendar, ArrowRightLeft, Globe } from 'lucide-react';
 import { ToolPage, ToolHeader, ToolWorkspace } from '../../../shared/components/ToolLayout';
-import { StatCard, Card } from '../../../shared/components/ui';
+import { cn } from '../../../shared/components/ui';
+import { CopyButton } from '../../../shared/components/CopyButton';
 import { createToolStore } from '../../../core/store/useToolState';
 import { useSyncToolUrl } from '../../../shared/hooks/useSyncToolUrl';
 
@@ -168,6 +169,56 @@ function parseDateString(
   return null;
 }
 
+function OutputRow({
+  label,
+  value,
+  subLabel,
+  copyable = true,
+  highlight = false,
+  accent = false,
+}: {
+  label: string;
+  value: string;
+  subLabel?: string;
+  copyable?: boolean;
+  highlight?: boolean;
+  accent?: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        'flex items-center justify-between gap-2.5 px-3 py-1.5 sm:py-2 rounded-xl border transition-colors',
+        highlight
+          ? 'bg-[var(--zd-primary-soft)] border-[var(--zd-primary)]/20'
+          : accent
+          ? 'bg-[var(--zd-accent-soft)] border-[var(--zd-accent)]/25'
+          : 'bg-[var(--zd-surface)] border-[var(--zd-border)]'
+      )}
+    >
+      <div className="flex flex-col min-w-0 flex-1">
+        <span className="text-[10px] uppercase font-bold tracking-wider text-[var(--zd-text-muted)]">
+          {label} {subLabel && <span className="normal-case opacity-75 font-normal">({subLabel})</span>}
+        </span>
+        <span
+          className={cn(
+            'text-xs sm:text-sm font-mono font-semibold truncate select-all',
+            accent
+              ? 'text-[var(--zd-accent)]'
+              : highlight
+              ? 'text-[var(--zd-primary)]'
+              : 'text-[var(--zd-text-primary)]'
+          )}
+          title={value}
+        >
+          {value || '—'}
+        </span>
+      </div>
+      {copyable && value && (
+        <CopyButton value={value} className="shrink-0 text-xs" />
+      )}
+    </div>
+  );
+}
 
 export default function EpochConverter() {
   const { inputEpoch, dateTimeInput, timezoneToggle, targetTimezone, setValues } = useEpochStore();
@@ -276,254 +327,307 @@ export default function EpochConverter() {
     }
   }
 
+  // Quick Preset Helper for DateTime
+  const applyPreset = (mode: 'now' | 'startOfDay' | '+1h' | '+24h' | '-24h') => {
+    const d = new Date();
+    if (mode === 'startOfDay') {
+      d.setHours(0, 0, 0, 0);
+    } else if (mode === '+1h') {
+      d.setHours(d.getHours() + 1);
+    } else if (mode === '+24h') {
+      d.setDate(d.getDate() + 1);
+    } else if (mode === '-24h') {
+      d.setDate(d.getDate() - 1);
+    }
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    const seconds = String(d.getSeconds()).padStart(2, '0');
+    setDateTimeInput(`${year}-${month}-${day} ${hours}:${minutes}:${seconds}`);
+  };
+
+  const isMs = cleanEpoch.length > 11;
 
   return (
-    <ToolPage className="max-w-4xl 2xl:max-w-5xl">
+    <ToolPage fullWidth compact className="h-[calc(100vh-3.5rem)] flex flex-col min-h-0 overflow-hidden max-w-7xl 2xl:max-w-[1440px] mx-auto p-1 sm:p-2">
       <ToolHeader
         icon={Clock}
         title="Epoch Timestamp Converter"
-        description="Parse Unix timestamps to human times and construct epochs in local or UTC."
+        description="Convert Unix timestamps to human dates and vice versa with multi-timezone support."
+        toolId="epoch-converter"
+        compact
       />
 
-      <ToolWorkspace className="overflow-y-auto custom-scrollbar">
-        {/* Global Config / Timezone Selector */}
-        <div className="w-full bg-[var(--zd-surface-raised)] border-b border-[var(--zd-border)] p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-[var(--zd-accent-soft)] flex items-center justify-center text-[var(--zd-accent)] shrink-0">
-            <Globe className="w-4.5 h-4.5" />
-          </div>
-          <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--zd-text-muted)]">Target Timezone</span>
-            <div className="text-sm font-semibold text-[var(--zd-text-secondary)]">
-              Convert and view timestamps in your selected region.
+      <ToolWorkspace className="flex-1 min-h-0 flex flex-col overflow-hidden border border-[var(--zd-border)] rounded-xl bg-[var(--zd-surface)] shadow-[var(--zd-shadow-md)]">
+        {/* Compact Live Bar & Timezone Selector */}
+        <div className="w-full bg-[var(--zd-surface-raised)] border-b border-[var(--zd-border)] px-3 sm:px-4 py-2 flex flex-wrap items-center justify-between gap-2 shrink-0">
+          {/* Live Unix Clock */}
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[var(--zd-primary-soft)] text-[var(--zd-primary)] text-[11px] font-bold">
+              <Clock className="w-3 h-3 animate-pulse" />
+              <span>LIVE</span>
             </div>
-          </div>
-        </div>
-        <div className="w-full sm:w-64">
-          <select
-            value={targetTimezone}
-            onChange={(e) => setTargetTimezone(e.target.value)}
-            className="w-full px-3 py-2 text-sm bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] rounded-xl text-[var(--zd-text-primary)] outline-none focus:border-[var(--zd-primary)] transition-all font-semibold cursor-pointer"
-          >
-            {SUPPORTED_TIMEZONES.map((tz) => (
-              <option key={tz.value} value={tz.value}>
-                {tz.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
 
-
-      {/* Grid Panels */}
-      <div className="w-full flex flex-col gap-6 p-4 sm:p-6">
-        
-        {/* Ticking Live Epoch Display Card */}
-        <Card className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-6" glow>
-          <div className="space-y-1">
-            <span className="text-xs font-bold uppercase tracking-wider text-[var(--zd-primary)]">
-              Current Unix Timestamp
-            </span>
-            <div className="text-3xl font-extrabold font-mono text-[var(--zd-text-primary)] tracking-tight flex flex-wrap items-baseline gap-2">
+            <div className="flex items-center gap-2 font-mono text-xs sm:text-sm font-extrabold text-[var(--zd-text-primary)]">
               <span>{Math.floor(liveTime / 1000)}</span>
-              <span className="text-[var(--zd-text-muted)] text-lg">seconds</span>
-              <span className="text-[var(--zd-text-muted)] mx-2">|</span>
+              <span className="text-[11px] font-normal text-[var(--zd-text-muted)]">sec</span>
+              <span className="text-[var(--zd-border)]">|</span>
               <span className="text-[var(--zd-accent)]">{liveTime}</span>
-              <span className="text-[var(--zd-text-muted)] text-lg">milliseconds</span>
+              <span className="text-[11px] font-normal text-[var(--zd-text-muted)]">ms</span>
             </div>
-            <p className="text-xs text-[var(--zd-text-muted)]">Ticking in real-time. Freeze or copy values using the buttons on the right.</p>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setIsPaused(!isPaused)}
-              className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-                isPaused
-                  ? 'bg-[var(--zd-accent-soft)] text-[var(--zd-accent)] border border-[var(--zd-accent)]/30'
-                  : 'bg-[var(--zd-primary-soft)] text-[var(--zd-primary)] border border-transparent'
-              }`}
-            >
-              {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
-              <span>{isPaused ? "Resume" : "Freeze"}</span>
-            </button>
-            <button
-              onClick={() => triggerCopy(Math.floor(liveTime / 1000).toString(), 'seconds')}
-              className="flex items-center gap-1.5 px-4 py-2.5 bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] rounded-xl text-sm font-semibold text-[var(--zd-text-secondary)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)] transition-all"
-            >
-              <Copy className="w-4 h-4" />
-              <span>{copiedText === 'seconds' ? "Copied Sec!" : "Copy Sec"}</span>
-            </button>
-            <button
-              onClick={() => triggerCopy(liveTime.toString(), 'ms')}
-              className="flex items-center gap-1.5 px-4 py-2.5 bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] rounded-xl text-sm font-semibold text-[var(--zd-text-secondary)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)] transition-all"
-            >
-              <Copy className="w-4 h-4" />
-              <span>{copiedText === 'ms' ? "Copied Ms!" : "Copy Ms"}</span>
-            </button>
-          </div>
-        </Card>
 
-        {/* Bi-directional conversion panels */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-          
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setIsPaused(!isPaused)}
+                className={cn(
+                  'px-2 py-0.5 rounded text-xs font-semibold flex items-center gap-1 transition-all',
+                  isPaused
+                    ? 'bg-[var(--zd-accent-soft)] text-[var(--zd-accent)] border border-[var(--zd-accent)]/30'
+                    : 'text-[var(--zd-text-muted)] hover:text-[var(--zd-text-primary)] hover:bg-[var(--zd-surface)]'
+                )}
+                title={isPaused ? 'Resume live clock' : 'Freeze live clock'}
+              >
+                {isPaused ? <Play className="w-3 h-3" /> : <Pause className="w-3 h-3" />}
+                <span>{isPaused ? 'Resume' : 'Freeze'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => triggerCopy(Math.floor(liveTime / 1000).toString(), 'seconds')}
+                className="px-2 py-0.5 rounded text-xs font-semibold text-[var(--zd-text-secondary)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-surface)] transition-all flex items-center gap-1"
+                title="Copy current seconds"
+              >
+                <Copy className="w-3 h-3" />
+                <span>{copiedText === 'seconds' ? 'Copied!' : 'Sec'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => triggerCopy(liveTime.toString(), 'ms')}
+                className="px-2 py-0.5 rounded text-xs font-semibold text-[var(--zd-text-secondary)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-surface)] transition-all flex items-center gap-1"
+                title="Copy current milliseconds"
+              >
+                <Copy className="w-3 h-3" />
+                <span>{copiedText === 'ms' ? 'Copied!' : 'Ms'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Timezone Selector in Toolbar */}
+          <div className="flex items-center gap-1.5">
+            <Globe className="w-3.5 h-3.5 text-[var(--zd-text-muted)] shrink-0" />
+            <span className="text-xs text-[var(--zd-text-muted)] hidden md:inline font-medium">Timezone:</span>
+            <select
+              value={targetTimezone}
+              onChange={(e) => setTargetTimezone(e.target.value)}
+              className="px-2.5 py-1 text-xs bg-[var(--zd-surface)] border border-[var(--zd-border)] rounded-lg text-[var(--zd-text-primary)] outline-none focus:border-[var(--zd-primary)] transition-all font-semibold cursor-pointer"
+            >
+              {SUPPORTED_TIMEZONES.map((tz) => (
+                <option key={tz.value} value={tz.value}>
+                  {tz.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* 2-Column Responsive Workspace Grid */}
+        <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-2 gap-2.5 sm:gap-3 p-2.5 sm:p-3 overflow-y-auto custom-scrollbar">
           {/* Panel 1: Epoch to Human */}
-          <div className="bg-[var(--zd-surface)] border border-[var(--zd-border)] rounded-2xl p-6 shadow-[var(--zd-shadow-md)] flex flex-col gap-4">
-            <h3 className="text-lg font-bold text-[var(--zd-text-primary)] flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-[var(--zd-primary)]" />
-              Epoch to Date Time
-            </h3>
-            
-            <div className="flex flex-col gap-2">
-              <label className="text-xs font-semibold text-[var(--zd-text-secondary)]">
-                Enter Timestamp (Seconds or Milliseconds)
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={inputEpoch}
-                  onChange={(e) => setInputEpoch(e.target.value)}
-                  className="flex-1 px-4 py-2.5 text-sm bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] rounded-xl text-[var(--zd-text-primary)] outline-none focus:border-[var(--zd-primary)] focus:ring-2 focus:ring-[var(--zd-primary-soft)] transition-all font-mono"
-                  placeholder="e.g. 1781523600"
-                />
-                <button
-                  onClick={() => setInputEpoch(Math.floor(Date.now() / 1000).toString())}
-                  className="px-3 py-2.5 bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] hover:border-[var(--zd-primary)] hover:text-[var(--zd-primary)] rounded-xl transition-all"
-                  title="Load current epoch"
-                >
-                  <RefreshCw className="w-4.5 h-4.5" />
-                </button>
-              </div>
+          <div className="bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] rounded-xl p-3 sm:p-3.5 flex flex-col gap-2.5 min-h-0">
+            <div className="flex items-center justify-between gap-2 shrink-0">
+              <h3 className="text-sm font-bold text-[var(--zd-text-primary)] flex items-center gap-1.5">
+                <Calendar className="w-4 h-4 text-[var(--zd-primary)]" />
+                Epoch to Date / Time
+              </h3>
+              {cleanEpoch && !epochError && (
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[var(--zd-primary-soft)] text-[var(--zd-primary)] font-semibold">
+                  {isMs ? 'Milliseconds (ms)' : 'Seconds (s)'}
+                </span>
+              )}
+            </div>
+
+            {/* Input area */}
+            <div className="flex gap-1.5 shrink-0">
+              <input
+                type="text"
+                value={inputEpoch}
+                onChange={(e) => setInputEpoch(e.target.value)}
+                className="flex-1 px-3 py-1.5 text-xs sm:text-sm bg-[var(--zd-surface)] border border-[var(--zd-border)] rounded-lg text-[var(--zd-text-primary)] outline-none focus:border-[var(--zd-primary)] focus:ring-1 focus:ring-[var(--zd-primary)] transition-all font-mono"
+                placeholder="Enter timestamp e.g. 1774567890"
+              />
+              <button
+                type="button"
+                onClick={() => setInputEpoch(Math.floor(Date.now() / 1000).toString())}
+                className="px-2.5 py-1.5 bg-[var(--zd-surface)] border border-[var(--zd-border)] hover:border-[var(--zd-primary)] hover:text-[var(--zd-primary)] rounded-lg transition-all text-xs font-semibold flex items-center gap-1 shrink-0"
+                title="Use current timestamp"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Now</span>
+              </button>
             </div>
 
             {epochError ? (
-              <div className="text-xs text-red-500 font-medium">
+              <div className="text-xs text-red-500 font-medium p-2.5 bg-red-500/10 rounded-lg border border-red-500/20">
                 {epochError}
               </div>
             ) : (
-              <div className="flex flex-col gap-3 mt-2">
-                <StatCard label="UTC / GMT Time" value={utcString} copyable />
-                <StatCard label="Local Timezone" value={localString} copyable />
+              <div className="flex flex-col gap-1.5 flex-1 min-h-0 overflow-y-auto pr-0.5">
+                <OutputRow label="UTC / GMT Time" value={utcString} />
+                <OutputRow label="Local Timezone" value={localString} highlight />
                 {targetTimezone && (
-                  <StatCard
-                    label={`Target Timezone (${SUPPORTED_TIMEZONES.find((tz) => tz.value === targetTimezone)?.label || targetTimezone})`}
+                  <OutputRow
+                    label="Target Timezone"
+                    subLabel={SUPPORTED_TIMEZONES.find((tz) => tz.value === targetTimezone)?.label || targetTimezone}
                     value={targetString}
-                    copyable
-                    className="border-l-2 border-l-[var(--zd-accent)]"
+                    accent
                   />
                 )}
-                <StatCard label="ISO 8601 String" value={isoString} copyable />
-                <StatCard label="Relative Time" value={relativeAge} className="[&_p]:text-[var(--zd-primary)]" />
+                <OutputRow label="ISO 8601 String" value={isoString} />
+                <OutputRow label="Relative Time" value={relativeAge} copyable={false} />
               </div>
             )}
           </div>
 
           {/* Panel 2: Human to Epoch */}
-          <div className="bg-[var(--zd-surface)] border border-[var(--zd-border)] rounded-2xl p-6 shadow-[var(--zd-shadow-md)] flex flex-col gap-4">
-            <h3 className="text-lg font-bold text-[var(--zd-text-primary)] flex items-center gap-2">
-              <ArrowRightLeft className="w-5 h-5 text-[var(--zd-primary)]" />
-              Date Time to Epoch
-            </h3>
-            
-            <div className="flex flex-col gap-2">
-              <label className="text-xs font-semibold text-[var(--zd-text-secondary)]">
-                Enter Date / Time String (Pastable)
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={dateTimeInput}
-                  onChange={(e) => setDateTimeInput(e.target.value)}
-                  className="flex-1 px-4 py-2.5 text-sm bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] rounded-xl text-[var(--zd-text-primary)] outline-none focus:border-[var(--zd-primary)] focus:ring-2 focus:ring-[var(--zd-primary-soft)] transition-all font-mono"
-                  placeholder="e.g. 2026-06-15 12:40:00 or ISO/RFC string"
-                />
-                <input
-                  type="datetime-local"
-                  ref={pickerRef}
-                  className="sr-only"
-                  onChange={(e) => {
-                    if (e.target.value) {
-                      setDateTimeInput(e.target.value.replace('T', ' '));
-                    }
-                  }}
-                />
-                <button
-                  onClick={() => pickerRef.current?.showPicker ? pickerRef.current.showPicker() : pickerRef.current?.click()}
-                  className="px-3 py-2.5 bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] hover:border-[var(--zd-primary)] hover:text-[var(--zd-primary)] rounded-xl transition-all"
-                  title="Open date picker calendar"
-                >
-                  <Calendar className="w-4.5 h-4.5" />
-                </button>
+          <div className="bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] rounded-xl p-3 sm:p-3.5 flex flex-col gap-2.5 min-h-0">
+            <div className="flex items-center justify-between gap-2 shrink-0">
+              <h3 className="text-sm font-bold text-[var(--zd-text-primary)] flex items-center gap-1.5">
+                <ArrowRightLeft className="w-4 h-4 text-[var(--zd-primary)]" />
+                Date / Time to Epoch
+              </h3>
+
+              {/* Timezone Toggle */}
+              <div className="flex items-center gap-1 bg-[var(--zd-surface)] border border-[var(--zd-border)] p-0.5 rounded-lg shrink-0">
+                {(['local', 'utc', 'target'] as const).map((tzMode) => (
+                  <button
+                    key={tzMode}
+                    type="button"
+                    onClick={() => setTimezoneToggle(tzMode)}
+                    className={cn(
+                      'px-2 py-0.5 rounded text-[11px] font-semibold transition-all',
+                      timezoneToggle === tzMode
+                        ? 'bg-[var(--zd-surface-raised)] text-[var(--zd-primary)] shadow-xs'
+                        : 'text-[var(--zd-text-muted)] hover:text-[var(--zd-text-secondary)]'
+                    )}
+                  >
+                    {tzMode === 'local' ? 'Local' : tzMode === 'utc' ? 'UTC' : 'Target'}
+                  </button>
+                ))}
               </div>
             </div>
 
-            {/* Timezone Toggle */}
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs font-semibold text-[var(--zd-text-muted)]">Interpret as:</span>
-              <div className="flex gap-1 bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] p-1 rounded-xl">
-                <button
-                  onClick={() => setTimezoneToggle('local')}
-                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-                    timezoneToggle === 'local' 
-                      ? 'bg-[var(--zd-surface)] text-[var(--zd-primary)] shadow-sm' 
-                      : 'text-[var(--zd-text-muted)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]/40 bg-transparent'
-                  }`}
-                >
-                  Local
-                </button>
-                <button
-                  onClick={() => setTimezoneToggle('utc')}
-                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-                    timezoneToggle === 'utc' 
-                      ? 'bg-[var(--zd-surface)] text-[var(--zd-primary)] shadow-sm' 
-                      : 'text-[var(--zd-text-muted)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]/40 bg-transparent'
-                  }`}
-                >
-                  UTC
-                </button>
-                <button
-                  onClick={() => setTimezoneToggle('target')}
-                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-                    timezoneToggle === 'target' 
-                      ? 'bg-[var(--zd-surface)] text-[var(--zd-primary)] shadow-sm' 
-                      : 'text-[var(--zd-text-muted)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]/40 bg-transparent'
-                  }`}
-                  title={`Interpret in ${targetTimezone}`}
-                >
-                  Target Tz
-                </button>
-              </div>
+            {/* Input area */}
+            <div className="flex gap-1.5 shrink-0">
+              <input
+                type="text"
+                value={dateTimeInput}
+                onChange={(e) => setDateTimeInput(e.target.value)}
+                className="flex-1 px-3 py-1.5 text-xs sm:text-sm bg-[var(--zd-surface)] border border-[var(--zd-border)] rounded-lg text-[var(--zd-text-primary)] outline-none focus:border-[var(--zd-primary)] focus:ring-1 focus:ring-[var(--zd-primary)] transition-all font-mono"
+                placeholder="YYYY-MM-DD HH:mm:ss or ISO string"
+              />
+              <input
+                type="datetime-local"
+                ref={pickerRef}
+                className="sr-only"
+                onChange={(e) => {
+                  if (e.target.value) {
+                    setDateTimeInput(e.target.value.replace('T', ' '));
+                  }
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => pickerRef.current?.showPicker ? pickerRef.current.showPicker() : pickerRef.current?.click()}
+                className="px-2.5 py-1.5 bg-[var(--zd-surface)] border border-[var(--zd-border)] hover:border-[var(--zd-primary)] hover:text-[var(--zd-primary)] rounded-lg transition-all text-xs font-semibold flex items-center gap-1 shrink-0"
+                title="Open calendar picker"
+              >
+                <Calendar className="w-3.5 h-3.5" />
+              </button>
             </div>
 
+            {/* Quick Presets */}
+            <div className="flex items-center gap-1.5 flex-wrap shrink-0">
+              <span className="text-[10px] uppercase font-bold text-[var(--zd-text-muted)] tracking-wider">Presets:</span>
+              <button
+                type="button"
+                onClick={() => applyPreset('now')}
+                className="px-2 py-0.5 rounded text-[11px] font-semibold bg-[var(--zd-surface)] hover:bg-[var(--zd-primary-soft)] hover:text-[var(--zd-primary)] text-[var(--zd-text-secondary)] border border-[var(--zd-border)] transition-colors"
+              >
+                Now
+              </button>
+              <button
+                type="button"
+                onClick={() => applyPreset('startOfDay')}
+                className="px-2 py-0.5 rounded text-[11px] font-semibold bg-[var(--zd-surface)] hover:bg-[var(--zd-primary-soft)] hover:text-[var(--zd-primary)] text-[var(--zd-text-secondary)] border border-[var(--zd-border)] transition-colors"
+              >
+                Today 00:00
+              </button>
+              <button
+                type="button"
+                onClick={() => applyPreset('+1h')}
+                className="px-2 py-0.5 rounded text-[11px] font-semibold bg-[var(--zd-surface)] hover:bg-[var(--zd-primary-soft)] hover:text-[var(--zd-primary)] text-[var(--zd-text-secondary)] border border-[var(--zd-border)] transition-colors"
+              >
+                +1h
+              </button>
+              <button
+                type="button"
+                onClick={() => applyPreset('+24h')}
+                className="px-2 py-0.5 rounded text-[11px] font-semibold bg-[var(--zd-surface)] hover:bg-[var(--zd-primary-soft)] hover:text-[var(--zd-primary)] text-[var(--zd-text-secondary)] border border-[var(--zd-border)] transition-colors"
+              >
+                +1d
+              </button>
+            </div>
+
+            {/* Output area */}
             {parseError ? (
-              <div className="text-xs text-red-500 font-medium p-3 bg-red-500/10 rounded-xl border border-red-500/20 mt-2">
+              <div className="text-xs text-red-500 font-medium p-2.5 bg-red-500/10 rounded-lg border border-red-500/20">
                 {parseError}
               </div>
             ) : dateTimeInput.trim() ? (
-              <div className="flex flex-col gap-3 mt-2.5">
-                {/* Parser status badge */}
-                {isCustomParsed && (
-                  <div className="text-[10px] text-[var(--zd-accent)] font-bold px-2.5 py-1 bg-[var(--zd-accent-soft)] rounded-lg border border-[var(--zd-accent)]/20 w-fit self-end uppercase tracking-wider">
-                    Custom Regex Parsed
+              <div className="flex flex-col gap-2 flex-1 min-h-0 justify-center">
+                {/* Epoch Seconds Card */}
+                <div className="p-2.5 sm:p-3 rounded-xl bg-[var(--zd-surface)] border border-[var(--zd-border)] flex items-center justify-between gap-3">
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-[var(--zd-text-muted)]">
+                      Epoch Seconds (Unix)
+                    </span>
+                    <span className="text-base sm:text-lg font-mono font-extrabold text-[var(--zd-primary)] truncate select-all">
+                      {outputEpochSec}
+                    </span>
                   </div>
+                  <CopyButton value={outputEpochSec.toString()} />
+                </div>
+
+                {/* Epoch Milliseconds Card */}
+                <div className="p-2.5 sm:p-3 rounded-xl bg-[var(--zd-surface)] border border-[var(--zd-border)] flex items-center justify-between gap-3">
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-[var(--zd-text-muted)]">
+                      Epoch Milliseconds
+                    </span>
+                    <span className="text-base sm:text-lg font-mono font-extrabold text-[var(--zd-accent)] truncate select-all">
+                      {outputEpochMs}
+                    </span>
+                  </div>
+                  <CopyButton value={outputEpochMs.toString()} />
+                </div>
+
+                {isCustomParsed && (
+                  <span className="text-[10px] text-[var(--zd-text-muted)] italic text-right">
+                    Parsed with custom date-time patterns
+                  </span>
                 )}
-                <StatCard label="Epoch Seconds (Unix)" value={outputEpochSec.toString()} copyable />
-                <StatCard
-                  label="Epoch Milliseconds"
-                  value={outputEpochMs.toString()}
-                  copyable
-                  className="[&_p]:text-[var(--zd-accent)]"
-                />
               </div>
             ) : (
-              <div className="text-center text-xs text-[var(--zd-text-muted)] py-8 bg-[var(--zd-surface-raised)]/30 rounded-xl border border-dashed border-[var(--zd-border)] mt-2">
+              <div className="text-center text-xs text-[var(--zd-text-muted)] py-6 bg-[var(--zd-surface)] rounded-lg border border-dashed border-[var(--zd-border)]">
                 Enter or paste a valid date/time above.
               </div>
             )}
           </div>
-
         </div>
-
-      </div>
       </ToolWorkspace>
     </ToolPage>
   );

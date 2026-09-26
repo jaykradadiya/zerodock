@@ -1,10 +1,12 @@
 import { motion } from 'framer-motion';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { ArrowRight, Sparkles, FileJson } from 'lucide-react';
+import { useNavigate } from '@tanstack/react-router';
 import { toolRegistry } from '../../core/registry/tools';
 import { getLandingTools } from '../../types/tool';
 import { Button } from '../../shared/components/ui';
 
 export function HeroSection() {
+  const navigate = useNavigate();
   const toolCount = getLandingTools(toolRegistry).length;
 
   return (
@@ -93,6 +95,16 @@ export function HeroSection() {
             <Sparkles className="w-4 h-4" />
             Explore Tools
             <ArrowRight className="w-4 h-4 ml-0.5" />
+          </Button>
+
+          <Button
+            variant="secondary"
+            size="lg"
+            onClick={() => navigate({ to: '/json-toolkit' })}
+            className="!px-7 !py-3 !text-[15px] !font-bold !text-[var(--zd-text-primary)] hover:!text-[var(--zd-primary)] border-[var(--zd-border)] hover:border-[var(--zd-primary)]/40 shadow-xs"
+          >
+            <FileJson className="w-4 h-4 text-[var(--zd-primary)]" />
+            JSON Toolkit
           </Button>
 
           <Button

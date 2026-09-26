@@ -7,6 +7,7 @@ import {
 } from '@tanstack/react-router';
 import { toolRegistry } from '../registry/tools';
 import { Suspense, lazy, useEffect } from 'react';
+import { Minimize } from 'lucide-react';
 import { useUIStore } from '../store/useUIStore';
 import { usePreferenceStore } from '../store/usePreferenceStore';
 import { Navbar } from '../../landing/components/Navbar';
@@ -49,7 +50,7 @@ const LazyStorageWarningModal = lazyRetry(() => import('../../shared/components/
  */
 function RootLayout() {
   const { theme } = usePreferenceStore();
-  const { commandPaletteOpen, setCommandPaletteOpen, storageWarning, zenMode } = useUIStore();
+  const { commandPaletteOpen, setCommandPaletteOpen, storageWarning, zenMode, setZenMode } = useUIStore();
 
   // Toggle Command Palette globally
   useEffect(() => {
@@ -78,6 +79,19 @@ function RootLayout() {
     >
       <SkipLink />
       {!zenMode && <Navbar />}
+      {zenMode && (
+        <button
+          type="button"
+          onClick={() => setZenMode(false)}
+          title="Exit Focus Mode (Esc)"
+          aria-label="Exit Focus Mode"
+          className="fixed top-3 right-3 z-50 flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[var(--zd-border)] bg-[var(--zd-surface)]/90 hover:bg-[var(--zd-surface-raised)] backdrop-blur-md text-[var(--zd-text-secondary)] hover:text-[var(--zd-text-primary)] hover:border-[var(--zd-border-hover)] text-xs font-semibold shadow-lg transition-all cursor-pointer"
+        >
+          <Minimize className="w-3.5 h-3.5 text-[var(--zd-primary)]" />
+          <span>Exit Focus</span>
+          <kbd className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--zd-bg)] border border-[var(--zd-border)] text-[var(--zd-text-muted)] font-mono ml-0.5">Esc</kbd>
+        </button>
+      )}
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', paddingTop: zenMode ? 0 : '3.5rem', minHeight: zenMode ? '100vh' : 'calc(100vh - 3.5rem)' }}>
         <div className="flex flex-1 min-h-0 flex-col">
           <Outlet />

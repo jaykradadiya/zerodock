@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { get, set, del } from 'idb-keyval';
 import { useUIStore } from '../../../../core/store/useUIStore';
+import { generateUniqueTabName } from '../../../../shared/utils/nameGenerator';
 
 const CLI_SUGGESTIONS = [
   "Use command-line utilities like 'jq' for querying and formatting (e.g., `jq . file.json`).",
@@ -22,7 +23,7 @@ interface WorkspaceState {
   
   // Actions
   initialize: () => Promise<void>;
-  addTab: (name: string, content: string) => Promise<string>;
+  addTab: (name?: string, content?: string) => Promise<string>;
   removeTab: (id: string) => Promise<void>;
   setActiveTab: (id: string) => void;
   updateTabContent: (id: string, content: string) => Promise<void>;
@@ -39,7 +40,12 @@ export const useWorkspaceStore = create<WorkspaceState>((setStore, getStore) => 
     try {
       const storedTabs = await get<FileTab[]>('zd_json_tabs');
       if (storedTabs && storedTabs.length > 0) {
-        setStore({ tabs: storedTabs, activeTabId: storedTabs[0].id, isLoading: false });
+        const storedActive = await get<string>('zd_json_active_tab');
+        const activeTabId =
+          storedActive && storedTabs.some((t) => t.id === storedActive)
+            ? storedActive
+            : storedTabs[0].id;
+        setStore({ tabs: storedTabs, activeTabId, isLoading: false });
         return;
       }
     } catch (e) {
@@ -47,17 +53,18 @@ export const useWorkspaceStore = create<WorkspaceState>((setStore, getStore) => 
     }
     // Fallback: Create default tab if empty or error
     const id = crypto.randomUUID();
-    const defaultTab: FileTab = { id, name: 'Untitled 1', size: 0, isModified: false };
+    const defaultTab: FileTab = { id, name: generateUniqueTabName([], '.json'), size: 0, isModified: false };
     try {
       await set(`zd_file_${id}`, '');
       await set('zd_json_tabs', [defaultTab]);
+      await set('zd_json_active_tab', id);
     } catch (e) {
       console.error('Failed to save default tab to IDB:', e);
     }
     setStore({ tabs: [defaultTab], activeTabId: id, isLoading: false });
   },
 
-  addTab: async (name: string, content: string) => {
+  addTab: async (name?: string, content: string = '') => {
     const currentTabs = getStore().tabs;
     const currentTotalSize = currentTabs.reduce((sum, t) => sum + t.size, 0);
     const newSize = content.length;
@@ -71,14 +78,18 @@ export const useWorkspaceStore = create<WorkspaceState>((setStore, getStore) => 
       throw new Error("Workspace size limit exceeded");
     }
 
+    const existingNames = currentTabs.map((t) => t.name);
+    const tabName = name?.trim() ? name.trim() : generateUniqueTabName(existingNames, '.json');
+
     const id = crypto.randomUUID();
-    const newTab: FileTab = { id, name, size: newSize, isModified: false };
+    const newTab: FileTab = { id, name: tabName, size: newSize, isModified: false };
     
     await set(`zd_file_${id}`, content);
     
     setStore((state) => {
       const newTabs = [...state.tabs, newTab];
       set('zd_json_tabs', newTabs).catch(console.error);
+      set('zd_json_active_tab', id).catch(console.error);
       return { tabs: newTabs, activeTabId: id };
     });
     
@@ -98,18 +109,22 @@ export const useWorkspaceStore = create<WorkspaceState>((setStore, getStore) => 
       // If no tabs left, create an empty one synchronously
       if (newTabs.length === 0) {
         const newId = crypto.randomUUID();
-        const defaultTab: FileTab = { id: newId, name: 'Untitled 1', size: 0, isModified: false };
+        const defaultTab: FileTab = { id: newId, name: generateUniqueTabName([], '.json'), size: 0, isModified: false };
         newTabs = [defaultTab];
         newActiveId = newId;
         set(`zd_file_${newId}`, '').catch(console.error);
       }
       
       set('zd_json_tabs', newTabs).catch(console.error);
+      if (newActiveId) set('zd_json_active_tab', newActiveId).catch(console.error);
       return { tabs: newTabs, activeTabId: newActiveId };
     });
   },
 
-  setActiveTab: (id: string) => setStore({ activeTabId: id }),
+  setActiveTab: (id: string) => {
+    setStore({ activeTabId: id });
+    set('zd_json_active_tab', id).catch(console.error);
+  },
 
   updateTabContent: async (id: string, content: string) => {
     const currentTabs = getStore().tabs;

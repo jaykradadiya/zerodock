@@ -83,10 +83,18 @@ export default function Base64Codec() {
   const toolToolbar = (
     <ToolToolbar>
       <ModeToggleGroup>
-        <ModeToggle active={mode === 'encode'} onClick={() => { setMode('encode'); setInput(output); }}>
+        <ModeToggle active={mode === 'encode'} onClick={() => {
+          if (mode === 'encode') return;
+          setMode('encode');
+          setInput(output);
+        }}>
           Encode
         </ModeToggle>
-        <ModeToggle active={mode === 'decode'} onClick={() => { setMode('decode'); setInput(output); }}>
+        <ModeToggle active={mode === 'decode'} onClick={() => {
+          if (mode === 'decode') return;
+          setMode('decode');
+          setInput(output);
+        }}>
           Decode
         </ModeToggle>
       </ModeToggleGroup>

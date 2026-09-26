@@ -141,7 +141,7 @@ export function CommandPalette() {
       icon: GithubIcon,
       category: 'External',
       action: () => {
-        window.open('https://github.com/jayradadiya/ZeroDock', '_blank');
+        window.open('https://github.com/jaykradadiya/zerodock', '_blank');
         setCommandPaletteOpen(false);
       },
     },

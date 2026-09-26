@@ -46,11 +46,9 @@ export const usePreferenceStore = create<PreferenceState>()(
       }),
       dismissTip: (tipId) => set((state) => {
         try {
-          localStorage.setItem('zerodock_tips_hidden', 'true');
           localStorage.setItem(`zerodock_dismissed_${tipId}`, 'true');
         } catch {}
         return {
-          tipsHidden: true,
           dismissedTips: state.dismissedTips.includes(tipId)
             ? state.dismissedTips
             : [...state.dismissedTips, tipId],

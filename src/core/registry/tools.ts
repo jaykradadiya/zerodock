@@ -8,7 +8,7 @@ import {
   Shield,
 } from 'lucide-react';
 
-const NO_SHARE_IDS = new Set(['json-toolkit']);
+const NO_SHARE_IDS = new Set<string>();
 
 function enrichTool(tool: Tool): Tool {
   const tier: ToolTier = (FEATURED_TOOL_IDS as readonly string[]).includes(tool.id)

@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { useUIStore } from '../../core/store/useUIStore';
 import { ToolRouteProvider } from '../context/ToolRouteContext';
-import { ToolTipBanner } from './ToolTipBanner';
 import { useGlobalToolShortcuts } from '../hooks/useToolShortcuts';
 
 interface ToolRouteShellProps {
@@ -25,9 +24,8 @@ export function ToolRouteShell({ toolId, children }: ToolRouteShellProps) {
 
   return (
     <ToolRouteProvider toolId={toolId}>
-      <div className="flex flex-col flex-1 min-h-0 w-full max-w-[1600px] mx-auto self-stretch">
-        <ToolTipBanner toolId={toolId} />
-        <div className="zd-tool-fill">{children}</div>
+      <div className="flex flex-col flex-1 min-h-0 w-full self-stretch px-0 sm:px-1 md:px-1.5">
+        <div className="zd-tool-fill min-h-0">{children}</div>
       </div>
     </ToolRouteProvider>
   );

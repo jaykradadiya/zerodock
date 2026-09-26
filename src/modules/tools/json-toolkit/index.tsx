@@ -86,12 +86,12 @@ export default function JsonFormatter() {
       if ((e.altKey && e.code === 'KeyT') || ((e.metaKey || e.ctrlKey) && e.code === 'KeyM')) {
         e.preventDefault();
         e.stopPropagation();
-        addTab(`Untitled-${tabs.length + 1}.json`, '');
+        addTab();
       }
     };
     window.addEventListener('keydown', handleKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
-  }, [tabs.length, addTab]);
+  }, [addTab]);
 
   useEffect(() => {
     activeTabIdRef.current = activeTabId;
@@ -497,8 +497,10 @@ export default function JsonFormatter() {
   const sidePanelOpen = sidePanel !== 'hidden' && viewMode === 'editor';
 
   const workspaceShellClass = cn(
-    'zd-tool-fill overflow-hidden transition-all duration-200 border border-[var(--zd-border)] rounded-xl bg-[var(--zd-surface)] flex-1 min-h-0',
-    !embedded && 'shadow-[var(--zd-shadow-md)]',
+    'zd-tool-fill overflow-hidden transition-all duration-200 bg-[var(--zd-surface)] flex-1 min-h-0',
+    embedded
+      ? 'border-0 sm:border sm:border-[var(--zd-border)] sm:rounded-lg'
+      : 'border border-[var(--zd-border)] rounded-xl shadow-[var(--zd-shadow-md)]',
     isDragging && 'border-[var(--zd-primary)] ring-4 ring-[var(--zd-primary-soft)]',
     isFullscreen && 'fixed inset-0 z-[110] rounded-none border-none'
   );

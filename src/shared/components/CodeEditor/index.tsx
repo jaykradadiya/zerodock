@@ -216,7 +216,8 @@ export function CodeEditor({
   return (
     <div
       onMouseDownCapture={() => onFocusRef.current?.()}
-      className={cn('zd-tool-fill w-full overflow-hidden bg-[var(--zd-surface)]', className)}
+      className={cn('zd-tool-fill w-full overflow-hidden bg-[var(--zd-surface)] relative', className)}
+      style={{ contain: 'layout size paint' }}
     >
       <Editor
         height="100%"
@@ -252,8 +253,16 @@ export function CodeEditor({
           smoothScrolling: true,
         }}
         loading={
-          <div className="h-full flex items-center justify-center text-[var(--zd-text-muted)] text-sm">
-            Loading editor...
+          <div
+            className="h-full w-full flex bg-[var(--zd-surface)] font-mono text-xs select-none pointer-events-none overflow-hidden"
+            aria-hidden="true"
+          >
+            <div className="w-[51px] h-full border-r border-[var(--zd-border)]/40 bg-[var(--zd-surface-raised)]/20 py-4 px-2 text-[var(--zd-text-muted)]/40 text-right shrink-0">
+              1<br />2<br />3
+            </div>
+            <div className="flex-1 p-4 text-[var(--zd-text-muted)]/50">
+              Loading editor workspace...
+            </div>
           </div>
         }
         {...props}

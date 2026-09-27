@@ -481,7 +481,7 @@ export function DiffView({
       </div>
 
       {/* Editor Viewport */}
-      <div className="flex-1 min-h-0 relative">
+      <div className="flex-1 min-h-0 relative" style={{ contain: 'layout size paint' }}>
         <DiffEditor
           height="100%"
           width="100%"
@@ -511,8 +511,16 @@ export function DiffView({
             },
           }}
           loading={
-            <div className="flex-1 h-full flex items-center justify-center text-[var(--zd-text-muted)] text-sm">
-              Loading diff editor...
+            <div
+              className="flex-1 h-full w-full flex bg-[var(--zd-surface)] font-mono text-xs select-none pointer-events-none overflow-hidden"
+              aria-hidden="true"
+            >
+              <div className="w-[51px] h-full border-r border-[var(--zd-border)]/40 bg-[var(--zd-surface-raised)]/20 py-4 px-2 text-[var(--zd-text-muted)]/40 text-right shrink-0">
+                1<br />2<br />3
+              </div>
+              <div className="flex-1 p-4 text-[var(--zd-text-muted)]/50">
+                Loading diff workspace...
+              </div>
             </div>
           }
         />

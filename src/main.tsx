@@ -8,7 +8,7 @@ import { applyTheme, findThemeById } from './core/theme/themeEngine';
 // Apply initial theme tokens and .dark class immediately on mount
 const prefState = usePreferenceStore.getState();
 const initialTheme = findThemeById(
-  prefState.activeThemeId || 'zerodock-dark',
+  prefState.activeThemeId || 'linear-dark',
   prefState.customThemes || {}
 );
 applyTheme(initialTheme, prefState.themeOverrides || {});

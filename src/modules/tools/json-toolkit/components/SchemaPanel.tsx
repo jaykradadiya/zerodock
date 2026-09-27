@@ -71,7 +71,7 @@ export function SchemaPanel({
               title="Copy JSON Schema"
               className="p-1 rounded text-[var(--zd-text-muted)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)] transition-colors"
             >
-              {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+              {copied ? <Check className="w-3.5 h-3.5 text-[var(--zd-success)]" /> : <Copy className="w-3.5 h-3.5" />}
             </button>
           )}
 
@@ -114,19 +114,19 @@ export function SchemaPanel({
               No schema defined. Click "Infer from JSON" to generate one.
             </div>
           ) : errors.length === 0 ? (
-            <div className="flex items-center gap-3 text-emerald-400 bg-emerald-500/10 p-3 rounded-lg border border-emerald-500/25 shadow-xs">
-              <div className="p-1 rounded-full bg-emerald-500/20 text-emerald-400 shrink-0">
+            <div className="flex items-center gap-3 text-[var(--zd-success)] bg-[var(--zd-success-soft)] p-3 rounded-lg border border-[var(--zd-success)]/25 shadow-xs">
+              <div className="p-1 rounded-full bg-[var(--zd-success)]/20 text-[var(--zd-success)] shrink-0">
                 <CheckCircle2 className="w-4 h-4" />
               </div>
               <div className="text-xs">
-                <span className="font-semibold block text-emerald-300">Valid Document</span>
-                <span className="text-[11px] text-emerald-400/80">JSON matches schema successfully.</span>
+                <span className="font-semibold block text-[var(--zd-success)]">Valid Document</span>
+                <span className="text-[11px] text-[var(--zd-success)]/80">JSON matches schema successfully.</span>
               </div>
             </div>
           ) : (
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between gap-1.5 mb-1">
-                <div className="flex items-center gap-1.5 text-rose-400 font-semibold text-xs">
+                <div className="flex items-center gap-1.5 text-[var(--zd-error)] font-semibold text-xs">
                   <XCircle className="w-4 h-4 shrink-0" />
                   <span>Found {errors.length} validation {errors.length === 1 ? 'error' : 'errors'}</span>
                 </div>
@@ -139,7 +139,7 @@ export function SchemaPanel({
                   key={i}
                   type="button"
                   onClick={() => onErrorClick?.(err)}
-                  className="w-full text-left text-xs bg-[var(--zd-surface)] text-[var(--zd-text-primary)] p-2.5 rounded-lg border border-[var(--zd-border)] hover:border-rose-500/50 hover:bg-[var(--zd-surface-raised)] transition-all flex flex-col gap-1 group cursor-pointer shadow-xs focus:outline-none focus:ring-1 focus:ring-rose-500/40"
+                  className="w-full text-left text-xs bg-[var(--zd-surface)] text-[var(--zd-text-primary)] p-2.5 rounded-lg border border-[var(--zd-border)] hover:border-[var(--zd-error)]/50 hover:bg-[var(--zd-surface-raised)] transition-all flex flex-col gap-1 group cursor-pointer shadow-xs focus:outline-none focus:ring-1 focus:ring-[var(--zd-error)]/40"
                 >
                   <div className="flex items-center justify-between gap-1.5 w-full">
                     <div className="flex items-center gap-1.5 font-mono text-[11px] min-w-0">
@@ -153,14 +153,14 @@ export function SchemaPanel({
                     </div>
 
                     {err.line !== undefined && (
-                      <div className="flex items-center gap-0.5 text-[10px] font-mono font-medium px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 group-hover:bg-rose-500/20 transition-colors shrink-0">
+                      <div className="flex items-center gap-0.5 text-[10px] font-mono font-medium px-1.5 py-0.5 rounded bg-[var(--zd-error-soft)] text-[var(--zd-error)] group-hover:bg-[var(--zd-error)]/20 transition-colors shrink-0">
                         <span>Line {err.line}</span>
                         <ArrowUpRight className="w-3 h-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                       </div>
                     )}
                   </div>
                   <div className="text-[11.5px] text-[var(--zd-text-secondary)] group-hover:text-[var(--zd-text-primary)] transition-colors flex items-start gap-1.5 leading-snug">
-                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500 mt-1 shrink-0" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--zd-error)] mt-1 shrink-0" />
                     <span>{err.message}</span>
                   </div>
                 </button>

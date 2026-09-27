@@ -5,7 +5,7 @@ import type { ThemeDefinition, ThemeTokens, ThemeMode } from './types';
 export interface UseThemeReturn {
   /** 'dark' | 'light' mode */
   theme: ThemeMode;
-  /** Active theme ID, e.g. 'zerodock-dark', 'tokyo-night', 'dracula' */
+  /** Active theme ID, e.g. 'linear-dark', 'geist-mono', 'tokyo-night' */
   activeThemeId: string;
   /** Complete theme definition */
   activeTheme: ThemeDefinition;

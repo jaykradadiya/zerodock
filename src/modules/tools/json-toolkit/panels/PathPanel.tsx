@@ -682,8 +682,8 @@ export function PathPanel({
 
         {/* Informative Missing Property / Null State Helper */}
         {isNullOrEmptyMatch && availableKeys.length > 0 && (
-          <div className="mx-3.5 my-2.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 flex flex-col gap-2 shrink-0 animate-in fade-in duration-150">
-            <div className="flex items-center gap-2 text-amber-400 text-xs font-semibold">
+          <div className="mx-3.5 my-2.5 p-3 rounded-xl bg-[var(--zd-warning-soft)] border border-[var(--zd-warning)]/25 flex flex-col gap-2 shrink-0 animate-in fade-in duration-150">
+            <div className="flex items-center gap-2 text-[var(--zd-warning)] text-xs font-semibold">
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>No match for &ldquo;{query.trim().slice(0, 30)}&rdquo; in this document</span>
             </div>
@@ -766,7 +766,7 @@ export function PathPanel({
                       className={cn(
                         'flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer',
                         isSelected
-                          ? 'bg-[var(--zd-primary)] text-white shadow-xs'
+                          ? 'bg-[var(--zd-primary)] text-[var(--zd-primary-foreground)] shadow-xs'
                           : 'text-[var(--zd-text-muted)] hover:text-[var(--zd-text-primary)] hover:bg-[var(--zd-surface)]'
                       )}
                     >
@@ -927,7 +927,7 @@ export function PathPanel({
                           <button
                             type="button"
                             onClick={() => handleApplyRecipe(selectedPreset.query, modalDialect)}
-                            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[var(--zd-primary)] hover:bg-[var(--zd-primary-hover,var(--zd-primary))] text-white shadow-xs transition-transform active:scale-98 cursor-pointer"
+                            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[var(--zd-primary)] hover:bg-[var(--zd-primary-hover,var(--zd-primary))] text-[var(--zd-primary-foreground)] shadow-xs transition-transform active:scale-98 cursor-pointer"
                           >
                             <Zap className="w-3.5 h-3.5" />
                             <span>Use in Editor</span>
@@ -976,7 +976,7 @@ export function PathPanel({
                         <pre
                           className={cn(
                             'font-mono text-xs whitespace-pre leading-relaxed max-h-56 overflow-y-auto scrollbar-thin',
-                            livePreview ? 'text-sky-300' : 'text-[var(--zd-text-secondary)]'
+                            livePreview ? 'text-[var(--zd-info)]' : 'text-[var(--zd-text-secondary)]'
                           )}
                         >
                           {livePreview || selectedPreset.exampleOutput || '// No preview available'}

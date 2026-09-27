@@ -137,7 +137,7 @@ export function JsonToolbar({
                   onClick={() => onProcessJson('format')}
                   disabled={isProcessing || !activeTabId}
                   title="Format JSON (Cmd+Shift+F)"
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-[var(--zd-primary)] text-white hover:opacity-95 transition-all disabled:opacity-50 shadow-xs"
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-[var(--zd-primary)] text-[var(--zd-primary-foreground)] hover:opacity-95 transition-all disabled:opacity-50 shadow-xs"
                 >
                   <Play className="w-3.5 h-3.5 fill-current" />
                   <span>Format</span>

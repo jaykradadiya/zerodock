@@ -9,8 +9,8 @@ const icons: Record<ToastType, React.ElementType> = {
 };
 
 const colors: Record<ToastType, string> = {
-  success: 'text-green-500',
-  error: 'text-red-500',
+  success: 'text-[var(--zd-success)]',
+  error: 'text-[var(--zd-error)]',
   info: 'text-[var(--zd-primary)]',
 };
 

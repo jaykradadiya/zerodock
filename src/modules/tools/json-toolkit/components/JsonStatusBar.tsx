@@ -52,7 +52,7 @@ export function JsonStatusBar({
             <span className="truncate">Syntax Error: {error.message}</span>
           </div>
         ) : isValid ? (
-          <div className="flex items-center gap-1.5 text-emerald-500 dark:text-emerald-400 font-medium">
+          <div className="flex items-center gap-1.5 text-[var(--zd-success)] font-medium">
             <CheckCircle2 className="w-3 h-3 shrink-0" />
             <span>Valid JSON</span>
           </div>

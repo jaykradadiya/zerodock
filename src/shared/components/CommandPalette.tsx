@@ -269,7 +269,7 @@ export function CommandPalette() {
 
   const palette = (
     <div
-      className="fixed inset-0 z-[200] flex items-start justify-center pt-[12vh] sm:pt-[15vh] p-4 bg-black/50 dark:bg-black/70 backdrop-blur-md"
+      className="fixed inset-0 z-[200] flex items-start justify-center pt-[12vh] sm:pt-[15vh] p-4 bg-black/60 backdrop-blur-md"
       role="presentation"
       onClick={() => setCommandPaletteOpen(false)}
     >
@@ -312,7 +312,7 @@ export function CommandPalette() {
               }}
               className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
                 activeCategory === cat 
-                  ? 'bg-[var(--zd-primary)] text-white shadow-sm' 
+                  ? 'bg-[var(--zd-primary)] text-[var(--zd-primary-foreground)] shadow-sm' 
                   : 'text-[var(--zd-text-secondary)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)] bg-transparent'
               }`}
             >

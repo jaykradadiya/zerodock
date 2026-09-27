@@ -39,7 +39,7 @@ export const usePreferenceStore = create<PreferenceState>()(
   persist(
     (set, get) => ({
       theme: 'dark',
-      activeThemeId: 'zerodock-dark',
+      activeThemeId: 'linear-dark',
       customThemes: {},
       themeOverrides: {},
       viewMode: 'grid',
@@ -63,7 +63,7 @@ export const usePreferenceStore = create<PreferenceState>()(
         set((state) => {
           const currentTheme = findThemeById(state.activeThemeId, state.customThemes);
           const nextMode: 'light' | 'dark' = currentTheme.mode === 'dark' ? 'light' : 'dark';
-          const nextThemeId = nextMode === 'light' ? 'zerodock-light' : 'zerodock-dark';
+          const nextThemeId = nextMode === 'light' ? 'geist-mono' : 'linear-dark';
           const nextTheme = findThemeById(nextThemeId, state.customThemes);
 
           applyTheme(nextTheme, {});
@@ -126,7 +126,7 @@ export const usePreferenceStore = create<PreferenceState>()(
         set((state) => {
           const updated = { ...state.customThemes };
           delete updated[themeId];
-          const fallbackId = 'zerodock-dark';
+          const fallbackId = 'linear-dark';
           const fallbackTheme = BUILTIN_THEMES[0];
           if (state.activeThemeId === themeId) {
             applyTheme(fallbackTheme, {});
@@ -178,9 +178,20 @@ export const usePreferenceStore = create<PreferenceState>()(
     {
       name: 'zerodock-preferences',
       storage: createJSONStorage(() => idbStorage),
+      version: 1,
+      migrate: (persistedState: any, version: number) => {
+        if (version === 0 && persistedState) {
+          if (persistedState.activeThemeId === 'zerodock-dark') {
+            persistedState.activeThemeId = 'linear-dark';
+          } else if (persistedState.activeThemeId === 'zerodock-light') {
+            persistedState.activeThemeId = 'geist-mono';
+          }
+        }
+        return persistedState;
+      },
       onRehydrateStorage: () => (state) => {
         if (state) {
-          const active = findThemeById(state.activeThemeId || 'zerodock-dark', state.customThemes || {});
+          const active = findThemeById(state.activeThemeId || 'linear-dark', state.customThemes || {});
           applyTheme(active, state.themeOverrides || {});
         }
       },

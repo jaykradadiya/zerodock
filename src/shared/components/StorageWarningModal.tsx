@@ -22,7 +22,7 @@ export function StorageWarningModal() {
         className="w-full max-w-md zd-workspace zd-glow-border focus:outline-none animate-in fade-in zoom-in-95 duration-150"
       >
         <div className="flex items-center justify-between p-4 border-b border-[var(--zd-border)] bg-[var(--zd-surface-raised)]">
-          <div className="flex items-center gap-2 text-amber-500">
+          <div className="flex items-center gap-2 text-[var(--zd-warning)]">
             <AlertTriangle className="w-5 h-5 shrink-0" />
             <h3 className="font-bold text-[var(--zd-text-primary)] text-sm">{storageWarning.title}</h3>
           </div>

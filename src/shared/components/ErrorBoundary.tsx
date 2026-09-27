@@ -30,7 +30,7 @@ export class ErrorBoundary extends Component<Props, State> {
   public render() {
     if (this.state.hasError) {
       return (
-        <div className="p-8 m-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-800 dark:text-red-200 font-mono text-sm overflow-auto max-h-[80vh]">
+        <div className="p-8 m-4 bg-[var(--zd-error-soft)] border border-[var(--zd-error)]/25 rounded-lg text-[var(--zd-error)] font-mono text-sm overflow-auto max-h-[80vh]">
           <h2 className="text-xl font-bold mb-4">Something went wrong.</h2>
           <div className="mb-4">
             <strong>Error:</strong> {this.state.error && this.state.error.toString()}
@@ -42,7 +42,7 @@ export class ErrorBoundary extends Component<Props, State> {
           <div className="mt-6 flex items-center gap-4">
             <button
               onClick={() => this.setState({ hasError: false, error: null, errorInfo: null })}
-              className="px-4 py-2 bg-red-100 dark:bg-red-800 text-red-900 dark:text-red-100 rounded-md font-medium hover:bg-red-200 dark:hover:bg-red-700 transition-colors"
+              className="px-4 py-2 bg-[var(--zd-error)]/15 text-[var(--zd-error)] rounded-md font-medium hover:bg-[var(--zd-error)]/25 transition-colors"
             >
               Try Again
             </button>

@@ -160,7 +160,7 @@ export function Navbar() {
               <span>GitHub</span>
             </div>
             <div className="flex items-center gap-1 px-2.5 border-l border-[var(--zd-border)] bg-[var(--zd-surface)] h-full text-[var(--zd-text-secondary)] font-mono">
-              <Star size={12} className="fill-current text-[#E17055]" />
+              <Star size={12} className="fill-current text-[var(--zd-accent)]" />
               <span>{stars}</span>
             </div>
           </a>
@@ -183,7 +183,7 @@ export function Navbar() {
             className="!w-8 !h-8 sm:!w-9 sm:!h-9 !rounded-xl border border-[var(--zd-border)] bg-[var(--zd-surface-raised)] hover:bg-[var(--zd-primary-soft)] hover:border-[var(--zd-primary)]/50 shadow-xs"
           >
             {theme === 'dark' ? (
-              <Sun size={15} className="text-[#FDCB6E]" />
+              <Sun size={15} className="text-[var(--zd-warning)]" />
             ) : (
               <Moon size={15} className="text-[var(--zd-primary)]" />
             )}

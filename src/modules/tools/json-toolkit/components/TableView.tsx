@@ -269,7 +269,7 @@ export function TableView({ jsonString, panelLayout = 'full', onToggleLayout }: 
           type="button"
           onClick={() => drillInKey !== undefined && stepInto(drillInKey)}
           title={`Click to step into ${drillInKey || 'this object'}`}
-          className="inline-flex items-center gap-1 font-mono text-xs font-semibold px-2 py-0.5 rounded bg-[var(--zd-primary-soft)] text-[var(--zd-primary)] hover:bg-[var(--zd-primary)] hover:text-white transition-all cursor-pointer shadow-xs group/badge"
+          className="inline-flex items-center gap-1 font-mono text-xs font-semibold px-2 py-0.5 rounded bg-[var(--zd-primary-soft)] text-[var(--zd-primary)] hover:bg-[var(--zd-primary)] hover:text-[var(--zd-primary-foreground)] transition-all cursor-pointer shadow-xs group/badge"
         >
           <span>{label}</span>
           <ChevronRight className="w-3 h-3 group-hover/badge:translate-x-0.5 transition-transform" />

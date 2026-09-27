@@ -14,66 +14,80 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* ─── CSS Custom Properties (Light Mode) ─── */
+/* ─── CSS Custom Properties (Light Mode — Default: Geist Monochrome) ─── */
 :root {
-  --zd-bg: #FFFFFF;
-  --zd-surface: #F8F8FA;
-  --zd-surface-raised: #FFFFFF;
-  --zd-primary: #6C5CE7;
-  --zd-primary-hover: #5A4BD6;
-  --zd-primary-soft: rgba(108, 92, 231, 0.08);
-  --zd-accent: #D4931F;
-  --zd-accent-soft: rgba(212, 147, 31, 0.08);
-  --zd-text-primary: #333333;
-  --zd-text-secondary: #666666;
-  --zd-text-muted: #999999;
-  --zd-border: #E5E5E5;
-  --zd-border-hover: #D4D4D4;
-  --zd-glow: rgba(108, 92, 231, 0.12);
+  --zd-bg: #FAFAFA;
+  --zd-surface: #FFFFFF;
+  --zd-surface-raised: #F4F4F5;
+  --zd-primary: #18181B;
+  --zd-primary-hover: #27272A;
+  --zd-primary-soft: rgba(24, 24, 27, 0.08);
+  --zd-accent: #0068D6;
+  --zd-accent-soft: rgba(0, 104, 214, 0.08);
+  --zd-text-primary: #09090B;
+  --zd-text-secondary: #52525B;
+  --zd-text-muted: #71717A;
+  --zd-border: #E4E4E7;
+  --zd-border-hover: #D4D4D8;
+  --zd-glow: rgba(0, 0, 0, 0.06);
   --zd-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.03);
   --zd-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.04);
   --zd-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
-  --zd-shadow-glow: 0 0 40px rgba(108, 92, 231, 0.15);
+  --zd-shadow-glow: 0 0 40px rgba(0, 0, 0, 0.08);
   --zd-radius-sm: 8px;
   --zd-radius-md: 12px;
   --zd-radius-lg: 16px;
   --zd-radius-xl: 24px;
-  --zd-nav-bg: rgba(255, 255, 255, 0.9);
+  --zd-nav-bg: rgba(255, 255, 255, 0.88);
   --zd-grid-opacity: 0.025;
   --zd-grain-opacity: 0.025;
-  --zd-border-glow: rgba(108, 92, 231, 0.25);
+  --zd-border-glow: rgba(0, 0, 0, 0.16);
   --zd-gradient-ring: linear-gradient(135deg, var(--zd-primary) 0%, var(--zd-accent) 100%);
   --zd-label-tracking: 0.12em;
-  --zd-success: #15803D;
-  --zd-error: #B42318;
+  --zd-success: #16A34A;
+  --zd-success-soft: rgba(22, 163, 74, 0.08);
+  --zd-error: #DC2626;
+  --zd-error-soft: rgba(220, 38, 38, 0.08);
+  --zd-warning: #CA8A04;
+  --zd-warning-soft: rgba(202, 138, 4, 0.08);
+  --zd-info: #2563EB;
+  --zd-info-soft: rgba(37, 99, 235, 0.08);
+  --zd-primary-foreground: #FFFFFF;
 }
 
-/* ─── Dark Mode ─── */
+/* ─── Dark Mode (Default: Linear Obsidian) ─── */
 .dark {
-  --zd-bg: #0A0A0A;
-  --zd-surface: #121212;
-  --zd-surface-raised: #1A1A1A;
-  --zd-primary: #8B7CF7;
-  --zd-primary-hover: #9D90F9;
-  --zd-primary-soft: rgba(139, 124, 247, 0.1);
-  --zd-accent: #F0A030;
-  --zd-accent-soft: rgba(240, 160, 48, 0.12);
-  --zd-text-primary: #F5F5F5;
-  --zd-text-secondary: #A3A3A3;
-  --zd-text-muted: #737373;
-  --zd-border: #262626;
-  --zd-border-hover: #404040;
-  --zd-glow: rgba(139, 124, 247, 0.15);
+  --zd-bg: #08090A;
+  --zd-surface: #0F1015;
+  --zd-surface-raised: #181920;
+  --zd-primary: #5E6AD2;
+  --zd-primary-hover: #707EEA;
+  --zd-primary-soft: rgba(94, 106, 210, 0.15);
+  --zd-accent: #8792F0;
+  --zd-accent-soft: rgba(135, 146, 240, 0.12);
+  --zd-text-primary: #F7F8F8;
+  --zd-text-secondary: #8A8F98;
+  --zd-text-muted: #525866;
+  --zd-border: #232530;
+  --zd-border-hover: #363B4C;
+  --zd-glow: rgba(94, 106, 210, 0.2);
   --zd-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2), 0 1px 3px rgba(0, 0, 0, 0.15);
   --zd-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.25), 0 1px 4px rgba(0, 0, 0, 0.2);
   --zd-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(0, 0, 0, 0.25);
-  --zd-shadow-glow: 0 0 60px rgba(139, 124, 247, 0.2);
-  --zd-nav-bg: rgba(10, 10, 10, 0.85);
+  --zd-shadow-glow: 0 0 50px rgba(94, 106, 210, 0.25);
+  --zd-nav-bg: rgba(8, 9, 10, 0.92);
   --zd-grid-opacity: 0.03;
   --zd-grain-opacity: 0.035;
-  --zd-border-glow: rgba(139, 124, 247, 0.35);
-  --zd-success: #4ADE80;
-  --zd-error: #FCA5A5;
+  --zd-border-glow: rgba(94, 106, 210, 0.4);
+  --zd-success: #4BD18A;
+  --zd-success-soft: rgba(75, 209, 138, 0.12);
+  --zd-error: #EB5757;
+  --zd-error-soft: rgba(235, 87, 87, 0.12);
+  --zd-warning: #F2C94C;
+  --zd-warning-soft: rgba(242, 201, 76, 0.12);
+  --zd-info: #56CCF2;
+  --zd-info-soft: rgba(86, 204, 242, 0.12);
+  --zd-primary-foreground: #FFFFFF;
 }
 
 /* ═══════════════════════════════════════════════════════

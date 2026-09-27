@@ -46,7 +46,7 @@ export function ShareLinkButton({
       aria-label="Copy shareable link"
       className={className}
     >
-      {copied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Link2 className="w-3.5 h-3.5" />}
+      {copied ? <Check className="w-3.5 h-3.5 text-[var(--zd-success)]" /> : <Link2 className="w-3.5 h-3.5" />}
       <span className="hidden sm:inline">Share</span>
     </Button>
   );

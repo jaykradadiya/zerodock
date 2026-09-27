@@ -144,9 +144,9 @@ export function CodePanel({
           {error && (
             <div
               role="alert"
-              className="flex items-center gap-1.5 px-2 py-0.5 text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 rounded-md border border-red-200 dark:border-red-900/50"
+              className="flex items-center gap-1.5 px-2 py-0.5 text-xs font-medium text-[var(--zd-error)] bg-[var(--zd-error-soft)] rounded-md border border-[var(--zd-error)]/25"
             >
-              <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-500" />
+              <AlertCircle className="w-3.5 h-3.5 shrink-0 text-[var(--zd-error)]" />
               <span className="truncate max-w-[200px] sm:max-w-[300px] font-mono">{error}</span>
             </div>
           )}
@@ -198,11 +198,11 @@ export function CodePanel({
       <div className={cn('zd-code-panel-body relative', contentClassName)}>
         {error && isEmpty ? (
           <div className="flex-1 h-full p-6 flex flex-col items-center justify-center text-center">
-            <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-950/50 flex items-center justify-center text-red-500 mb-3">
+            <div className="w-10 h-10 rounded-full bg-[var(--zd-error-soft)] flex items-center justify-center text-[var(--zd-error)] mb-3">
               <AlertCircle className="w-5 h-5" />
             </div>
-            <p className="text-sm font-semibold text-red-600 dark:text-red-400">Processing Error</p>
-            <p className="text-xs text-red-500/80 dark:text-red-300/80 mt-1.5 font-mono max-w-md whitespace-pre-wrap break-all">{error}</p>
+            <p className="text-sm font-semibold text-[var(--zd-error)]">Processing Error</p>
+            <p className="text-xs text-[var(--zd-error)]/80 mt-1.5 font-mono max-w-md whitespace-pre-wrap break-all">{error}</p>
           </div>
         ) : children ? (
           <div className="zd-tool-fill overflow-hidden">{children}</div>

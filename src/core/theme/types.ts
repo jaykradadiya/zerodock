@@ -31,7 +31,13 @@ export interface ThemeTokens {
 
   // Status Indicators
   '--zd-success': string;
+  '--zd-success-soft': string;
   '--zd-error': string;
+  '--zd-error-soft': string;
+  '--zd-warning': string;
+  '--zd-warning-soft': string;
+  '--zd-info': string;
+  '--zd-info-soft': string;
 
   // Monaco Editor Workbench Mappings
   'editor.background'?: string;

@@ -38,9 +38,12 @@ const VSCODE_TO_ZERODOCK_MAP: Record<string, keyof ThemeTokens> = {
 
   // Status
   'testing.iconPassed': '--zd-success',
-  'notificationsInfoIcon.foreground': '--zd-success',
+  'terminal.ansiGreen': '--zd-success',
   'errorForeground': '--zd-error',
   'testing.iconFailed': '--zd-error',
+  'notificationsErrorIcon.foreground': '--zd-error',
+  'notificationsWarningIcon.foreground': '--zd-warning',
+  'notificationsInfoIcon.foreground': '--zd-info',
 
   // Direct Monaco Workbench Keys
   'editor.background': 'editor.background',
@@ -101,6 +104,11 @@ export function parseThemeImport(jsonString: string): {
         extractedTokens['--zd-border-glow'] = hexToRgba(extractedTokens['--zd-primary'], mode === 'dark' ? 0.35 : 0.25);
       }
 
+      const successColor = extractedTokens['--zd-success'] || (mode === 'dark' ? '#4ADE80' : '#15803D');
+      const errorColor = extractedTokens['--zd-error'] || (mode === 'dark' ? '#FCA5A5' : '#B42318');
+      const warningColor = extractedTokens['--zd-warning'] || (mode === 'dark' ? '#FBBF24' : '#B45309');
+      const infoColor = extractedTokens['--zd-info'] || (mode === 'dark' ? '#60A5FA' : '#2563EB');
+
       const generatedTheme: ThemeDefinition = {
         id: `custom-imported-${Date.now()}`,
         name: data.name || 'Imported VS Code Theme',
@@ -125,8 +133,14 @@ export function parseThemeImport(jsonString: string): {
           '--zd-border-glow': extractedTokens['--zd-border-glow'] || 'rgba(139, 124, 247, 0.35)',
           '--zd-glow': extractedTokens['--zd-glow'] || 'rgba(139, 124, 247, 0.15)',
           '--zd-shadow-glow': '0 0 50px rgba(139, 124, 247, 0.2)',
-          '--zd-success': extractedTokens['--zd-success'] || (mode === 'dark' ? '#4ADE80' : '#15803D'),
-          '--zd-error': extractedTokens['--zd-error'] || (mode === 'dark' ? '#FCA5A5' : '#B42318'),
+          '--zd-success': successColor,
+          '--zd-success-soft': hexToRgba(successColor, mode === 'dark' ? 0.12 : 0.08),
+          '--zd-error': errorColor,
+          '--zd-error-soft': hexToRgba(errorColor, mode === 'dark' ? 0.12 : 0.08),
+          '--zd-warning': warningColor,
+          '--zd-warning-soft': hexToRgba(warningColor, mode === 'dark' ? 0.12 : 0.08),
+          '--zd-info': infoColor,
+          '--zd-info-soft': hexToRgba(infoColor, mode === 'dark' ? 0.12 : 0.08),
           'editor.background': extractedTokens['editor.background'] || extractedTokens['--zd-surface'] || (mode === 'dark' ? '#121212' : '#FFFFFF'),
           'editor.foreground': extractedTokens['editor.foreground'] || extractedTokens['--zd-text-primary'] || (mode === 'dark' ? '#F5F5F5' : '#1A1A2E'),
           'editorLineHighlightBackground': extractedTokens['editorLineHighlightBackground'] || (mode === 'dark' ? '#181818' : '#FAFAF8'),

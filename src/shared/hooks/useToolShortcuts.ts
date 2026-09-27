@@ -9,15 +9,6 @@ export interface ToolShortcutHandlers {
   primaryLabel?: string;
 }
 
-export function useRegisterToolShortcuts(handlers: ToolShortcutHandlers) {
-  const setToolActions = useUIStore((s) => s.setToolActions);
-
-  useEffect(() => {
-    setToolActions(handlers);
-    return () => setToolActions({});
-  }, [handlers.onPrimary, handlers.onCopy, handlers.onClear, handlers.primaryLabel, setToolActions]);
-}
-
 /** Global listener — mount once in ToolRouteShell */
 export function useGlobalToolShortcuts() {
   const { toolActions, zenMode, setZenMode } = useUIStore();

@@ -1,12 +1,11 @@
 import React from 'react';
 import { Link } from '@tanstack/react-router';
-import { ArrowRightLeft, ChevronRight, type LucideIcon } from 'lucide-react';
+import { ChevronRight, type LucideIcon } from 'lucide-react';
 import { toolRegistry } from '../../core/registry/tools';
 import { useUIStore } from '../../core/store/useUIStore';
 import { useToolRoute } from '../context/ToolRouteContext';
-import { cn, Button, IconBox } from './ui';
+import { cn, IconBox } from './ui';
 import { ToolStandardActions } from './ToolStandardActions';
-import { MobileSwapBar } from './MobileSwapBar';
 import { PrivacyBadge } from './PrivacyBadge';
 
 interface ToolPageProps {
@@ -145,22 +144,6 @@ export function ToolWorkspace({ children, toolbar, className = '', compact = fal
   );
 }
 
-interface ToolEmbedFrameProps {
-  toolbar?: React.ReactNode;
-  children: React.ReactNode;
-  className?: string;
-}
-
-/** Wraps hub-embedded tool content so panels stretch to the workspace bottom */
-export function ToolEmbedFrame({ toolbar, children, className }: ToolEmbedFrameProps) {
-  return (
-    <div className={cn('zd-tool-fill', className)}>
-      {toolbar}
-      <div className="zd-tool-fill min-w-0">{children}</div>
-    </div>
-  );
-}
-
 interface ToolToolbarProps {
   children: React.ReactNode;
   className?: string;
@@ -220,63 +203,5 @@ export function ModeToggle({ active, onClick, children, className = '' }: ModeTo
 }
 
 export { ToolSelect } from './ui';
-
-interface SplitPanelsProps {
-  children: React.ReactNode;
-  className?: string;
-  mobileSwap?: {
-    onSwap: () => void;
-    onFocusInput?: () => void;
-    onFocusOutput?: () => void;
-    activePanel?: 'input' | 'output';
-  };
-}
-
-export function SplitPanels({ children, className = '', mobileSwap }: SplitPanelsProps) {
-  return (
-    <div className={cn('zd-tool-fill relative', className)}>
-      {mobileSwap && (
-        <MobileSwapBar
-          onSwap={mobileSwap.onSwap}
-          onFocusInput={mobileSwap.onFocusInput}
-          onFocusOutput={mobileSwap.onFocusOutput}
-          activePanel={mobileSwap.activePanel}
-        />
-      )}
-      <div className="flex flex-col md:flex-row zd-tool-fill md:items-stretch">{children}</div>
-    </div>
-  );
-}
-
-interface SwapButtonProps {
-  onClick: () => void;
-  title?: string;
-  className?: string;
-}
-
-export function SwapButton({ onClick, title = 'Swap input and output', className = '' }: SwapButtonProps) {
-  return (
-    <>
-      <div className={cn('hidden md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none', className)}>
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={onClick}
-          title={title}
-          aria-label={title}
-          className="!rounded-full !p-2 pointer-events-auto"
-          style={{ pointerEvents: 'auto' }}
-        >
-          <ArrowRightLeft className="w-4 h-4" />
-        </Button>
-      </div>
-      <div className="hidden">
-        <MobileSwapBar onSwap={onClick} swapLabel="Swap panels" />
-      </div>
-    </>
-  );
-}
-
-
 export { MobileSwapBar } from './MobileSwapBar';
 export { PrivacyBadge } from './PrivacyBadge';

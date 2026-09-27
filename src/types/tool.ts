@@ -42,10 +42,6 @@ export const FEATURED_TOOL_IDS = [
   'json-toolkit',
 ] as const;
 
-export function getFeaturedTools(tools: Tool[]) {
-  return FEATURED_TOOL_IDS.map((id) => tools.find((t) => t.id === id)).filter(Boolean) as Tool[];
-}
-
 export function getLandingTools(tools: Tool[]) {
   return tools.filter((t) => !t.metadata.hiddenFromBrowse);
 }

@@ -7,7 +7,6 @@ export { Select, ToolSelect } from './Select';
 export { Textarea } from './Textarea';
 export { IconBox } from './IconBox';
 export { SectionLabel } from './SectionLabel';
-export { StatCard } from './StatCard';
 export { ToolCard } from './ToolCard';
 export { DotGrid } from './DotGrid';
 export { GlowOrb } from './GlowOrb';

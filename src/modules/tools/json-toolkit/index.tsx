@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { CodeEditor } from '../../../shared/components/CodeEditor';
 import { ToolPage, ToolHeader, ToolWorkspace, MobileSwapBar } from '../../../shared/components/ToolLayout';
 import { useToolEmbed } from '../../../shared/context/ToolEmbedContext';
@@ -23,6 +23,7 @@ import { jsonToSchema } from './lib/jsonToTypes';
 import { JsonTabBar } from './components/JsonTabBar';
 import { JsonToolbar } from './components/JsonToolbar';
 import { JsonStatusBar } from './components/JsonStatusBar';
+import { SplitEditorView } from './components/SplitEditorView';
 import { monaco } from '../../../core/monaco/setup';
 
 import JsonWorker from './json.worker.ts?worker';
@@ -31,7 +32,48 @@ import ValidateWorker from './validate.worker.ts?worker';
 
 export default function JsonFormatter() {
   const workspace = useWorkspaceStore();
-  const { tabs, activeTabId, addTab, removeTab, setActiveTab, getFileContent, updateTabContent, renameTab, isLoading } = workspace;
+  const {
+    tabs,
+    activeTabId,
+    addTab,
+    removeTab,
+    closeTabInGroup,
+    setActiveTab,
+    getFileContent,
+    updateTabContent,
+    renameTab,
+    isLoading,
+    isSplit,
+    splitDirection,
+    secondaryTabId,
+    splitRatio,
+    group1TabIds,
+    group2TabIds,
+    toggleSplit,
+    setSplitDirection,
+    setSecondaryTabId,
+    setSplitRatio,
+    swapPanes,
+    moveTabToGroup,
+  } = workspace;
+
+  const group1Tabs = useMemo(() => {
+    if (group1TabIds.length === 0) {
+      return activeTabId ? tabs.filter((t) => t.id === activeTabId) : tabs.slice(0, 1);
+    }
+    return group1TabIds
+      .map((id) => tabs.find((t) => t.id === id))
+      .filter((t): t is (typeof tabs)[number] => Boolean(t));
+  }, [tabs, group1TabIds, activeTabId]);
+
+  const group2Tabs = useMemo(() => {
+    if (group2TabIds.length === 0) {
+      return secondaryTabId ? tabs.filter((t) => t.id === secondaryTabId) : [];
+    }
+    return group2TabIds
+      .map((id) => tabs.find((t) => t.id === id))
+      .filter((t): t is (typeof tabs)[number] => Boolean(t));
+  }, [tabs, group2TabIds, secondaryTabId]);
   const [sidePanel, setSidePanel] = useToolkitPanel('hidden');
   const [panelLayout, setPanelLayout] = useState<'full' | 'split'>('full');
   const [mobileFocus, setMobileFocus] = useState<'input' | 'output'>('input');
@@ -67,6 +109,14 @@ export default function JsonFormatter() {
   // Output Mode (Right Pane)
   const [activeTabContent, setActiveTabContent] = useState<string>('');
 
+  // Split Editor State
+  const [focusedPane, setFocusedPane] = useState<'primary' | 'secondary'>('primary');
+  const [secondaryTabContent, setSecondaryTabContent] = useState<string>('');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const secondaryEditorRef = useRef<any>(null);
+  const secondaryTabIdRef = useRef(secondaryTabId);
+  const focusedPaneRef = useRef(focusedPane);
+
   // Tab renaming
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
   const [editingTabName, setEditingTabName] = useState('');
@@ -95,22 +145,52 @@ export default function JsonFormatter() {
     return () => window.removeEventListener('keydown', handleKey);
   }, [isFullscreen]);
 
-  // Global keyboard shortcuts
+  // Global keyboard shortcuts: Tab creation & Split Editor (Cmd+\ or Ctrl+\)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.altKey && e.code === 'KeyT') || ((e.metaKey || e.ctrlKey) && e.code === 'KeyM')) {
         e.preventDefault();
         e.stopPropagation();
-        addTab();
+        if (isSplit && focusedPane === 'secondary') {
+          addTab(undefined, undefined, 2);
+        } else {
+          addTab(undefined, undefined, 1);
+        }
+      }
+      if ((e.metaKey || e.ctrlKey) && (e.key === '\\' || e.code === 'Backslash')) {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleSplit();
       }
     };
     window.addEventListener('keydown', handleKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
-  }, [addTab]);
+  }, [addTab, toggleSplit, isSplit, focusedPane]);
 
   useEffect(() => {
     activeTabIdRef.current = activeTabId;
   }, [activeTabId]);
+
+  useEffect(() => {
+    secondaryTabIdRef.current = secondaryTabId;
+    if (secondaryTabId) {
+      getFileContent(secondaryTabId).then(setSecondaryTabContent);
+    }
+  }, [secondaryTabId, getFileContent]);
+
+  useEffect(() => {
+    focusedPaneRef.current = focusedPane;
+  }, [focusedPane]);
+
+  const secondarySyncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleSecondaryEditorChange = (val?: string) => {
+    if (val !== undefined) {
+      if (secondarySyncTimeoutRef.current) clearTimeout(secondarySyncTimeoutRef.current);
+      secondarySyncTimeoutRef.current = setTimeout(() => {
+        setSecondaryTabContent(val);
+      }, 500);
+    }
+  };
 
   // Apply pipelined JSON from other tools non-destructively
   useEffect(() => {
@@ -270,20 +350,24 @@ export default function JsonFormatter() {
   }, [activeTabContent, indent, sortKeys, smartFormat, isLoading]);
 
   const applyEditToEditor = useCallback((newText: string) => {
-    if (editorRef.current) {
-      const model = editorRef.current.getModel();
+    const isSec = isSplit && focusedPaneRef.current === 'secondary';
+    const targetEditor = isSec && secondaryEditorRef.current ? secondaryEditorRef.current : editorRef.current;
+    const targetTabId = isSec && secondaryTabIdRef.current ? secondaryTabIdRef.current : activeTabIdRef.current;
+
+    if (targetEditor) {
+      const model = targetEditor.getModel();
       if (model) {
-        editorRef.current.pushUndoStop();
-        editorRef.current.executeEdits('formatter', [{
+        targetEditor.pushUndoStop();
+        targetEditor.executeEdits('formatter', [{
           range: model.getFullModelRange(),
           text: newText
         }]);
-        editorRef.current.pushUndoStop();
+        targetEditor.pushUndoStop();
       }
-    } else if (activeTabIdRef.current) {
-      updateTabContent(activeTabIdRef.current, newText);
+    } else if (targetTabId) {
+      updateTabContent(targetTabId, newText);
     }
-  }, [updateTabContent]);
+  }, [isSplit, updateTabContent]);
 
   useEffect(() => {
     try {
@@ -462,12 +546,20 @@ export default function JsonFormatter() {
 
   const processJson = useCallback(async (
     action: 'format' | 'minify',
-    overrides?: { indent?: number | 'tab'; sortKeys?: boolean; smartFormat?: boolean }
+    overrides?: { indent?: number | 'tab'; sortKeys?: boolean; smartFormat?: boolean; targetPane?: 'primary' | 'secondary' }
   ) => {
-    if (!activeTabId) return;
-    const content = (editorRef.current && typeof editorRef.current.getValue === 'function')
-      ? editorRef.current.getValue()
-      : await getFileContent(activeTabId);
+    const pane = overrides?.targetPane ?? (isSplit && focusedPane === 'secondary' ? 'secondary' : 'primary');
+    if (isSplit && pane !== focusedPane) {
+      setFocusedPane(pane);
+    }
+    const isSec = pane === 'secondary';
+    const targetTabId = isSec && secondaryTabId ? secondaryTabId : activeTabId;
+    const targetEditor = isSec && secondaryEditorRef.current ? secondaryEditorRef.current : editorRef.current;
+
+    if (!targetTabId) return;
+    const content = (targetEditor && typeof targetEditor.getValue === 'function')
+      ? targetEditor.getValue()
+      : await getFileContent(targetTabId);
     if (!content.trim()) return;
     setIsProcessing(true);
     setError(null);
@@ -482,7 +574,11 @@ export default function JsonFormatter() {
         smartFormat: overrides?.smartFormat ?? smartFormat
       }
     });
-  }, [activeTabId, indent, sortKeys, smartFormat, getFileContent]);
+  }, [activeTabId, secondaryTabId, isSplit, focusedPane, indent, sortKeys, smartFormat, getFileContent]);
+
+  const handleProcessJsonForPane = useCallback((pane: 'primary' | 'secondary', action: 'format' | 'minify') => {
+    processJson(action, { targetPane: pane });
+  }, [processJson]);
 
   const handleIndentChange = useCallback((val: number | 'tab') => {
     setIndent(val);
@@ -505,19 +601,31 @@ export default function JsonFormatter() {
     }
   }, [viewMode, error, processJson]);
 
-  const repairJson = useCallback(async () => {
-    if (!activeTabId) return;
+  const repairJson = useCallback(async (targetPane?: 'primary' | 'secondary') => {
+    const pane = targetPane ?? (isSplit && focusedPane === 'secondary' ? 'secondary' : 'primary');
+    if (isSplit && pane !== focusedPane) {
+      setFocusedPane(pane);
+    }
+    const isSec = pane === 'secondary';
+    const targetTabId = isSec && secondaryTabId ? secondaryTabId : activeTabId;
+    const targetEditor = isSec && secondaryEditorRef.current ? secondaryEditorRef.current : editorRef.current;
+
+    if (!targetTabId) return;
     setIsProcessing(true);
     setError(null);
-    const content = (editorRef.current && typeof editorRef.current.getValue === 'function')
-      ? editorRef.current.getValue()
-      : await getFileContent(activeTabId);
+    const content = (targetEditor && typeof targetEditor.getValue === 'function')
+      ? targetEditor.getValue()
+      : await getFileContent(targetTabId);
     repairWorkerRef.current?.postMessage({
       id: crypto.randomUUID(),
       type: 'PROCESS',
       payload: { code: content }
     });
-  }, [activeTabId, getFileContent]);
+  }, [activeTabId, secondaryTabId, isSplit, focusedPane, getFileContent]);
+
+  const handleRepairJsonForPane = useCallback((pane: 'primary' | 'secondary') => {
+    repairJson(pane);
+  }, [repairJson]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -600,7 +708,7 @@ export default function JsonFormatter() {
 
 
   const embedded = useToolEmbed();
-  const sidePanelOpen = sidePanel !== 'hidden' && viewMode === 'editor';
+  const sidePanelOpen = sidePanel !== 'hidden' && viewMode === 'editor' && !isSplit;
 
   const workspaceShellClass = cn(
     'zd-tool-fill overflow-hidden transition-all duration-200 bg-[var(--zd-surface)] flex-1 min-h-0',
@@ -651,54 +759,66 @@ export default function JsonFormatter() {
         className="hidden"
       />
 
-      {/* Tabs Strip */}
-      <JsonTabBar
-        tabs={tabs}
-        activeTabId={activeTabId}
-        setActiveTab={setActiveTab}
-        addTab={addTab}
-        removeTab={removeTab}
-        renameTab={renameTab}
-        editingTabId={editingTabId}
-        setEditingTabId={setEditingTabId}
-        editingTabName={editingTabName}
-        setEditingTabName={setEditingTabName}
-      />
+      {/* Tabs Strip (only shown in single-editor mode; in split mode each pane has its own tab bar) */}
+      {!isSplit && (
+        <JsonTabBar
+          tabs={tabs}
+          activeTabId={activeTabId}
+          setActiveTab={setActiveTab}
+          addTab={addTab}
+          removeTab={removeTab}
+          renameTab={renameTab}
+          editingTabId={editingTabId}
+          setEditingTabId={setEditingTabId}
+          editingTabName={editingTabName}
+          setEditingTabName={setEditingTabName}
+          isSplit={isSplit}
+          onToggleSplit={toggleSplit}
+        />
+      )}
 
-      {/* Action Toolbar */}
-      <JsonToolbar
-        viewMode={viewMode}
-        setViewMode={setViewMode}
-        sidePanel={sidePanel}
-        onSidePanelChange={handleSidePanelChange}
-        panelLayout={panelLayout}
-        onTogglePanelLayout={() => setPanelLayout(panelLayout === 'full' ? 'split' : 'full')}
-        isProcessing={isProcessing}
-        activeTabId={activeTabId}
-        onProcessJson={processJson}
-        onRepairJson={repairJson}
-        showSchema={showSchema}
-        setShowSchema={handleToggleSchema}
-        indent={indent}
-        sortKeys={sortKeys}
-        smartFormat={smartFormat}
-        onIndentChange={handleIndentChange}
-        onSortKeysChange={handleSortKeysChange}
-        onSmartFormatChange={handleSmartFormatChange}
-        tabs={tabs}
-        origDiffId={origDiffId}
-        modDiffId={modDiffId}
-        setOrigDiffId={setOrigDiffId}
-        setModDiffId={setModDiffId}
-        diffSideBySide={diffSideBySide}
-        setDiffSideBySide={setDiffSideBySide}
-        diffIgnoreWhitespace={diffIgnoreWhitespace}
-        setDiffIgnoreWhitespace={setDiffIgnoreWhitespace}
-        onOpenFileClick={() => fileInputRef.current?.click()}
-        onDownload={handleDownload}
-        isFullscreen={isFullscreen}
-        setIsFullscreen={setIsFullscreen}
-      />
+      {/* Action Toolbar (rendered in single-editor mode; in split mode each pane has its own toolbar) */}
+      {!isSplit && (
+        <JsonToolbar
+          viewMode={viewMode}
+          setViewMode={setViewMode}
+          sidePanel={sidePanel}
+          onSidePanelChange={handleSidePanelChange}
+          panelLayout={panelLayout}
+          onTogglePanelLayout={() => setPanelLayout(panelLayout === 'full' ? 'split' : 'full')}
+          isProcessing={isProcessing}
+          activeTabId={activeTabId}
+          onProcessJson={processJson}
+          onRepairJson={repairJson}
+          showSchema={showSchema}
+          setShowSchema={handleToggleSchema}
+          indent={indent}
+          sortKeys={sortKeys}
+          smartFormat={smartFormat}
+          onIndentChange={handleIndentChange}
+          onSortKeysChange={handleSortKeysChange}
+          onSmartFormatChange={handleSmartFormatChange}
+          tabs={tabs}
+          origDiffId={origDiffId}
+          modDiffId={modDiffId}
+          setOrigDiffId={setOrigDiffId}
+          setModDiffId={setModDiffId}
+          diffSideBySide={diffSideBySide}
+          setDiffSideBySide={setDiffSideBySide}
+          diffIgnoreWhitespace={diffIgnoreWhitespace}
+          setDiffIgnoreWhitespace={setDiffIgnoreWhitespace}
+          onOpenFileClick={() => fileInputRef.current?.click()}
+          onDownload={handleDownload}
+          isSplit={isSplit}
+          onToggleSplit={toggleSplit}
+          splitDirection={splitDirection}
+          onToggleSplitDirection={() =>
+            setSplitDirection(splitDirection === 'horizontal' ? 'vertical' : 'horizontal')
+          }
+          isFullscreen={isFullscreen}
+          setIsFullscreen={setIsFullscreen}
+        />
+      )}
 
       {/* Workspace Editor Main Viewport */}
       <div className="flex flex-col flex-1 min-h-0 relative bg-[var(--zd-bg)] overflow-hidden">
@@ -745,7 +865,7 @@ export default function JsonFormatter() {
             </ErrorBoundary>
           ) : (
             <>
-              {/* Main Editor Pane: hidden in Full Mode when Tree, Table, or Path is active */}
+              {/* Main Editor Pane: SplitEditorView in split mode, single CodeEditor otherwise */}
               {(!sidePanelOpen || panelLayout === 'split') && (
                 <div
                   className={cn(
@@ -754,12 +874,67 @@ export default function JsonFormatter() {
                     sidePanelOpen && mobileFocus === 'output' && 'hidden md:flex'
                   )}
                 >
-                  {activeTabId ? (
+                  {isSplit ? (
+                    <SplitEditorView
+                      primaryTabId={activeTabId}
+                      secondaryTabId={secondaryTabId}
+                      primaryContent={activeTabContent}
+                      secondaryContent={secondaryTabContent}
+                      allTabs={tabs}
+                      group1Tabs={group1Tabs}
+                      group2Tabs={group2Tabs}
+                      primaryEditorRef={editorRef}
+                      secondaryEditorRef={secondaryEditorRef}
+                      focusedPane={focusedPane}
+                      onFocusPane={setFocusedPane}
+                      onPrimaryChange={handleEditorChange}
+                      onSecondaryChange={handleSecondaryEditorChange}
+                      onSelectPrimaryTab={setActiveTab}
+                      onSelectSecondaryTab={setSecondaryTabId}
+                      onAddTab={(group) => {
+                        addTab(undefined, undefined, group);
+                        setFocusedPane(group === 1 ? 'primary' : 'secondary');
+                      }}
+                      onCloseTab={(id, group) => closeTabInGroup(id, group)}
+                      onRenameTab={renameTab}
+                      editingTabId={editingTabId}
+                      setEditingTabId={setEditingTabId}
+                      editingTabName={editingTabName}
+                      setEditingTabName={setEditingTabName}
+                      onMoveToOtherGroup={(id, currentGroup) => {
+                        moveTabToGroup(id, currentGroup === 1 ? 2 : 1);
+                      }}
+                      splitDirection={splitDirection}
+                      onToggleSplitDirection={() =>
+                        setSplitDirection(splitDirection === 'horizontal' ? 'vertical' : 'horizontal')
+                      }
+                      onSwapPanes={swapPanes}
+                      onCloseSplit={toggleSplit}
+                      splitRatio={splitRatio}
+                      onSplitRatioChange={setSplitRatio}
+                      isProcessing={isProcessing}
+                      onProcessJson={handleProcessJsonForPane}
+                      onRepairJson={handleRepairJsonForPane}
+                      indent={indent}
+                      sortKeys={sortKeys}
+                      smartFormat={smartFormat}
+                      onIndentChange={handleIndentChange}
+                      onSortKeysChange={handleSortKeysChange}
+                      onSmartFormatChange={handleSmartFormatChange}
+                      schema={schema}
+                      onSchemaChange={setSchema}
+                      validationErrors={validationErrors}
+                      isValidating={isValidating}
+                      onInferSchema={handleInferSchema}
+                      onJumpToError={handleJumpToError}
+                    />
+                  ) : activeTabId ? (
                     <CodeEditor
                       modelId={activeTabId}
                       language="json"
                       editorRef={editorRef}
                       onChange={handleEditorChange}
+                      onFocus={() => setFocusedPane('primary')}
                       className="h-full"
                     />
                   ) : (
@@ -815,7 +990,7 @@ export default function JsonFormatter() {
 
       {/* Bottom Status Bar */}
       <JsonStatusBar
-        content={activeTabContent}
+        content={isSplit && focusedPane === 'secondary' ? secondaryTabContent : activeTabContent}
         error={error}
         isProcessing={isProcessing}
         indent={indent}

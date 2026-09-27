@@ -13,6 +13,7 @@ interface CodeEditorProps extends Omit<EditorProps, 'theme' | 'onChange'> {
   language?: string;
   readOnly?: boolean;
   onChange?: (value: string | undefined) => void;
+  onFocus?: () => void;
   editorRef?: React.MutableRefObject<any>;
   className?: string;
 }
@@ -23,6 +24,7 @@ export function CodeEditor({
   language = 'json',
   readOnly = false,
   onChange,
+  onFocus,
   editorRef: externalEditorRef,
   className,
   ...props
@@ -36,12 +38,17 @@ export function CodeEditor({
   const timeoutRef = useRef<any>(null);
   const modelIdRef = useRef(modelId);
   const onChangeRef = useRef(onChange);
+  const onFocusRef = useRef(onFocus);
   const readOnlyRef = useRef(readOnly);
   const isWorkspaceModel = Boolean(modelId);
 
   useEffect(() => {
     modelIdRef.current = modelId;
   }, [modelId]);
+
+  useEffect(() => {
+    onFocusRef.current = onFocus;
+  }, [onFocus]);
 
   useEffect(() => {
     onChangeRef.current = onChange;
@@ -180,6 +187,10 @@ export function CodeEditor({
       externalEditorRef.current = editor;
     }
 
+    editor.onDidFocusEditorWidget(() => {
+      onFocusRef.current?.();
+    });
+
     editor.onDidChangeModelContent(() => {
       const val = editor.getValue();
       if (onChangeRef.current) onChangeRef.current(val);
@@ -197,7 +208,10 @@ export function CodeEditor({
   };
 
   return (
-    <div className={cn('zd-tool-fill w-full overflow-hidden bg-[var(--zd-surface)]', className)}>
+    <div
+      onMouseDownCapture={() => onFocusRef.current?.()}
+      className={cn('zd-tool-fill w-full overflow-hidden bg-[var(--zd-surface)]', className)}
+    >
       <Editor
         height="100%"
         width="100%"

@@ -56,6 +56,11 @@ interface JsonToolbarProps {
   // File IO
   onOpenFileClick: () => void;
   onDownload: (format: 'json' | 'csv') => void;
+  // Split Editor
+  isSplit?: boolean;
+  onToggleSplit?: () => void;
+  splitDirection?: 'horizontal' | 'vertical';
+  onToggleSplitDirection?: () => void;
   // Fullscreen
   isFullscreen: boolean;
   setIsFullscreen: (full: boolean) => void;
@@ -91,6 +96,10 @@ export function JsonToolbar({
   setDiffIgnoreWhitespace,
   onOpenFileClick,
   onDownload,
+  isSplit = false,
+  onToggleSplit,
+  splitDirection = 'horizontal',
+  onToggleSplitDirection,
   isFullscreen,
   setIsFullscreen,
 }: JsonToolbarProps) {
@@ -492,6 +501,45 @@ export function JsonToolbar({
               <span>Compare</span>
             </button>
           </div>
+
+          {/* Split Mode Control (in editor view) */}
+          {viewMode === 'editor' && onToggleSplit && (
+            <div className="flex items-center gap-0.5 bg-[var(--zd-surface)] border border-[var(--zd-border)] p-0.5 rounded-lg">
+              <button
+                type="button"
+                onClick={onToggleSplit}
+                title={isSplit ? 'Close Split Editor (⌘\\)' : 'Split Editor (⌘\\)'}
+                className={cn(
+                  'flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer',
+                  isSplit
+                    ? 'bg-[var(--zd-surface-raised)] text-[var(--zd-primary)] font-semibold shadow-xs'
+                    : 'text-[var(--zd-text-secondary)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-primary-soft)]/40'
+                )}
+              >
+                <Columns2 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">{isSplit ? 'Split Active' : 'Split'}</span>
+              </button>
+              {isSplit && onToggleSplitDirection && (
+                <button
+                  type="button"
+                  onClick={onToggleSplitDirection}
+                  title={
+                    splitDirection === 'horizontal'
+                      ? 'Switch to Stacked Split (Rows)'
+                      : 'Switch to Side-by-Side Split (Columns)'
+                  }
+                  aria-label="Toggle split orientation"
+                  className="p-1 rounded-md text-[var(--zd-text-muted)] hover:text-[var(--zd-primary)] hover:bg-[var(--zd-surface-raised)] transition-colors cursor-pointer"
+                >
+                  {splitDirection === 'horizontal' ? (
+                    <Rows className="w-3 h-3" />
+                  ) : (
+                    <Columns2 className="w-3 h-3" />
+                  )}
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Focus Mode Toggle */}
           <button

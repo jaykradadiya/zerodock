@@ -18,6 +18,7 @@ import { SkeletonLoader } from '../../shared/components/SkeletonLoader';
 import { SkipLink } from '../../shared/components/SkipLink';
 import { ToolRouteShell } from '../../shared/components/ToolRouteShell';
 import { KeyboardShortcutsHelp } from '../../shared/components/KeyboardShortcutsHelp';
+import { usePageTracking } from '../analytics';
 
 
 import { LandingPage } from '../../landing/LandingPage';
@@ -44,6 +45,7 @@ const lazyRetry = (componentImport: () => Promise<any>) =>
 const LazyCommandPalette = lazyRetry(() => import('../../shared/components/CommandPalette').then(m => ({ default: m.CommandPalette })));
 const LazyStorageWarningModal = lazyRetry(() => import('../../shared/components/StorageWarningModal').then(m => ({ default: m.StorageWarningModal })));
 const LazyThemeModal = lazyRetry(() => import('../../shared/components/ThemeModal').then(m => ({ default: m.ThemeModal })));
+const LazyFeedbackModal = lazyRetry(() => import('../../shared/components/FeedbackModal').then(m => ({ default: m.FeedbackModal })));
 
 /*
  * RootLayout — site-wide shell.
@@ -51,11 +53,14 @@ const LazyThemeModal = lazyRetry(() => import('../../shared/components/ThemeModa
  * Tool pages get a self-contained layout; the landing page renders its own footer.
  */
 function RootLayout() {
+  usePageTracking();
+
   const {
     commandPaletteOpen,
     setCommandPaletteOpen,
     themeModalOpen,
     setThemeModalOpen,
+    feedbackModalOpen,
     storageWarning,
     zenMode,
     setZenMode,
@@ -144,6 +149,11 @@ function RootLayout() {
       {themeModalOpen && (
         <Suspense fallback={null}>
           <LazyThemeModal />
+        </Suspense>
+      )}
+      {feedbackModalOpen && (
+        <Suspense fallback={null}>
+          <LazyFeedbackModal />
         </Suspense>
       )}
       <ToastContainer />

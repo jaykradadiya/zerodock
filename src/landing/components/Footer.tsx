@@ -1,6 +1,8 @@
 import { Heart } from 'lucide-react';
+import { useUIStore } from '../../core/store/useUIStore';
 
 export function Footer() {
+  const { setFeedbackModalOpen } = useUIStore();
   const year = new Date().getFullYear();
 
   return (
@@ -38,6 +40,13 @@ export function Footer() {
 
           {/* Right — links */}
           <div className="flex items-center gap-6 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setFeedbackModalOpen(true)}
+              className="text-xs sm:text-sm font-medium text-[var(--zd-text-muted)] hover:text-[var(--zd-text-primary)] cursor-pointer transition-colors duration-200 bg-transparent border-0 p-0"
+            >
+              Feedback & Requests
+            </button>
             <FooterLink href="https://github.com/jaykradadiya/zerodock" label="GitHub" />
             <FooterLink
               href="https://github.com/jaykradadiya/zerodock/issues"

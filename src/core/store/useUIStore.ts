@@ -32,6 +32,9 @@ interface UIState {
   setContextCommands: (commands: ContextCommand[]) => void;
   showStorageWarning: (title: string, message: string, suggestions?: string[]) => void;
   closeStorageWarning: () => void;
+  feedbackModalOpen: boolean;
+  feedbackModalCategory?: import('../../shared/types/feedback').FeedbackCategory;
+  setFeedbackModalOpen: (open: boolean, category?: import('../../shared/types/feedback').FeedbackCategory) => void;
   shortcutsOpen: boolean;
   setShortcutsOpen: (open: boolean) => void;
 }
@@ -45,6 +48,13 @@ export const useUIStore = create<UIState>((set) => ({
   shortcutsOpen: false,
   themeModalOpen: false,
   themeModalTab: 'browse',
+  feedbackModalOpen: false,
+  feedbackModalCategory: 'feature',
+  setFeedbackModalOpen: (feedbackModalOpen, category) =>
+    set((state) => ({
+      feedbackModalOpen,
+      feedbackModalCategory: category !== undefined ? category : (feedbackModalOpen ? state.feedbackModalCategory || 'feature' : state.feedbackModalCategory),
+    })),
   setThemeModalOpen: (themeModalOpen, tab) =>
     set((state) => ({
       themeModalOpen,

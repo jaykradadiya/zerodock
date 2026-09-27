@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from '@tanstack/react-router';
-import { Search, Terminal, Sun, Moon, Volume2, VolumeX, CornerDownLeft, Sparkles, Palette, Sliders, FileCode, Contrast } from 'lucide-react';
+import { Search, Terminal, Sun, Moon, Volume2, VolumeX, CornerDownLeft, Sparkles, Palette, Sliders, FileCode, Contrast, MessageSquarePlus, Bug } from 'lucide-react';
 import { toolRegistry } from '../../core/registry/tools';
 import { usePreferenceStore } from '../../core/store/usePreferenceStore';
 import { useUIStore } from '../../core/store/useUIStore';
@@ -17,7 +17,7 @@ const GithubIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 export function CommandPalette() {
   const { theme, toggleTheme, setThemeId, recentTools, favoriteTools, soundEnabled, toggleSound, highContrast, toggleHighContrast } = usePreferenceStore();
-  const { commandPaletteOpen, setCommandPaletteOpen, setThemeModalOpen, contextCommands } = useUIStore();
+  const { commandPaletteOpen, setCommandPaletteOpen, setThemeModalOpen, setFeedbackModalOpen, contextCommands } = useUIStore();
   const [search, setSearch] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [activeCategory, setActiveCategory] = useState<'All' | 'Favorites' | 'Recent' | 'Tools' | 'Preferences' | 'External'>('All');
@@ -191,6 +191,28 @@ export function CommandPalette() {
       category: 'Preferences',
       action: () => {
         toggleSound();
+        setCommandPaletteOpen(false);
+      },
+    },
+    {
+      id: 'feedback-feature-request',
+      name: 'Give Feedback or Request a Feature',
+      description: 'Share tool ideas, feature requests, or general feedback with the team',
+      icon: MessageSquarePlus,
+      category: 'Preferences',
+      action: () => {
+        setFeedbackModalOpen(true, 'feature');
+        setCommandPaletteOpen(false);
+      },
+    },
+    {
+      id: 'feedback-bug-report',
+      name: 'Report a Bug or Unexpected Behavior',
+      description: 'Submit an issue with non-sensitive technical diagnostics',
+      icon: Bug,
+      category: 'Preferences',
+      action: () => {
+        setFeedbackModalOpen(true, 'bug');
         setCommandPaletteOpen(false);
       },
     },

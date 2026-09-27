@@ -3,7 +3,7 @@ import { Link, useLocation } from '@tanstack/react-router';
 import { usePreferenceStore } from '../../core/store/usePreferenceStore';
 import { useUIStore } from '../../core/store/useUIStore';
 import { toolRegistry } from '../../core/registry/tools';
-import { Moon, Sun, Star, Search, ChevronRight, Lock, FileJson, Palette, Contrast } from 'lucide-react';
+import { Moon, Sun, Star, Search, ChevronRight, Lock, FileJson, Palette, Contrast, MessageSquarePlus } from 'lucide-react';
 import { Button, cn } from '../../shared/components/ui';
 import { ShareLinkButton } from '../../shared/components/ShareLinkButton';
 
@@ -15,7 +15,7 @@ const GithubIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 export function Navbar() {
   const { theme, toggleTheme, highContrast, toggleHighContrast } = usePreferenceStore();
-  const { setCommandPaletteOpen, setThemeModalOpen } = useUIStore();
+  const { setCommandPaletteOpen, setThemeModalOpen, setFeedbackModalOpen } = useUIStore();
   const [scrolled, setScrolled] = useState(false);
   const [stars, setStars] = useState<string>('Star');
 
@@ -147,6 +147,18 @@ export function Navbar() {
             <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--zd-surface)] border border-[var(--zd-border)] text-[var(--zd-text-muted)] group-hover:border-[var(--zd-primary)]/30">
               ⌘K
             </kbd>
+          </Button>
+
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setFeedbackModalOpen(true)}
+            aria-label="Submit feature request or feedback"
+            title="Feedback & Feature Requests"
+            className="!h-8 sm:!h-9 group text-xs gap-1.5"
+          >
+            <MessageSquarePlus className="w-3.5 h-3.5 text-[var(--zd-primary)] transition-transform group-hover:scale-110" />
+            <span className="hidden lg:inline">Feedback</span>
           </Button>
 
           <a

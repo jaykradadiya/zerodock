@@ -1,13 +1,52 @@
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin, type ViteDevServer, type Connect } from 'vite'
+import type { ServerResponse } from 'node:http'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
+
+// Local dev server mock plugin for /api/feedback
+function feedbackDevPlugin(): Plugin {
+  return {
+    name: 'feedback-dev-plugin',
+    configureServer(server: ViteDevServer) {
+      server.middlewares.use((req: Connect.IncomingMessage, res: ServerResponse, next: Connect.NextFunction) => {
+        if (req.url === '/api/feedback' && req.method === 'POST') {
+          let body = '';
+          req.on('data', (chunk: Buffer | string) => {
+            body += chunk;
+          });
+          req.on('end', () => {
+            try {
+              const parsed = JSON.parse(body);
+              console.log('\n📨 [ZeroDock Dev Server] Feedback received:');
+              console.log(JSON.stringify(parsed, null, 2));
+              res.setHeader('Content-Type', 'application/json');
+              res.statusCode = 200;
+              res.end(
+                JSON.stringify({
+                  success: true,
+                  message: 'Feedback received successfully in local dev mode!',
+                })
+              );
+            } catch {
+              res.statusCode = 400;
+              res.end(JSON.stringify({ error: 'Invalid JSON payload' }));
+            }
+          });
+          return;
+        }
+        next();
+      });
+    },
+  };
+}
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    feedbackDevPlugin(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],

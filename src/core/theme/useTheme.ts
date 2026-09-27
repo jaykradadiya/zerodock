@@ -13,8 +13,14 @@ export interface UseThemeReturn {
   tokens: ThemeTokens;
   /** Whether the active theme is in dark mode */
   isDark: boolean;
+  /** Whether high contrast mode is currently active (GitHub style) */
+  highContrast: boolean;
   /** Quick toggle between dark and light modes */
   toggleTheme: () => void;
+  /** Toggle high contrast mode on or off */
+  toggleHighContrast: () => void;
+  /** Set high contrast mode explicitly */
+  setHighContrast: (enabled: boolean) => void;
   /** Select a specific theme by ID */
   setThemeId: (themeId: string) => void;
   /** Override an individual color token */
@@ -52,7 +58,10 @@ export function useTheme(): UseThemeReturn {
     activeThemeId,
     getActiveTheme,
     getEffectiveTokens,
+    highContrast,
     toggleTheme,
+    toggleHighContrast,
+    setHighContrast,
     setThemeId,
     setThemeOverride,
     resetThemeOverrides,
@@ -69,7 +78,10 @@ export function useTheme(): UseThemeReturn {
     activeTheme,
     tokens,
     isDark: activeTheme.mode === 'dark',
+    highContrast,
     toggleTheme,
+    toggleHighContrast,
+    setHighContrast,
     setThemeId,
     setThemeOverride,
     resetThemeOverrides,

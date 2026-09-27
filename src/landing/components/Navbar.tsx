@@ -3,8 +3,8 @@ import { Link, useLocation } from '@tanstack/react-router';
 import { usePreferenceStore } from '../../core/store/usePreferenceStore';
 import { useUIStore } from '../../core/store/useUIStore';
 import { toolRegistry } from '../../core/registry/tools';
-import { Moon, Sun, Star, Search, ChevronRight, Lock, FileJson, Palette } from 'lucide-react';
-import { Button } from '../../shared/components/ui';
+import { Moon, Sun, Star, Search, ChevronRight, Lock, FileJson, Palette, Contrast } from 'lucide-react';
+import { Button, cn } from '../../shared/components/ui';
 import { ShareLinkButton } from '../../shared/components/ShareLinkButton';
 
 const GithubIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -14,7 +14,7 @@ const GithubIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 export function Navbar() {
-  const { theme, toggleTheme } = usePreferenceStore();
+  const { theme, toggleTheme, highContrast, toggleHighContrast } = usePreferenceStore();
   const { setCommandPaletteOpen, setThemeModalOpen } = useUIStore();
   const [scrolled, setScrolled] = useState(false);
   const [stars, setStars] = useState<string>('Star');
@@ -173,6 +173,21 @@ export function Navbar() {
             className="!w-8 !h-8 sm:!w-9 sm:!h-9 !rounded-xl border border-[var(--zd-border)] bg-[var(--zd-surface-raised)] hover:bg-[var(--zd-primary-soft)] hover:border-[var(--zd-primary)]/50 shadow-xs text-[var(--zd-text-secondary)] hover:text-[var(--zd-primary)]"
           >
             <Palette size={15} />
+          </Button>
+
+          <Button
+            variant="icon"
+            onClick={toggleHighContrast}
+            aria-label={highContrast ? 'Disable high contrast mode' : 'Increase contrast (GitHub style)'}
+            title={highContrast ? 'High Contrast Mode: Active (Click to disable)' : 'Increase Contrast (GitHub style)'}
+            className={cn(
+              '!w-8 !h-8 sm:!w-9 sm:!h-9 !rounded-xl border shadow-xs transition-all',
+              highContrast
+                ? 'border-[var(--zd-primary)] bg-[var(--zd-primary-soft)] text-[var(--zd-primary)] ring-1 ring-[var(--zd-primary)]/40'
+                : 'border-[var(--zd-border)] bg-[var(--zd-surface-raised)] hover:bg-[var(--zd-primary-soft)] hover:border-[var(--zd-primary)]/50 text-[var(--zd-text-secondary)] hover:text-[var(--zd-primary)]'
+            )}
+          >
+            <Contrast size={15} />
           </Button>
 
           <Button

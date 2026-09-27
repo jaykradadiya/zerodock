@@ -98,6 +98,9 @@ export function CodeEditor({
         'editor.foreground': '#EAEAF0',
         'editorLineHighlightBackground': '#1C1C21',
         'editorLineNumber.foreground': '#5E5E72',
+        'editor.selectionBackground': '#264F78',
+        'editor.inactiveSelectionBackground': '#3A3D4180',
+        'editor.selectionHighlightBackground': '#264F7855',
       }
     });
     monaco.editor.defineTheme('zerodock-light', {
@@ -109,6 +112,9 @@ export function CodeEditor({
         'editor.foreground': '#1A1A2E',
         'editorLineHighlightBackground': '#FAFAF8',
         'editorLineNumber.foreground': '#8E8EA0',
+        'editor.selectionBackground': '#ADD6FF',
+        'editor.inactiveSelectionBackground': '#E4E6F180',
+        'editor.selectionHighlightBackground': '#ADD6FF50',
       }
     });
 

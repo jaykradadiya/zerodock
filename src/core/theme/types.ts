@@ -55,6 +55,7 @@ export interface ThemeDefinition {
   description: string;
   author?: string;
   isBuiltin?: boolean;
+  isHighContrast?: boolean;
   tokens: ThemeTokens;
 }
 

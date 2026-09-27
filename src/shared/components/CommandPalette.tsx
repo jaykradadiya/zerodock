@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from '@tanstack/react-router';
-import { Search, Terminal, Sun, Moon, Volume2, VolumeX, CornerDownLeft, Sparkles, Palette, Sliders, FileCode } from 'lucide-react';
+import { Search, Terminal, Sun, Moon, Volume2, VolumeX, CornerDownLeft, Sparkles, Palette, Sliders, FileCode, Contrast } from 'lucide-react';
 import { toolRegistry } from '../../core/registry/tools';
 import { usePreferenceStore } from '../../core/store/usePreferenceStore';
 import { useUIStore } from '../../core/store/useUIStore';
@@ -16,7 +16,7 @@ const GithubIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 export function CommandPalette() {
-  const { theme, toggleTheme, setThemeId, recentTools, favoriteTools, soundEnabled, toggleSound } = usePreferenceStore();
+  const { theme, toggleTheme, setThemeId, recentTools, favoriteTools, soundEnabled, toggleSound, highContrast, toggleHighContrast } = usePreferenceStore();
   const { commandPaletteOpen, setCommandPaletteOpen, setThemeModalOpen, contextCommands } = useUIStore();
   const [search, setSearch] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -158,6 +158,17 @@ export function CommandPalette() {
       category: 'Preferences',
       action: () => {
         toggleTheme();
+        setCommandPaletteOpen(false);
+      },
+    },
+    {
+      id: 'toggle-high-contrast',
+      name: 'Toggle High Contrast Mode (GitHub style)',
+      description: highContrast ? 'Disable increased contrast' : 'Enable increased contrast like GitHub',
+      icon: Contrast,
+      category: 'Preferences',
+      action: () => {
+        toggleHighContrast();
         setCommandPaletteOpen(false);
       },
     },

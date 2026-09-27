@@ -63,3 +63,40 @@ export function getLuminance(hex: string): number {
 export function isDarkColor(hex: string): boolean {
   return getLuminance(hex) < 0.35;
 }
+
+/**
+ * Converts any CSS color (hex, rgb, rgba) to a strict Monaco-compatible hex string (#RRGGBB or #RRGGBBAA).
+ * Monaco's Color.fromHex parser throws/falls back to pure red (#FF0000) if given an rgba() string!
+ */
+export function toMonacoHex(color: string | undefined, fallbackHex: string): string {
+  if (!color || typeof color !== 'string') return fallbackHex;
+  const trimmed = color.trim();
+
+  // If already hex, validate and return normalized hex
+  if (trimmed.startsWith('#')) {
+    if (isValidHex(trimmed)) return normalizeHex(trimmed);
+    return fallbackHex;
+  }
+
+  // Parse rgba(r, g, b, a)
+  const rgbaMatch = trimmed.match(/^rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+)\s*\)$/i);
+  if (rgbaMatch) {
+    const r = Math.min(255, Math.max(0, parseInt(rgbaMatch[1], 10))).toString(16).padStart(2, '0');
+    const g = Math.min(255, Math.max(0, parseInt(rgbaMatch[2], 10))).toString(16).padStart(2, '0');
+    const b = Math.min(255, Math.max(0, parseInt(rgbaMatch[3], 10))).toString(16).padStart(2, '0');
+    const alphaNum = Math.min(1, Math.max(0, parseFloat(rgbaMatch[4])));
+    const a = Math.round(alphaNum * 255).toString(16).padStart(2, '0');
+    return `#${r}${g}${b}${a}`.toUpperCase();
+  }
+
+  // Parse rgb(r, g, b)
+  const rgbMatch = trimmed.match(/^rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/i);
+  if (rgbMatch) {
+    const r = Math.min(255, Math.max(0, parseInt(rgbMatch[1], 10))).toString(16).padStart(2, '0');
+    const g = Math.min(255, Math.max(0, parseInt(rgbMatch[2], 10))).toString(16).padStart(2, '0');
+    const b = Math.min(255, Math.max(0, parseInt(rgbMatch[3], 10))).toString(16).padStart(2, '0');
+    return `#${r}${g}${b}`.toUpperCase();
+  }
+
+  return fallbackHex;
+}

@@ -123,8 +123,13 @@
   }
 
   ::selection {
-    background-color: var(--zd-primary-soft);
-    color: var(--zd-primary);
+    background-color: #ADD6FF;
+    color: #09090B;
+  }
+
+  .dark ::selection {
+    background-color: #264F78;
+    color: #FFFFFF;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -473,6 +478,34 @@
   .monaco-diff-editor .diagonal-fill {
     opacity: 0.15 !important;
   }
+}
+
+/* ═══════════════════════════════════════════════════════
+   HIGH CONTRAST MODE (GitHub Style Accessibility)
+   ═══════════════════════════════════════════════════════ */
+
+[data-high-contrast="true"] {
+  --zd-grid-opacity: 0 !important;
+  --zd-grain-opacity: 0 !important;
+}
+
+[data-high-contrast="true"] * {
+  text-shadow: none !important;
+}
+
+/* Crisp high-contrast borders & solid separation */
+[data-high-contrast="true"] .border,
+[data-high-contrast="true"] [class*="border-"] {
+  border-color: var(--zd-border) !important;
+}
+
+[data-high-contrast="true"] button:focus-visible,
+[data-high-contrast="true"] input:focus-visible,
+[data-high-contrast="true"] select:focus-visible,
+[data-high-contrast="true"] textarea:focus-visible,
+[data-high-contrast="true"] [tabindex]:focus-visible {
+  outline: 2px solid var(--zd-primary) !important;
+  outline-offset: 2px !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

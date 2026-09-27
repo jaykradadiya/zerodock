@@ -146,7 +146,7 @@ export function parseThemeImport(jsonString: string): {
           'editorLineHighlightBackground': extractedTokens['editorLineHighlightBackground'] || (mode === 'dark' ? '#181818' : '#FAFAF8'),
           'editorLineNumber.foreground': extractedTokens['editorLineNumber.foreground'] || (mode === 'dark' ? '#525252' : '#8E8EA0'),
           'editorCursor.foreground': extractedTokens['editorCursor.foreground'] || extractedTokens['--zd-primary'] || (mode === 'dark' ? '#8B7CF7' : '#6C5CE7'),
-          'editor.selectionBackground': extractedTokens['editor.selectionBackground'] || 'rgba(139, 124, 247, 0.25)',
+          'editor.selectionBackground': extractedTokens['editor.selectionBackground'] || (mode === 'dark' ? '#264F78' : '#ADD6FF'),
         },
       };
 

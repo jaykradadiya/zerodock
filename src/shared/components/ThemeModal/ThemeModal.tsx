@@ -10,6 +10,7 @@ import {
   Plus,
   Save,
   Check,
+  Contrast,
 } from 'lucide-react';
 import { usePreferenceStore } from '../../../core/store/usePreferenceStore';
 import { useUIStore, type ThemeModalTab } from '../../../core/store/useUIStore';
@@ -28,6 +29,8 @@ export function ThemeModal() {
     activeThemeId,
     customThemes,
     themeOverrides,
+    highContrast,
+    toggleHighContrast,
     setThemeId,
     setThemeOverride,
     resetThemeOverrides,
@@ -39,7 +42,7 @@ export function ThemeModal() {
 
   const [activeTab, setActiveTab] = useState<ThemeModalTab>(themeModalTab);
   const [search, setSearch] = useState('');
-  const [filterMode, setFilterMode] = useState<'all' | 'dark' | 'light' | 'custom'>('all');
+  const [filterMode, setFilterMode] = useState<'all' | 'dark' | 'light' | 'contrast' | 'custom'>('all');
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [newThemeName, setNewThemeName] = useState('');
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -78,6 +81,7 @@ export function ThemeModal() {
 
       if (filterMode === 'dark') return t.mode === 'dark';
       if (filterMode === 'light') return t.mode === 'light';
+      if (filterMode === 'contrast') return Boolean(t.isHighContrast || t.id.includes('high-contrast'));
       if (filterMode === 'custom') return !t.isBuiltin;
       return true;
     });
@@ -246,21 +250,39 @@ export function ThemeModal() {
                     />
                   </div>
 
-                  <div className="flex items-center gap-1 bg-[var(--zd-surface)] p-1 rounded-xl border border-[var(--zd-border)]">
-                    {(['all', 'dark', 'light', 'custom'] as const).map((mode) => (
-                      <button
-                        key={mode}
-                        type="button"
-                        onClick={() => setFilterMode(mode)}
-                        className={`px-2.5 py-1 text-xs font-semibold rounded-lg capitalize transition-colors cursor-pointer ${
-                          filterMode === mode
-                            ? 'bg-[var(--zd-primary)] text-[var(--zd-bg)] shadow-xs'
-                            : 'text-[var(--zd-text-secondary)] hover:text-[var(--zd-text-primary)]'
-                        }`}
-                      >
-                        {mode}
-                      </button>
-                    ))}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-1 bg-[var(--zd-surface)] p-1 rounded-xl border border-[var(--zd-border)]">
+                      {(['all', 'dark', 'light', 'contrast', 'custom'] as const).map((mode) => (
+                        <button
+                          key={mode}
+                          type="button"
+                          onClick={() => setFilterMode(mode)}
+                          className={`px-2.5 py-1 text-xs font-semibold rounded-lg capitalize transition-colors cursor-pointer ${
+                            filterMode === mode
+                              ? 'bg-[var(--zd-primary)] text-[var(--zd-primary-foreground)] shadow-xs'
+                              : 'text-[var(--zd-text-secondary)] hover:text-[var(--zd-text-primary)]'
+                          }`}
+                        >
+                          {mode === 'contrast' ? 'High Contrast' : mode}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Increase Contrast Toggle (GitHub style) */}
+                    <button
+                      type="button"
+                      onClick={toggleHighContrast}
+                      title={highContrast ? 'Turn off Increase Contrast' : 'Increase contrast (like GitHub high contrast)'}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border transition-all cursor-pointer select-none ${
+                        highContrast
+                          ? 'bg-[var(--zd-primary)] text-[var(--zd-primary-foreground)] border-[var(--zd-primary)] shadow-xs ring-1 ring-[var(--zd-primary)]'
+                          : 'bg-[var(--zd-surface)] text-[var(--zd-text-secondary)] border border-[var(--zd-border)] hover:text-[var(--zd-text-primary)] hover:border-[var(--zd-border-hover)]'
+                      }`}
+                    >
+                      <Contrast className="w-3.5 h-3.5" />
+                      <span className="hidden xs:inline">Contrast:</span>
+                      <span>{highContrast ? 'Increased' : 'Standard'}</span>
+                    </button>
                   </div>
                 </div>
 

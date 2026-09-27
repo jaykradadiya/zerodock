@@ -56,6 +56,11 @@ export function ThemeCard({
               <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--zd-surface-raised)] border border-[var(--zd-border)] text-[var(--zd-text-muted)] uppercase tracking-wider">
                 {theme.mode}
               </span>
+              {theme.isHighContrast && (
+                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[var(--zd-primary-soft)] text-[var(--zd-primary)] border border-[var(--zd-primary)]/40">
+                  High Contrast
+                </span>
+              )}
               {isCustom && (
                 <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[var(--zd-accent-soft)] text-[var(--zd-accent)] border border-[var(--zd-accent)]/30">
                   Custom

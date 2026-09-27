@@ -10,6 +10,7 @@ interface PreferenceState {
   activeThemeId: string;
   customThemes: Record<string, ThemeDefinition>;
   themeOverrides: Partial<ThemeTokens>;
+  highContrast: boolean;
   viewMode: 'grid' | 'list';
   soundEnabled: boolean;
   recentTools: string[];
@@ -22,6 +23,8 @@ interface PreferenceState {
   setThemeId: (themeId: string) => void;
   setThemeOverride: (key: keyof ThemeTokens, value: string) => void;
   resetThemeOverrides: () => void;
+  toggleHighContrast: () => void;
+  setHighContrast: (enabled: boolean) => void;
   saveCustomTheme: (theme: ThemeDefinition) => void;
   deleteCustomTheme: (themeId: string) => void;
   getActiveTheme: () => ThemeDefinition;
@@ -42,6 +45,7 @@ export const usePreferenceStore = create<PreferenceState>()(
       activeThemeId: 'linear-dark',
       customThemes: {},
       themeOverrides: {},
+      highContrast: false,
       viewMode: 'grid',
       soundEnabled: true,
       recentTools: [],
@@ -56,17 +60,19 @@ export const usePreferenceStore = create<PreferenceState>()(
 
       getEffectiveTokens: () => {
         const theme = get().getActiveTheme();
-        return resolveEffectiveTokens(theme, get().themeOverrides);
+        return resolveEffectiveTokens(theme, get().themeOverrides, get().highContrast);
       },
 
       toggleTheme: () =>
         set((state) => {
           const currentTheme = findThemeById(state.activeThemeId, state.customThemes);
           const nextMode: 'light' | 'dark' = currentTheme.mode === 'dark' ? 'light' : 'dark';
-          const nextThemeId = nextMode === 'light' ? 'geist-mono' : 'linear-dark';
+          const nextThemeId = state.highContrast
+            ? (nextMode === 'light' ? 'github-light-high-contrast' : 'github-dark-high-contrast')
+            : (nextMode === 'light' ? 'geist-mono' : 'linear-dark');
           const nextTheme = findThemeById(nextThemeId, state.customThemes);
 
-          applyTheme(nextTheme, {});
+          applyTheme(nextTheme, {}, state.highContrast);
           return {
             theme: nextMode,
             activeThemeId: nextThemeId,
@@ -77,10 +83,12 @@ export const usePreferenceStore = create<PreferenceState>()(
       setThemeId: (themeId: string) =>
         set((state) => {
           const targetTheme = findThemeById(themeId, state.customThemes);
-          applyTheme(targetTheme, {});
+          const isHighContrast = Boolean(targetTheme.isHighContrast || state.highContrast);
+          applyTheme(targetTheme, {}, isHighContrast);
           return {
             activeThemeId: themeId,
             theme: targetTheme.mode,
+            highContrast: targetTheme.isHighContrast ? true : state.highContrast,
             themeOverrides: {},
           };
         }),
@@ -92,7 +100,7 @@ export const usePreferenceStore = create<PreferenceState>()(
             [key]: value,
           };
           const targetTheme = findThemeById(state.activeThemeId, state.customThemes);
-          applyTheme(targetTheme, newOverrides);
+          applyTheme(targetTheme, newOverrides, state.highContrast);
           return {
             themeOverrides: newOverrides,
           };
@@ -101,10 +109,25 @@ export const usePreferenceStore = create<PreferenceState>()(
       resetThemeOverrides: () =>
         set((state) => {
           const targetTheme = findThemeById(state.activeThemeId, state.customThemes);
-          applyTheme(targetTheme, {});
+          applyTheme(targetTheme, {}, state.highContrast);
           return {
             themeOverrides: {},
           };
+        }),
+
+      toggleHighContrast: () =>
+        set((state) => {
+          const next = !state.highContrast;
+          const targetTheme = findThemeById(state.activeThemeId, state.customThemes);
+          applyTheme(targetTheme, state.themeOverrides, next);
+          return { highContrast: next };
+        }),
+
+      setHighContrast: (enabled: boolean) =>
+        set((state) => {
+          const targetTheme = findThemeById(state.activeThemeId, state.customThemes);
+          applyTheme(targetTheme, state.themeOverrides, enabled);
+          return { highContrast: enabled };
         }),
 
       saveCustomTheme: (customTheme: ThemeDefinition) =>
@@ -192,7 +215,7 @@ export const usePreferenceStore = create<PreferenceState>()(
       onRehydrateStorage: () => (state) => {
         if (state) {
           const active = findThemeById(state.activeThemeId || 'linear-dark', state.customThemes || {});
-          applyTheme(active, state.themeOverrides || {});
+          applyTheme(active, state.themeOverrides || {}, state.highContrast || false);
         }
       },
     }

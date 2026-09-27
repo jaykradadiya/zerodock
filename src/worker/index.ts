@@ -1,5 +1,5 @@
 interface Env {
-  ASSETS: {
+  ASSETS?: {
     fetch: (request: Request) => Promise<Response>;
   };
   FEEDBACK_WEBHOOK_URL?: string;
@@ -56,7 +56,11 @@ export default {
       }
     }
 
-    // Default: Delegate to Cloudflare static asset fetcher
-    return env.ASSETS.fetch(request);
+    // Default: Delegate to Cloudflare static asset fetcher if bound
+    if (env.ASSETS && typeof env.ASSETS.fetch === 'function') {
+      return env.ASSETS.fetch(request);
+    }
+
+    return new Response('Not Found', { status: 404 });
   },
 };

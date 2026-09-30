@@ -1,12 +1,13 @@
 import { create } from 'zustand';
 
+import type { ComponentType } from 'react';
 import type { ToolShortcutHandlers } from '../../shared/hooks/useToolShortcuts';
 
 export interface ContextCommand {
   id: string;
   name: string;
   description?: string;
-  icon?: any;
+  icon?: ComponentType<{ className?: string }>;
   action: () => void;
 }
 

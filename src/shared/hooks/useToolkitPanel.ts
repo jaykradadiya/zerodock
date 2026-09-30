@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useNavigate, useSearch } from '@tanstack/react-router';
+import { useNavigate, useSearch, useLocation } from '@tanstack/react-router';
 
 export const TOOLKIT_PANELS = ['tree', 'table', 'path'] as const;
 export type ToolkitPanel = (typeof TOOLKIT_PANELS)[number];
@@ -11,6 +11,7 @@ export function isToolkitPanel(value: string | undefined): value is ToolkitPanel
 
 export function useToolkitPanel(defaultPanel: SidePanel = 'hidden'): [SidePanel, (panel: SidePanel) => void] {
   const navigate = useNavigate();
+  const location = useLocation();
   const search = useSearch({ strict: false }) as { panel?: string };
 
   const sidePanel: SidePanel =
@@ -19,13 +20,14 @@ export function useToolkitPanel(defaultPanel: SidePanel = 'hidden'): [SidePanel,
   const setSidePanel = useCallback(
     (panel: SidePanel) => {
       navigate({
-        to: '/json-toolkit',
+        to: location.pathname as '/',
         search: panel === 'hidden' ? {} : { panel },
         replace: true,
       });
     },
-    [navigate]
+    [navigate, location.pathname]
   );
 
   return [sidePanel, setSidePanel];
 }
+

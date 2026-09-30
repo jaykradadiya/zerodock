@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 import '../../../core/monaco/setup';
 import Editor from '@monaco-editor/react';
 import type { EditorProps } from '@monaco-editor/react';
@@ -63,12 +63,13 @@ export function CodeEditor({
     const monaco = monacoRef.current;
     const currentTabIds = new Set(tabs.map(t => t.id));
     const models = monaco.editor.getModels();
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     models.forEach((m: any) => {
       const pathParts = m.uri.path.split('/');
       const filename = pathParts[pathParts.length - 1];
       if (filename && filename.endsWith('.json')) {
         const id = filename.replace('.json', '');
-        if (id && id.length > 10 && !currentTabIds.has(id)) {
+        if (UUID_REGEX.test(id) && !currentTabIds.has(id)) {
           m.dispose();
         }
       }
@@ -89,38 +90,9 @@ export function CodeEditor({
   }, [isWorkspaceModel]);
 
   const handleEditorWillMount = (monaco: any) => {
-    monaco.editor.defineTheme('zerodock-dark', {
-      base: 'vs-dark',
-      inherit: true,
-      rules: [],
-      colors: {
-        'editor.background': '#16161A',
-        'editor.foreground': '#EAEAF0',
-        'editorLineHighlightBackground': '#1C1C21',
-        'editorLineNumber.foreground': '#5E5E72',
-        'editor.selectionBackground': '#264F78',
-        'editor.inactiveSelectionBackground': '#3A3D4180',
-        'editor.selectionHighlightBackground': '#264F7855',
-      }
-    });
-    monaco.editor.defineTheme('zerodock-light', {
-      base: 'vs',
-      inherit: true,
-      rules: [],
-      colors: {
-        'editor.background': '#FFFFFF',
-        'editor.foreground': '#1A1A2E',
-        'editorLineHighlightBackground': '#FAFAF8',
-        'editorLineNumber.foreground': '#8E8EA0',
-        'editor.selectionBackground': '#ADD6FF',
-        'editor.inactiveSelectionBackground': '#E4E6F180',
-        'editor.selectionHighlightBackground': '#ADD6FF50',
-      }
-    });
-
     const prefState = usePreferenceStore.getState();
     const activeTheme = prefState.getActiveTheme();
-    applyTheme(activeTheme, prefState.themeOverrides);
+    applyTheme(activeTheme, prefState.themeOverrides, prefState.highContrast);
 
     if (!monaco.languages.getLanguages().some((l: any) => l.id === 'json-hover-registered')) {
       monaco.languages.register({ id: 'json-hover-registered' });
@@ -148,7 +120,7 @@ export function CodeEditor({
     }
   };
 
-  const loadModel = async () => {
+  const loadModel = useCallback(async () => {
     if (!editorRef.current || !monacoRef.current) return;
     const monaco = monacoRef.current;
 
@@ -158,15 +130,20 @@ export function CodeEditor({
 
       if (!model) {
         const content = await getFileContent(modelId);
+        if (modelId !== modelIdRef.current || !editorRef.current || editorRef.current.isDisposed?.()) {
+          return;
+        }
         model = monaco.editor.createModel(content, language, uri);
       }
-      editorRef.current.setModel(model);
+      if (modelId === modelIdRef.current && editorRef.current && !editorRef.current.isDisposed?.()) {
+        editorRef.current.setModel(model);
+      }
     }
-  };
+  }, [modelId, language, getFileContent]);
 
   useEffect(() => {
     loadModel();
-  }, [modelId]);
+  }, [loadModel]);
 
   // Recover workspace tab model if a panel editor accidentally disposed it
   useEffect(() => {
@@ -175,7 +152,7 @@ export function CodeEditor({
     if (!model || (typeof model.isDisposed === 'function' && model.isDisposed())) {
       void loadModel();
     }
-  }, [modelId, tabs.length]);
+  }, [modelId, tabs.length, loadModel]);
 
   useEffect(() => {
     if (editorRef.current && value !== undefined && !modelId) {

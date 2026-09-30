@@ -30,8 +30,8 @@ export interface AnalyticsEvent {
  * but this helper guarantees cross-environment consistency.
  */
 export function trackPageView(pathname?: string, title?: string): void {
-  const path = pathname || window.location.pathname;
-  const pageTitle = title || document.title;
+  const path = pathname || (typeof window !== 'undefined' ? window.location.pathname : '');
+  const pageTitle = title || (typeof document !== 'undefined' ? document.title : '');
 
   if (import.meta.env.DEV) {
     console.debug(`[ZeroDock Analytics] PageView: ${path} — "${pageTitle}"`);
@@ -74,7 +74,8 @@ export function usePageTracking(): void {
   useEffect(() => {
     // Defer slightly to ensure document.title has been updated by route components
     const timer = setTimeout(() => {
-      trackPageView(location.pathname, document.title);
+      const pageTitle = typeof document !== 'undefined' ? document.title : '';
+      trackPageView(location.pathname, pageTitle);
     }, 50);
 
     return () => clearTimeout(timer);

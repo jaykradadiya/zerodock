@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext } from 'react';
 import { toolRegistry } from '../../core/registry/tools';
 import { getToolSample } from '../data/toolSamples';

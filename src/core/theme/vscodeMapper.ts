@@ -154,8 +154,9 @@ export function parseThemeImport(jsonString: string): {
     }
 
     return { error: 'Invalid format. Provide a ZeroDock theme JSON or VS Code color customizations object.' };
-  } catch (err: any) {
-    return { error: err.message || 'Failed to parse JSON string.' };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Failed to parse JSON string.';
+    return { error: message };
   }
 }
 

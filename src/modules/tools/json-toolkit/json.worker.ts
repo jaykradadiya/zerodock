@@ -1,7 +1,7 @@
 import type { WorkerMessage, WorkerError } from '../../../workers/base.worker';
 import { parse as parseLossless, stringify as stringifyLossless } from 'lossless-json';
 
-function sortObjectKeys(obj: any): any {
+function sortObjectKeys(obj: unknown): unknown {
   if (obj === null || typeof obj !== 'object') {
     return obj;
   }
@@ -9,12 +9,13 @@ function sortObjectKeys(obj: any): any {
     return obj.map(sortObjectKeys);
   }
   // LosslessJSON parses large numbers as LosslessNumber objects
-  if (obj && typeof obj === 'object' && obj.isLosslessNumber === true && 'value' in obj) {
+  if (typeof obj === 'object' && 'isLosslessNumber' in obj && obj.isLosslessNumber === true && 'value' in obj) {
     return obj;
   }
-  const sorted: Record<string, any> = {};
-  Object.keys(obj).sort().forEach(key => {
-    sorted[key] = sortObjectKeys(obj[key]);
+  const sorted: Record<string, unknown> = {};
+  const record = obj as Record<string, unknown>;
+  Object.keys(record).sort().forEach((key) => {
+    sorted[key] = sortObjectKeys(record[key]);
   });
   return sorted;
 }
@@ -93,13 +94,14 @@ self.onmessage = (event: MessageEvent<WorkerMessage<{
     }
       
     self.postMessage({ id, type: 'SUCCESS', payload: result });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errMessage = error instanceof Error ? error.message : typeof error === 'string' ? error : 'Invalid JSON format';
     const workerError: WorkerError = {
-      message: error.message || 'Invalid JSON format',
+      message: errMessage,
     };
     
     // Attempt to extract line/col from standard JSON error strings (e.g. "Unexpected token } in JSON at position 123")
-    const match = error.message.match(/at position (\d+)/);
+    const match = errMessage.match(/at position (\d+)/);
     if (match) {
       const position = parseInt(match[1], 10);
       const lines = payload.code.substring(0, position).split('\n');

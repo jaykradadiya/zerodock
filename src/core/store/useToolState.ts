@@ -1,10 +1,15 @@
-import { create } from 'zustand';
+import { create, type StateCreator } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
 export interface ToolStoreOptions<T> {
   storageType?: 'session' | 'memory' | 'local';
   omitKeys?: (keyof T)[];
 }
+
+export type ToolStoreActions<T> = {
+  setValues: (values: Partial<T>) => void;
+  reset: () => void;
+};
 
 /**
  * Factory to generate a Zustand store for any tool state.
@@ -13,26 +18,26 @@ export interface ToolStoreOptions<T> {
  * - session / local storage
  * - key omission (to avoid storing sensitive data like secrets or credentials)
  */
-export function createToolStore<T extends Record<string, any>>(
+export function createToolStore<T extends Record<string, unknown>>(
   toolId: string,
   defaultState: T,
   options?: ToolStoreOptions<T>
 ) {
-  const storeInitializer = (set: any) => ({
+  type FullState = T & ToolStoreActions<T>;
+
+  const storeInitializer: StateCreator<FullState> = (set) => ({
     ...defaultState,
-    setValues: (values: Partial<T>) => set((state: any) => ({ ...state, ...values })),
-    reset: () => set(defaultState),
+    setValues: (values: Partial<T>) => set((state) => ({ ...state, ...values })),
+    reset: () => set((state) => ({ ...state, ...defaultState })),
   });
 
   if (options?.storageType === 'memory') {
-    return create<T & { setValues: (values: Partial<T>) => void; reset: () => void }>()(
-      storeInitializer
-    );
+    return create<FullState>()(storeInitializer);
   }
 
   const storageBackend = options?.storageType === 'local' ? localStorage : sessionStorage;
 
-  return create<T & { setValues: (values: Partial<T>) => void; reset: () => void }>()(
+  return create<FullState>()(
     persist(storeInitializer, {
       name: `zerodock-tool-${toolId}`,
       storage: createJSONStorage(() => storageBackend),

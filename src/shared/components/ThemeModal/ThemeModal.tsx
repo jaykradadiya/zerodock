@@ -22,6 +22,7 @@ import { ColorTokenEditor } from './ColorTokenEditor';
 import { ThemePreviewCard } from './ThemePreviewCard';
 import { VsCodeSyncPanel } from './VsCodeSyncPanel';
 import { Button } from '../ui/Button';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 export function ThemeModal() {
   const { themeModalOpen, setThemeModalOpen, themeModalTab } = useUIStore();
@@ -46,15 +47,28 @@ export function ThemeModal() {
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [newThemeName, setNewThemeName] = useState('');
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const saveSuccessTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const modalRef = useRef<HTMLDivElement>(null);
 
+  useFocusTrap(themeModalOpen, modalRef);
+
   useEffect(() => {
+    return () => {
+      if (saveSuccessTimerRef.current) clearTimeout(saveSuccessTimerRef.current);
+    };
+  }, []);
+
+  const [prevModalOpen, setPrevModalOpen] = useState(themeModalOpen);
+  const [prevModalTab, setPrevModalTab] = useState(themeModalTab);
+  if (themeModalOpen !== prevModalOpen || themeModalTab !== prevModalTab) {
+    setPrevModalOpen(themeModalOpen);
+    setPrevModalTab(themeModalTab);
     if (themeModalOpen) {
       setActiveTab(themeModalTab);
       setShowSaveDialog(false);
     }
-  }, [themeModalOpen, themeModalTab]);
+  }
 
   // Close on Escape key
   useEffect(() => {
@@ -116,8 +130,8 @@ export function ThemeModal() {
     saveCustomTheme(newTheme);
     setShowSaveDialog(false);
     setNewThemeName('');
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 2500);
+    if (saveSuccessTimerRef.current) clearTimeout(saveSuccessTimerRef.current);
+    saveSuccessTimerRef.current = setTimeout(() => setSaveSuccess(false), 2500);
   };
 
   const overrideCount = Object.keys(themeOverrides).length;

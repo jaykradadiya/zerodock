@@ -19,8 +19,9 @@ export function exportToFile(content: string, filename: string, mimeType: string
     link.click();
     document.body.removeChild(link);
     
-    // Clean up the URL object to prevent memory leaks
-    URL.revokeObjectURL(url);
+    // Defer revocation — some browsers (notably Firefox) initiate the download
+    // asynchronously after click(), so immediate revocation can produce 0-byte files
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   } catch (error) {
     console.error('Failed to export file:', error);
   }

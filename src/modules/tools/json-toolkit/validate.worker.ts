@@ -37,15 +37,56 @@ self.onmessage = (event: MessageEvent<WorkerMessage<{ document: string; schema: 
     return;
   }
 
+  let schemaObj: unknown;
   try {
-    const schemaObj = JSON.parse(payload.schema);
-    const docObj = JSON.parse(payload.document);
-    
+    schemaObj = JSON.parse(payload.schema);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Invalid JSON';
+    self.postMessage({ id, type: 'ERROR', payload: { message: `Schema Parse Error: ${msg}` } });
+    return;
+  }
+
+  let docObj: unknown;
+  try {
+    docObj = JSON.parse(payload.document);
+  } catch (error) {
+    let line = 1;
+    let column = 1;
+    const errMessage = error instanceof Error ? error.message : 'Invalid JSON';
+    const match = errMessage.match(/line (\d+) column (\d+)/i) || errMessage.match(/position (\d+)/i);
+    if (match) {
+      if (match[2]) {
+        line = parseInt(match[1], 10);
+        column = parseInt(match[2], 10);
+      } else {
+        const pos = parseInt(match[1], 10);
+        const lines = payload.document.slice(0, pos).split('\n');
+        line = lines.length;
+        column = lines[lines.length - 1].length + 1;
+      }
+    }
+
+    self.postMessage({
+      id,
+      type: 'ERROR',
+      payload: {
+        message: `Document Parse Error: ${errMessage}`,
+        line,
+        column,
+      },
+    });
+    return;
+  }
+
+  try {
     let validate;
     try {
-      validate = ajv.compile(schemaObj);
-    } catch (err: any) {
-      self.postMessage({ id, type: 'ERROR', payload: { message: `Invalid Schema: ${err.message}` } });
+      // Clear cached schemas to ensure edited schemas with the same $id are recompiled
+      ajv.removeSchema();
+      validate = ajv.compile(schemaObj as object);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Invalid schema definition';
+      self.postMessage({ id, type: 'ERROR', payload: { message: `Invalid Schema: ${msg}` } });
       return;
     }
 
@@ -53,14 +94,14 @@ self.onmessage = (event: MessageEvent<WorkerMessage<{ document: string; schema: 
     if (valid) {
       self.postMessage({ id, type: 'SUCCESS', payload: [] }); // Empty array means valid
     } else {
-      let pathMap: Map<string, any>;
+      let pathMap: Map<string, { startLineNumber: number; startColumn: number; endLineNumber: number; endColumn: number }>;
       try {
         pathMap = buildJsonPathMap(payload.document);
       } catch {
         pathMap = new Map();
       }
 
-      const errors: ValidationError[] = (validate.errors || []).map(err => {
+      const errors: ValidationError[] = (validate.errors || []).map((err) => {
         const missingProp = err.params?.missingProperty as string | undefined;
         const loc = locateError(pathMap, err.instancePath || '/', missingProp);
 
@@ -84,30 +125,14 @@ self.onmessage = (event: MessageEvent<WorkerMessage<{ document: string; schema: 
 
       self.postMessage({ id, type: 'SUCCESS', payload: errors });
     }
-  } catch (error: any) {
-    let line = 1;
-    let column = 1;
-    const match = error.message?.match(/line (\d+) column (\d+)/i) || error.message?.match(/position (\d+)/i);
-    if (match) {
-      if (match[2]) {
-        line = parseInt(match[1], 10);
-        column = parseInt(match[2], 10);
-      } else {
-        const pos = parseInt(match[1], 10);
-        const lines = payload.document.slice(0, pos).split('\n');
-        line = lines.length;
-        column = lines[lines.length - 1].length + 1;
-      }
-    }
-
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'Unknown validation error';
     self.postMessage({
       id,
       type: 'ERROR',
       payload: {
-        message: `Parse Error: ${error.message}`,
-        line,
-        column,
-      }
+        message: `Validation Error: ${msg}`,
+      },
     });
   }
 };

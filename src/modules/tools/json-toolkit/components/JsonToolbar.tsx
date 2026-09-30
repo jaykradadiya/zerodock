@@ -483,9 +483,18 @@ export function JsonToolbar({
             <button
               type="button"
               onClick={() => {
-                if (!origDiffId && tabs.length > 0) setOrigDiffId(tabs[0].id);
-                if (!modDiffId && tabs.length > 1) setModDiffId(tabs[1].id);
-                else if (!modDiffId && tabs.length > 0) setModDiffId(tabs[0].id);
+                const origExists = tabs.some((t) => t.id === origDiffId);
+                const modExists = tabs.some((t) => t.id === modDiffId);
+                if ((!origDiffId || !origExists) && tabs.length > 0) {
+                  setOrigDiffId(tabs[0].id);
+                }
+                if (!modDiffId || !modExists) {
+                  if (tabs.length > 1) {
+                    setModDiffId(tabs[1].id);
+                  } else if (tabs.length > 0) {
+                    setModDiffId(tabs[0].id);
+                  }
+                }
                 setViewMode('compare');
                 onSidePanelChange('hidden');
               }}

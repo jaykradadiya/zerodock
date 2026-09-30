@@ -9,8 +9,8 @@ export const idbStorage: StateStorage = {
   setItem: async (name: string, value: string): Promise<void> => {
     try {
       await set(name, value);
-    } catch (e: any) {
-      if (e?.name === 'QuotaExceededError') {
+    } catch (e: unknown) {
+      if (e instanceof Error && e.name === 'QuotaExceededError') {
         useUIStore.getState().showStorageWarning(
           "Browser Storage Full",
           "Your browser's IndexedDB storage is full. We cannot save any more preferences or recent tools until you clear some space.",

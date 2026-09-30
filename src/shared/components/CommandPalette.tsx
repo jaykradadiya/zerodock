@@ -29,13 +29,20 @@ export function CommandPalette() {
 
   useFocusTrap(commandPaletteOpen, paletteRef);
 
-  // Reset search when opening
-  useEffect(() => {
+  const [prevOpen, setPrevOpen] = useState(commandPaletteOpen);
+  if (commandPaletteOpen !== prevOpen) {
+    setPrevOpen(commandPaletteOpen);
     if (commandPaletteOpen) {
-      returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       setSearch('');
       setSelectedIndex(0);
       setActiveCategory('All');
+    }
+  }
+
+  // Manage DOM focus when opening/closing
+  useEffect(() => {
+    if (commandPaletteOpen) {
+      returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       setTimeout(() => inputRef.current?.focus(), 0);
     } else if (returnFocusRef.current) {
       setTimeout(() => returnFocusRef.current?.focus(), 0);
@@ -64,7 +71,7 @@ export function CommandPalette() {
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [commandPaletteOpen]);
+  }, [commandPaletteOpen, setCommandPaletteOpen]);
 
   // Command items definitions
   const toolItems = toolRegistry

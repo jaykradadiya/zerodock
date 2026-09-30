@@ -631,7 +631,7 @@ function evaluateJsonPath(data: any, pathStr: string): any {
   }
 
   // Tokenize dot and bracket notations
-  const tokens = cleanPath.match(/([^\.\[\]]+|\[\*\]|\[\d+\])/g) || [];
+  const tokens = cleanPath.match(/([^.[\]]+|\[\*\]|\[\d+\])/g) || [];
   let current: any = data;
 
   for (const token of tokens) {
@@ -749,7 +749,7 @@ export function evaluateQuery(data: any, query: string, type: FilterType): Query
         const fn = new Function('data', codeToRun);
         const res = fn(data);
         return { success: true, result: res };
-      } catch (innerErr: any) {
+      } catch (innerErr: unknown) {
         if (codeToRun !== trimmed) {
           const fn = new Function('data', trimmed);
           const res = fn(data);
@@ -760,7 +760,8 @@ export function evaluateQuery(data: any, query: string, type: FilterType): Query
     }
 
     return { success: false, error: `Unsupported filter type: ${type}` };
-  } catch (err: any) {
-    return { success: false, error: err?.message || 'Query execution error' };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { success: false, error: message || 'Query execution error' };
   }
 }

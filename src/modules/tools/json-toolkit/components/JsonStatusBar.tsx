@@ -23,12 +23,13 @@ export function JsonStatusBar({
     if (!content) return { lines: 0, chars: 0, bytesFormatted: '0 B' };
     const lines = content.split('\n').length;
     const chars = content.length;
+    const byteLength = new TextEncoder().encode(content).length;
 
-    let bytesFormatted = `${chars} B`;
-    if (chars >= 1024 * 1024) {
-      bytesFormatted = `${(chars / (1024 * 1024)).toFixed(2)} MB`;
-    } else if (chars >= 1024) {
-      bytesFormatted = `${(chars / 1024).toFixed(1)} KB`;
+    let bytesFormatted = `${byteLength} B`;
+    if (byteLength >= 1024 * 1024) {
+      bytesFormatted = `${(byteLength / (1024 * 1024)).toFixed(2)} MB`;
+    } else if (byteLength >= 1024) {
+      bytesFormatted = `${(byteLength / 1024).toFixed(1)} KB`;
     }
 
     return { lines, chars, bytesFormatted };

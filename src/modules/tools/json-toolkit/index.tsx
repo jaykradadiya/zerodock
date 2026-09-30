@@ -31,10 +31,10 @@ import RepairWorker from './repair.worker.ts?worker';
 import ValidateWorker from './validate.worker.ts?worker';
 
 export default function JsonFormatter() {
-  const workspace = useWorkspaceStore();
   const {
     tabs,
     activeTabId,
+    initialize: initializeWorkspace,
     addTab,
     removeTab,
     closeTabInGroup,
@@ -55,7 +55,7 @@ export default function JsonFormatter() {
     setSplitRatio,
     swapPanes,
     moveTabToGroup,
-  } = workspace;
+  } = useWorkspaceStore();
 
   const group1Tabs = useMemo(() => {
     if (group1TabIds.length === 0) {
@@ -100,11 +100,11 @@ export default function JsonFormatter() {
   const [diffIgnoreWhitespace, setDiffIgnoreWhitespace] = useState<boolean>(false);
 
   const handleSwapDiff = useCallback(() => {
-    setOrigDiffId((prevOrig) => {
-      setModDiffId(prevOrig);
-      return modDiffId;
-    });
-  }, [modDiffId]);
+    const prevOrig = origDiffId;
+    const prevMod = modDiffId;
+    setOrigDiffId(prevMod);
+    setModDiffId(prevOrig);
+  }, [origDiffId, modDiffId]);
 
   // Output Mode (Right Pane)
   const [activeTabContent, setActiveTabContent] = useState<string>('');
@@ -192,25 +192,27 @@ export default function JsonFormatter() {
     }
   };
 
-  // Apply pipelined JSON from other tools non-destructively
+  // Apply pipelined JSON from other tools non-destructively (once on mount)
+  const pipelineConsumedRef = useRef(false);
   useEffect(() => {
+    if (pipelineConsumedRef.current) return;
     const payload = usePipelineStore.getState().consumePipelinePayload();
     if (!payload?.data) return;
+    pipelineConsumedRef.current = true;
 
     const applyPiped = async () => {
       const pipedData = payload.data;
-      const currentContent = activeTabId ? await getFileContent(activeTabId) : '';
+      const currentActiveTabId = activeTabIdRef.current;
+      const currentContent = currentActiveTabId ? await getFileContent(currentActiveTabId) : '';
       const isCurrentEmpty = !currentContent || currentContent.trim() === '';
 
-      let targetTabId = activeTabId;
-
-      if (isCurrentEmpty && activeTabId) {
+      if (isCurrentEmpty && currentActiveTabId) {
         // Active tab is empty: safe to populate directly
-        await updateTabContent(activeTabId, pipedData);
-        renameTab(activeTabId, 'piped.json');
+        await updateTabContent(currentActiveTabId, pipedData);
+        renameTab(currentActiveTabId, 'piped.json');
       } else {
         // Active tab has unsaved content: create a new tab to avoid data loss
-        targetTabId = await addTab('piped.json', pipedData);
+        const targetTabId = await addTab('piped.json', pipedData);
         setActiveTab(targetTabId);
       }
 
@@ -224,7 +226,7 @@ export default function JsonFormatter() {
     };
 
     applyPiped();
-  }, [activeTabId, addTab, getFileContent, renameTab, setActiveTab, updateTabContent]);
+  }, [addTab, getFileContent, renameTab, setActiveTab, updateTabContent]);
 
   const handleSidePanelChange = async (panel: SidePanel) => {
     try {
@@ -241,7 +243,7 @@ export default function JsonFormatter() {
       }
 
       if (panel === 'tree' || panel === 'table') {
-        const tab = workspace.tabs.find(t => t.id === activeTabId);
+        const tab = tabs.find(t => t.id === activeTabId);
         if (tab && tab.size > 5 * 1024 * 1024) {
           alert('Tree and Table views are disabled for files larger than 5MB to prevent browser freezing.');
           return;
@@ -287,8 +289,10 @@ export default function JsonFormatter() {
 
   // Initialize Workspace and restore URL state
   useEffect(() => {
+    let isMounted = true;
     const initWorkspace = async () => {
-      await workspace.initialize();
+      await initializeWorkspace();
+      if (!isMounted) return;
       const urlState = getStateFromURL<{
         content?: string;
         indent?: number | 'tab';
@@ -302,7 +306,8 @@ export default function JsonFormatter() {
       }
     };
     initWorkspace();
-  }, []);
+    return () => { isMounted = false; };
+  }, [initializeWorkspace]);
 
   // Restore URL content into active tab once initialized or load active tab content on tab switch
   useEffect(() => {
@@ -369,13 +374,19 @@ export default function JsonFormatter() {
     }
   }, [isSplit, updateTabContent]);
 
+  // Keep a ref so workers always call the latest applyEditToEditor without re-creating workers
+  const applyEditRef = useRef(applyEditToEditor);
+  useEffect(() => {
+    applyEditRef.current = applyEditToEditor;
+  }, [applyEditToEditor]);
+
   useEffect(() => {
     try {
       workerRef.current = new JsonWorker();
       workerRef.current.onmessage = (e: MessageEvent<WorkerMessage>) => {
         setIsProcessing(false);
         if (e.data.type === 'SUCCESS') {
-          applyEditToEditor(e.data.payload);
+          applyEditRef.current(e.data.payload);
           setError(null);
         } else if (e.data.type === 'ERROR') {
           setError(e.data.payload);
@@ -390,7 +401,7 @@ export default function JsonFormatter() {
       repairWorkerRef.current.onmessage = (e: MessageEvent<WorkerMessage>) => {
         setIsProcessing(false);
         if (e.data.type === 'SUCCESS') {
-          applyEditToEditor(e.data.payload);
+          applyEditRef.current(e.data.payload);
           setError(null);
         } else if (e.data.type === 'ERROR') {
           setError(e.data.payload);
@@ -425,27 +436,36 @@ export default function JsonFormatter() {
       repairWorkerRef.current?.terminate();
       validateWorkerRef.current?.terminate();
     };
-  }, [applyEditToEditor]);
+  }, []);
 
   // Schema validation trigger
   useEffect(() => {
-    if (showSchema && schema.trim() && activeTabId) {
-      setIsValidating(true);
-      const runValidation = async () => {
-        const content = (editorRef.current && typeof editorRef.current.getValue === 'function')
-          ? editorRef.current.getValue()
-          : await getFileContent(activeTabId);
-        validateWorkerRef.current?.postMessage({
-          id: crypto.randomUUID(),
-          type: 'PROCESS',
-          payload: { document: content, schema }
-        });
-      };
-      runValidation();
-    } else {
-      setValidationErrors([]);
-      setIsValidating(false);
+    if (!showSchema || !schema.trim() || !activeTabId) {
+      const timer = setTimeout(() => {
+        setValidationErrors([]);
+        setIsValidating(false);
+      }, 0);
+      return () => clearTimeout(timer);
     }
+
+    let isCancelled = false;
+    const runValidation = async () => {
+      setIsValidating(true);
+      const content = (editorRef.current && typeof editorRef.current.getValue === 'function')
+        ? editorRef.current.getValue()
+        : await getFileContent(activeTabId);
+      if (isCancelled) return;
+      validateWorkerRef.current?.postMessage({
+        id: crypto.randomUUID(),
+        type: 'PROCESS',
+        payload: { document: content, schema }
+      });
+    };
+    runValidation();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [schema, showSchema, activeTabId, activeTabContent, getFileContent]);
 
   // Synchronize Monaco editor error squiggly markers with validation results

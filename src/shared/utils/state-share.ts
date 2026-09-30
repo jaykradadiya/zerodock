@@ -7,7 +7,7 @@ export function encodeStateToHash<T>(state: T): string {
   try {
     const jsonString = JSON.stringify(state);
     return LZString.compressToEncodedURIComponent(jsonString);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Failed to encode state:', error);
     return '';
   }
@@ -22,7 +22,7 @@ export function decodeStateFromHash<T>(hash: string): T | null {
     if (jsonString) {
       return JSON.parse(jsonString) as T;
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Failed to decode state:', error);
   }
   return null;
@@ -31,9 +31,12 @@ export function decodeStateFromHash<T>(hash: string): T | null {
 /**
  * Updates the browser's URL hash with the encoded state without reloading the page.
  */
-export function updateURLWithState<T>(state: T) {
+export function updateURLWithState<T>(state: T): void {
+  if (typeof window === 'undefined') return;
   const hash = encodeStateToHash(state);
-  const newUrl = `${window.location.pathname}${window.location.search}#${hash}`;
+  const newUrl = hash
+    ? `${window.location.pathname}${window.location.search}#${hash}`
+    : `${window.location.pathname}${window.location.search}`;
   window.history.replaceState(null, '', newUrl);
 }
 
@@ -41,6 +44,7 @@ export function updateURLWithState<T>(state: T) {
  * Retrieves the decoded state from the current window's URL hash.
  */
 export function getStateFromURL<T>(): T | null {
+  if (typeof window === 'undefined') return null;
   const hash = window.location.hash.slice(1);
   if (!hash) return null;
   return decodeStateFromHash<T>(hash);

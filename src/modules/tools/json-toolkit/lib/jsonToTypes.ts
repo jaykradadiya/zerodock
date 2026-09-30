@@ -74,7 +74,7 @@ export function jsonToTypeScript(obj: unknown, name = 'RootObject'): string {
     for (const key of keys) {
       const fieldVal = (val as Record<string, unknown>)[key];
       const type = typeof fieldVal;
-      let fieldType = '';
+      let fieldType: string;
 
       if (fieldVal === null) {
         fieldType = 'any';
@@ -146,7 +146,7 @@ export function jsonToGo(obj: unknown, name = 'RootObject'): string {
     for (const key of keys) {
       const fieldVal = (val as Record<string, unknown>)[key];
       const type = typeof fieldVal;
-      let fieldType = '';
+      let fieldType: string;
       const fieldKey = toPascalCase(key);
 
       if (fieldVal === null) {
@@ -220,7 +220,7 @@ export function jsonToRust(obj: unknown, name = 'RootObject'): string {
     for (const key of keys) {
       const fieldVal = (val as Record<string, unknown>)[key];
       const type = typeof fieldVal;
-      let fieldType = '';
+      let fieldType: string;
       const fieldName = toSnakeCase(key);
 
       if (fieldVal === null) {

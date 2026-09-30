@@ -136,7 +136,7 @@ export const usePreferenceStore = create<PreferenceState>()(
             ...state.customThemes,
             [customTheme.id]: customTheme,
           };
-          applyTheme(customTheme, {});
+          applyTheme(customTheme, {}, state.highContrast);
           return {
             customThemes: updatedCustomThemes,
             activeThemeId: customTheme.id,
@@ -152,7 +152,7 @@ export const usePreferenceStore = create<PreferenceState>()(
           const fallbackId = 'linear-dark';
           const fallbackTheme = BUILTIN_THEMES[0];
           if (state.activeThemeId === themeId) {
-            applyTheme(fallbackTheme, {});
+            applyTheme(fallbackTheme, {}, state.highContrast);
             return {
               customThemes: updated,
               activeThemeId: fallbackId,
@@ -180,37 +180,28 @@ export const usePreferenceStore = create<PreferenceState>()(
           };
         }),
       dismissTip: (tipId) =>
-        set((state) => {
-          try {
-            localStorage.setItem(`zerodock_dismissed_${tipId}`, 'true');
-          } catch {}
-          return {
-            dismissedTips: state.dismissedTips.includes(tipId)
-              ? state.dismissedTips
-              : [...state.dismissedTips, tipId],
-          };
-        }),
+        set((state) => ({
+          dismissedTips: state.dismissedTips.includes(tipId)
+            ? state.dismissedTips
+            : [...state.dismissedTips, tipId],
+        })),
       hideAllTips: () =>
-        set(() => {
-          try {
-            localStorage.setItem('zerodock_tips_hidden', 'true');
-          } catch {}
-          return { tipsHidden: true };
-        }),
+        set(() => ({ tipsHidden: true })),
     }),
     {
       name: 'zerodock-preferences',
       storage: createJSONStorage(() => idbStorage),
       version: 1,
-      migrate: (persistedState: any, version: number) => {
-        if (version === 0 && persistedState) {
-          if (persistedState.activeThemeId === 'zerodock-dark') {
-            persistedState.activeThemeId = 'linear-dark';
-          } else if (persistedState.activeThemeId === 'zerodock-light') {
-            persistedState.activeThemeId = 'geist-mono';
+      migrate: (persistedState: unknown, version: number) => {
+        if (version === 0 && persistedState && typeof persistedState === 'object') {
+          const state = persistedState as Record<string, unknown>;
+          if (state.activeThemeId === 'zerodock-dark') {
+            state.activeThemeId = 'linear-dark';
+          } else if (state.activeThemeId === 'zerodock-light') {
+            state.activeThemeId = 'geist-mono';
           }
         }
-        return persistedState;
+        return persistedState as PreferenceState;
       },
       onRehydrateStorage: () => (state) => {
         if (state) {

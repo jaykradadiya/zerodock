@@ -7,7 +7,7 @@ import {
   useLocation,
 } from '@tanstack/react-router';
 import { toolRegistry } from '../registry/tools';
-import { Suspense, lazy, useEffect } from 'react';
+import { Suspense, lazy, useEffect, useRef } from 'react';
 import { Minimize } from 'lucide-react';
 import { useUIStore } from '../store/useUIStore';
 import { usePreferenceStore } from '../store/usePreferenceStore';
@@ -23,7 +23,7 @@ import { usePageTracking } from '../analytics';
 
 import { LandingPage } from '../../landing/LandingPage';
 
-const lazyRetry = (componentImport: () => Promise<any>) =>
+const lazyRetry = (componentImport: Parameters<typeof lazy>[0]) =>
   lazy(async () => {
     const pageHasAlreadyBeenForceRefreshed = JSON.parse(
       window.sessionStorage.getItem('page-has-been-force-refreshed') || 'false'
@@ -36,7 +36,10 @@ const lazyRetry = (componentImport: () => Promise<any>) =>
     } catch (error) {
       if (!pageHasAlreadyBeenForceRefreshed) {
         window.sessionStorage.setItem('page-has-been-force-refreshed', 'true');
-        return window.location.reload();
+        window.location.reload();
+        // Return a never-resolving promise so React.lazy doesn't see undefined
+        // before the browser reload takes over
+        return new Promise(() => {});
       }
       throw error;
     }
@@ -69,24 +72,24 @@ function RootLayout() {
   const isLandingPage = location.pathname === '/';
 
   // Toggle Command Palette globally & VS Code Cmd+K Cmd+T theme chord
+  const kPressedTimestampRef = useRef(0);
   useEffect(() => {
-    let kPressedTimestamp = 0;
     const handleKeyDown = (e: KeyboardEvent) => {
       const isMeta = e.metaKey || e.ctrlKey;
       if (isMeta && e.key.toLowerCase() === 'k') {
-        kPressedTimestamp = Date.now();
+        kPressedTimestampRef.current = Date.now();
         e.preventDefault();
-        setCommandPaletteOpen(!commandPaletteOpen);
-      } else if (isMeta && e.key.toLowerCase() === 't' && Date.now() - kPressedTimestamp < 1500) {
+        setCommandPaletteOpen(!useUIStore.getState().commandPaletteOpen);
+      } else if (isMeta && e.key.toLowerCase() === 't' && Date.now() - kPressedTimestampRef.current < 1500) {
         e.preventDefault();
-        kPressedTimestamp = 0;
+        kPressedTimestampRef.current = 0;
         setCommandPaletteOpen(false);
         setThemeModalOpen(true, 'browse');
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [commandPaletteOpen, setCommandPaletteOpen, setThemeModalOpen]);
+  }, [setCommandPaletteOpen, setThemeModalOpen]);
 
   return (
     <div
@@ -188,16 +191,16 @@ function SEOWrapper({ title, description, toolId, children }: SEOWrapperProps) {
     const originalTitle = document.title;
     
     const metaDesc = document.querySelector('meta[name="description"]');
-    const originalDesc = metaDesc ? metaDesc.getAttribute('content') : '';
+    const originalDesc = metaDesc ? metaDesc.getAttribute('content') : null;
 
     const ogTitle = document.querySelector('meta[property="og:title"]');
-    const originalOgTitle = ogTitle ? ogTitle.getAttribute('content') : '';
+    const originalOgTitle = ogTitle ? ogTitle.getAttribute('content') : null;
 
     const ogDesc = document.querySelector('meta[property="og:description"]');
-    const originalOgDesc = ogDesc ? ogDesc.getAttribute('content') : '';
+    const originalOgDesc = ogDesc ? ogDesc.getAttribute('content') : null;
 
     const ogUrl = document.querySelector('meta[property="og:url"]');
-    const originalOgUrl = ogUrl ? ogUrl.getAttribute('content') : '';
+    const originalOgUrl = ogUrl ? ogUrl.getAttribute('content') : null;
 
     document.title = `${title} | ZeroDock`;
     if (metaDesc) metaDesc.setAttribute('content', description);
@@ -207,10 +210,10 @@ function SEOWrapper({ title, description, toolId, children }: SEOWrapperProps) {
 
     return () => {
       document.title = originalTitle;
-      if (metaDesc && originalDesc) metaDesc.setAttribute('content', originalDesc);
-      if (ogTitle && originalOgTitle) ogTitle.setAttribute('content', originalOgTitle);
-      if (ogDesc && originalOgDesc) ogDesc.setAttribute('content', originalOgDesc);
-      if (ogUrl && originalOgUrl) ogUrl.setAttribute('content', originalOgUrl);
+      if (metaDesc && originalDesc !== null) metaDesc.setAttribute('content', originalDesc);
+      if (ogTitle && originalOgTitle !== null) ogTitle.setAttribute('content', originalOgTitle);
+      if (ogDesc && originalOgDesc !== null) ogDesc.setAttribute('content', originalOgDesc);
+      if (ogUrl && originalOgUrl !== null) ogUrl.setAttribute('content', originalOgUrl);
     };
   }, [title, description]);
 
@@ -264,7 +267,7 @@ const toolRoutes = toolRegistry.map((tool) => {
 
 const routeTree = rootRoute.addChildren([indexRoute, ...toolRoutes]);
 
-export const router = createRouter({ routeTree });
+const router = createRouter({ routeTree });
 
 export function AppRouter() {
   return <RouterProvider router={router} />;

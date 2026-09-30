@@ -27,6 +27,7 @@ import {
 import type { FeedbackCategory, FeedbackPayload } from '../../types/feedback';
 import { Button } from '../ui/Button';
 import { trackEvent } from '../../../core/analytics';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 const CATEGORIES: Array<{
   id: FeedbackCategory;
@@ -86,6 +87,19 @@ export function FeedbackModal() {
   const modalRef = useRef<HTMLDivElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
 
+  useFocusTrap(feedbackModalOpen, modalRef);
+
+  // Sync category state when modal is opened with a specific category
+  const [prevModalOpen, setPrevModalOpen] = useState(feedbackModalOpen);
+  const [prevCategory, setPrevCategory] = useState(feedbackModalCategory);
+  if (feedbackModalOpen !== prevModalOpen || feedbackModalCategory !== prevCategory) {
+    setPrevModalOpen(feedbackModalOpen);
+    setPrevCategory(feedbackModalCategory);
+    if (feedbackModalOpen && feedbackModalCategory) {
+      setCategory(feedbackModalCategory);
+    }
+  }
+
   // Detect current active tool
   const currentPath = location.pathname;
   const activeTool = useMemo(
@@ -98,11 +112,12 @@ export function FeedbackModal() {
     [activeTool]
   );
 
-  // Focus input on mount
+  // Focus input when modal opens
   useEffect(() => {
+    if (!feedbackModalOpen) return;
     const timer = setTimeout(() => titleInputRef.current?.focus(), 50);
     return () => clearTimeout(timer);
-  }, []);
+  }, [feedbackModalOpen]);
 
   // Handle Escape key
   useEffect(() => {

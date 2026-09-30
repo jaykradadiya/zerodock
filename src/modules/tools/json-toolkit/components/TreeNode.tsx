@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 interface TreeNodeProps {
   name: string | null;
-  value: any;
+  value: unknown;
   isLast: boolean;
   depth?: number;
   initiallyExpanded?: boolean;
@@ -19,7 +19,7 @@ export function TreeNode({ name, value, isLast, depth = 0, initiallyExpanded = t
   
   const toggle = () => setIsExpanded(!isExpanded);
 
-  const getValueColor = (val: any) => {
+  const getValueColor = (val: unknown) => {
     if (val === null) return 'text-[var(--zd-text-muted)]';
     switch (typeof val) {
       case 'string': return 'text-[var(--zd-text-primary)] font-medium';
@@ -29,7 +29,7 @@ export function TreeNode({ name, value, isLast, depth = 0, initiallyExpanded = t
     }
   };
 
-  const formatValue = (val: any) => {
+  const formatValue = (val: unknown) => {
     if (val === null) return 'null';
     if (typeof val === 'string') return `"${val}"`;
     return String(val);
@@ -37,7 +37,7 @@ export function TreeNode({ name, value, isLast, depth = 0, initiallyExpanded = t
 
   // Render complex type (Object/Array)
   if (isComplex) {
-    const keys = Object.keys(value);
+    const keys = Object.keys(value as object);
     const isEmpty = keys.length === 0;
     const bracketOpen = isArray ? '[' : '{';
     const bracketClose = isArray ? ']' : '}';
@@ -86,7 +86,7 @@ export function TreeNode({ name, value, isLast, depth = 0, initiallyExpanded = t
                 <TreeNode 
                   key={k} 
                   name={isArray ? null : k} 
-                  value={value[k as keyof typeof value]} 
+                  value={(value as Record<string, unknown>)[k]} 
                   isLast={i === keys.length - 1}
                   depth={depth + 1} 
                   initiallyExpanded={initiallyExpanded && depth < 2}
@@ -107,7 +107,7 @@ export function TreeNode({ name, value, isLast, depth = 0, initiallyExpanded = t
                     <TreeNode 
                       key={k} 
                       name={isArray ? null : k} 
-                      value={value[k as keyof typeof value]} 
+                      value={(value as Record<string, unknown>)[k]} 
                       isLast={i === keys.length - 1}
                       depth={depth + 1} 
                       initiallyExpanded={initiallyExpanded && depth < 2}

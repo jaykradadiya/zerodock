@@ -121,11 +121,6 @@ export function PathPanel({
     [filterType]
   );
 
-  // Sync modal dialect when main dialect changes
-  useEffect(() => {
-    setModalDialect(filterType);
-  }, [filterType]);
-
   // Parse sourceJson once for structural introspection
   const parsedData = useMemo(() => {
     if (!sourceJson.trim()) return null;
@@ -194,11 +189,6 @@ export function PathPanel({
     return null;
   }, [parsedData, selectedPreset, modalDialect]);
 
-  // Reset index when search/category/dialect changes
-  useEffect(() => {
-    setSelectedPresetIndex(0);
-  }, [presetSearch, selectedCategory, modalDialect]);
-
   // Scroll active item into view
   useEffect(() => {
     if (selectedItemRef.current) {
@@ -225,6 +215,15 @@ export function PathPanel({
     };
   }, []);
 
+  const handleApplyRecipe = useCallback((recipeQuery: string, dialect: FilterType) => {
+    if (dialect !== filterType) {
+      setFilterType(dialect);
+    }
+    setQuery(recipeQuery);
+    setShowRecipesModal(false);
+    useToastStore.getState().addToast('Recipe loaded into query editor', 'info');
+  }, [filterType]);
+
   // Keyboard navigation for recipes modal
   useEffect(() => {
     if (!showRecipesModal) return;
@@ -249,7 +248,7 @@ export function PathPanel({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showRecipesModal, filteredPresets, selectedPreset, modalDialect]);
+  }, [showRecipesModal, filteredPresets, selectedPreset, modalDialect, handleApplyRecipe]);
 
   // Auto-expand textarea based on content
   useEffect(() => {
@@ -269,27 +268,6 @@ export function PathPanel({
     setDialectMenuOpen(false);
     const opt = FILTER_TYPES.find((f) => f.id === newType);
     if (opt) setQuery(opt.defaultQuery);
-  };
-
-  // Support Tab key indentation and Cmd+Enter immediate evaluation
-  const handleTextareaKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Tab') {
-      e.preventDefault();
-      const target = e.currentTarget;
-      const start = target.selectionStart;
-      const end = target.selectionEnd;
-      const val = target.value;
-      const newVal = val.substring(0, start) + '  ' + val.substring(end);
-      setQuery(newVal);
-      setTimeout(() => {
-        if (target) {
-          target.selectionStart = target.selectionEnd = start + 2;
-        }
-      }, 0);
-    } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-      e.preventDefault();
-      runEvaluationNow();
-    }
   };
 
   // Execution engine
@@ -349,6 +327,27 @@ export function PathPanel({
     }
   }, [sourceJson, query, filterType]);
 
+  // Support Tab key indentation and Cmd+Enter immediate evaluation
+  const handleTextareaKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const target = e.currentTarget;
+      const start = target.selectionStart;
+      const end = target.selectionEnd;
+      const val = target.value;
+      const newVal = val.substring(0, start) + '  ' + val.substring(end);
+      setQuery(newVal);
+      setTimeout(() => {
+        if (target) {
+          target.selectionStart = target.selectionEnd = start + 2;
+        }
+      }, 0);
+    } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      runEvaluationNow();
+    }
+  };
+
   // Debounced evaluation on query changes
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -368,15 +367,6 @@ export function PathPanel({
       console.error('Failed to open as tab', err);
     }
   }, [output, addTab, setActiveTab]);
-
-  const handleApplyRecipe = (recipeQuery: string, dialect: FilterType) => {
-    if (dialect !== filterType) {
-      setFilterType(dialect);
-    }
-    setQuery(recipeQuery);
-    setShowRecipesModal(false);
-    useToastStore.getState().addToast('Recipe loaded into query editor', 'info');
-  };
 
   const handleCopyRecipeCode = (recipeQuery: string, label: string) => {
     navigator.clipboard.writeText(recipeQuery);
@@ -514,6 +504,9 @@ export function PathPanel({
             type="button"
             onClick={() => {
               setModalDialect(filterType);
+              setSelectedCategory('all');
+              setPresetSearch('');
+              setSelectedPresetIndex(0);
               setShowRecipesModal(true);
             }}
             title="Open comprehensive recipe & filter patterns library"
@@ -762,6 +755,7 @@ export function PathPanel({
                       onClick={() => {
                         setModalDialect(f.id);
                         setSelectedCategory('all');
+                        setSelectedPresetIndex(0);
                       }}
                       className={cn(
                         'flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer',
@@ -797,14 +791,20 @@ export function PathPanel({
                 <input
                   type="text"
                   value={presetSearch}
-                  onChange={(e) => setPresetSearch(e.target.value)}
+                  onChange={(e) => {
+                    setPresetSearch(e.target.value);
+                    setSelectedPresetIndex(0);
+                  }}
                   placeholder="Search recipes (e.g. sum, filter, sort)..."
                   className="w-full bg-transparent text-xs outline-none text-[var(--zd-text-primary)] placeholder:text-[var(--zd-text-muted)]"
                 />
                 {presetSearch && (
                   <button
                     type="button"
-                    onClick={() => setPresetSearch('')}
+                    onClick={() => {
+                      setPresetSearch('');
+                      setSelectedPresetIndex(0);
+                    }}
                     className="text-[var(--zd-text-muted)] hover:text-[var(--zd-text-primary)]"
                   >
                     <X className="w-3 h-3" />
@@ -818,7 +818,10 @@ export function PathPanel({
                   <button
                     key={cat.id}
                     type="button"
-                    onClick={() => setSelectedCategory(cat.id)}
+                    onClick={() => {
+                      setSelectedCategory(cat.id);
+                      setSelectedPresetIndex(0);
+                    }}
                     className={cn(
                       'px-2.5 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer',
                       selectedCategory === cat.id

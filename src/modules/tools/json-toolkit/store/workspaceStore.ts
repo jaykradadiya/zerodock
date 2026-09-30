@@ -3,6 +3,12 @@ import { get, set, del } from 'idb-keyval';
 import { useUIStore } from '../../../../core/store/useUIStore';
 import { generateUniqueTabName } from '../../../../shared/utils/nameGenerator';
 
+const textEncoder = new TextEncoder();
+/** Returns accurate UTF-8 byte length instead of String.length (UTF-16 code units). */
+function byteLength(str: string): number {
+  return textEncoder.encode(str).byteLength;
+}
+
 const CLI_SUGGESTIONS = [
   "Use command-line utilities like 'jq' for querying and formatting (e.g., `jq . file.json`).",
   "Use 'prettier' to format JSON locally in your terminal (e.g., `npx prettier --write file.json`).",
@@ -33,7 +39,7 @@ interface WorkspaceState {
   initialize: () => Promise<void>;
   addTab: (name?: string, content?: string, targetGroup?: 1 | 2) => Promise<string>;
   removeTab: (id: string) => Promise<void>;
-  closeTabInGroup: (id: string, group: 1 | 2) => void;
+  closeTabInGroup: (id: string, group: 1 | 2) => Promise<void>;
   setActiveTab: (id: string) => void;
   updateTabContent: (id: string, content: string) => Promise<void>;
   renameTab: (id: string, newName: string) => void;
@@ -137,7 +143,7 @@ export const useWorkspaceStore = create<WorkspaceState>((setStore, getStore) => 
   addTab: async (name?: string, content: string = '', targetGroup?: 1 | 2) => {
     const currentTabs = getStore().tabs;
     const currentTotalSize = currentTabs.reduce((sum, t) => sum + t.size, 0);
-    const newSize = content.length;
+    const newSize = byteLength(content);
     
     if (currentTotalSize + newSize > 15 * 1024 * 1024) {
       useUIStore.getState().showStorageWarning(
@@ -203,7 +209,7 @@ export const useWorkspaceStore = create<WorkspaceState>((setStore, getStore) => 
       }
 
       let newGroup1 = state.group1TabIds.filter((t) => t !== id);
-      let newGroup2 = state.group2TabIds.filter((t) => t !== id);
+      const newGroup2 = state.group2TabIds.filter((t) => t !== id);
       if (newGroup1.length === 0 && newActiveId) {
         newGroup1 = [newActiveId];
       }
@@ -229,7 +235,7 @@ export const useWorkspaceStore = create<WorkspaceState>((setStore, getStore) => 
     });
   },
 
-  closeTabInGroup: (id: string, group: 1 | 2) => {
+  closeTabInGroup: async (id: string, group: 1 | 2) => {
     const state = getStore();
     if (group === 2) {
       const isAlsoInGroup1 = state.group1TabIds.includes(id);
@@ -242,7 +248,7 @@ export const useWorkspaceStore = create<WorkspaceState>((setStore, getStore) => 
         let newTabs = state.tabs;
         if (!isAlsoInGroup1 && state.group1TabIds.length > 0) {
           newTabs = state.tabs.filter((t) => t.id !== id);
-          del(`zd_file_${id}`).catch(console.error);
+          await del(`zd_file_${id}`).catch(console.error);
         }
         setStore({
           isSplit: false,
@@ -251,25 +257,25 @@ export const useWorkspaceStore = create<WorkspaceState>((setStore, getStore) => 
           group1TabIds: nextGroup1,
           tabs: newTabs,
         });
-        set('zd_json_is_split', false).catch(console.error);
-        set('zd_json_group2_tabs', []).catch(console.error);
-        set('zd_json_group1_tabs', nextGroup1).catch(console.error);
-        set('zd_json_tabs', newTabs).catch(console.error);
+        await set('zd_json_is_split', false).catch(console.error);
+        await set('zd_json_group2_tabs', []).catch(console.error);
+        await set('zd_json_group1_tabs', nextGroup1).catch(console.error);
+        await set('zd_json_tabs', newTabs).catch(console.error);
       } else {
         const newSec = state.secondaryTabId === id ? newGroup2[newGroup2.length - 1] : state.secondaryTabId;
         let newTabs = state.tabs;
         if (!isAlsoInGroup1) {
           newTabs = state.tabs.filter((t) => t.id !== id);
-          del(`zd_file_${id}`).catch(console.error);
-          set('zd_json_tabs', newTabs).catch(console.error);
+          await del(`zd_file_${id}`).catch(console.error);
+          await set('zd_json_tabs', newTabs).catch(console.error);
         }
         setStore({
           tabs: newTabs,
           group2TabIds: newGroup2,
           secondaryTabId: newSec,
         });
-        if (newSec) set('zd_json_secondary_tab', newSec).catch(console.error);
-        set('zd_json_group2_tabs', newGroup2).catch(console.error);
+        if (newSec) await set('zd_json_secondary_tab', newSec).catch(console.error);
+        await set('zd_json_group2_tabs', newGroup2).catch(console.error);
       }
     } else {
       // Group 1
@@ -281,8 +287,8 @@ export const useWorkspaceStore = create<WorkspaceState>((setStore, getStore) => 
           let newTabs = state.tabs;
           if (!isAlsoInGroup2 && id !== moved) {
             newTabs = state.tabs.filter((t) => t.id !== id);
-            del(`zd_file_${id}`).catch(console.error);
-            set('zd_json_tabs', newTabs).catch(console.error);
+            await del(`zd_file_${id}`).catch(console.error);
+            await set('zd_json_tabs', newTabs).catch(console.error);
           }
           const nextSplit = restGroup2.length > 0;
           setStore({
@@ -293,28 +299,28 @@ export const useWorkspaceStore = create<WorkspaceState>((setStore, getStore) => 
             secondaryTabId: restGroup2.length > 0 ? restGroup2[0] : null,
             isSplit: nextSplit,
           });
-          set('zd_json_group1_tabs', [moved]).catch(console.error);
-          set('zd_json_group2_tabs', restGroup2).catch(console.error);
-          set('zd_json_active_tab', moved).catch(console.error);
-          set('zd_json_is_split', nextSplit).catch(console.error);
+          await set('zd_json_group1_tabs', [moved]).catch(console.error);
+          await set('zd_json_group2_tabs', restGroup2).catch(console.error);
+          await set('zd_json_active_tab', moved).catch(console.error);
+          await set('zd_json_is_split', nextSplit).catch(console.error);
         } else {
-          void getStore().removeTab(id);
+          await getStore().removeTab(id);
         }
       } else {
         const newActive = state.activeTabId === id ? newGroup1[newGroup1.length - 1] : state.activeTabId;
         let newTabs = state.tabs;
         if (!isAlsoInGroup2) {
           newTabs = state.tabs.filter((t) => t.id !== id);
-          del(`zd_file_${id}`).catch(console.error);
-          set('zd_json_tabs', newTabs).catch(console.error);
+          await del(`zd_file_${id}`).catch(console.error);
+          await set('zd_json_tabs', newTabs).catch(console.error);
         }
         setStore({
           tabs: newTabs,
           group1TabIds: newGroup1,
           activeTabId: newActive,
         });
-        if (newActive) set('zd_json_active_tab', newActive).catch(console.error);
-        set('zd_json_group1_tabs', newGroup1).catch(console.error);
+        if (newActive) await set('zd_json_active_tab', newActive).catch(console.error);
+        await set('zd_json_group1_tabs', newGroup1).catch(console.error);
       }
     }
   },
@@ -333,7 +339,7 @@ export const useWorkspaceStore = create<WorkspaceState>((setStore, getStore) => 
     const oldTab = currentTabs.find(t => t.id === id);
     const oldTabSize = oldTab ? oldTab.size : 0;
     const currentTotalSize = currentTabs.reduce((sum, t) => sum + t.size, 0);
-    const newSize = content.length;
+    const newSize = byteLength(content);
 
     if (currentTotalSize - oldTabSize + newSize > 15 * 1024 * 1024) {
       useUIStore.getState().showStorageWarning(

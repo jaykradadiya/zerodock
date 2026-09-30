@@ -1,4 +1,4 @@
-import { useState, useEffect, type ChangeEvent } from 'react';
+import { useState, type ChangeEvent } from 'react';
 import type { ThemeTokens } from '../../../core/theme/types';
 import { RotateCcw, Copy, Check } from 'lucide-react';
 import { isValidHex, normalizeHex } from '../../../core/theme/colorUtils';
@@ -25,11 +25,13 @@ export function ColorTokenEditor({
   onReset,
 }: ColorTokenEditorProps) {
   const [inputValue, setInputValue] = useState(currentValue);
+  const [prevValue, setPrevValue] = useState(currentValue);
   const [copied, setCopied] = useState(false);
 
-  useEffect(() => {
+  if (currentValue !== prevValue) {
+    setPrevValue(currentValue);
     setInputValue(currentValue);
-  }, [currentValue]);
+  }
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;

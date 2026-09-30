@@ -147,10 +147,6 @@ export function JsonTabBar({
     tab.name.toLowerCase().includes(tabSearchQuery.toLowerCase())
   );
 
-  useEffect(() => {
-    setSelectedNavIndex(0);
-  }, [tabSearchQuery]);
-
   // Auto-scroll list when navigating with arrow keys
   useEffect(() => {
     if (!showTabDropdown || !listContainerRef.current) return;
@@ -424,7 +420,10 @@ export function JsonTabBar({
                         type="text"
                         placeholder="Filter tabs..."
                         value={tabSearchQuery}
-                        onChange={(e) => setTabSearchQuery(e.target.value)}
+                        onChange={(e) => {
+                          setTabSearchQuery(e.target.value);
+                          setSelectedNavIndex(0);
+                        }}
                         onKeyDown={handleDropdownKeyDown}
                         className="bg-transparent text-xs w-full outline-none text-[var(--zd-text-primary)] placeholder:text-[var(--zd-text-muted)]"
                         autoFocus
@@ -432,7 +431,10 @@ export function JsonTabBar({
                       {tabSearchQuery && (
                         <button
                           type="button"
-                          onClick={() => setTabSearchQuery('')}
+                          onClick={() => {
+                            setTabSearchQuery('');
+                            setSelectedNavIndex(0);
+                          }}
                           className="text-[var(--zd-text-muted)] hover:text-[var(--zd-text-primary)] p-0.5 rounded transition-colors cursor-pointer"
                           title="Clear filter"
                         >
@@ -450,7 +452,10 @@ export function JsonTabBar({
                         <p className="text-xs font-medium text-[var(--zd-text-secondary)]">No tabs match "{tabSearchQuery}"</p>
                         <button
                           type="button"
-                          onClick={() => setTabSearchQuery('')}
+                          onClick={() => {
+                            setTabSearchQuery('');
+                            setSelectedNavIndex(0);
+                          }}
                           className="text-[11px] text-[var(--zd-primary)] hover:underline cursor-pointer"
                         >
                           Clear filter

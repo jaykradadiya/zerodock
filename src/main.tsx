@@ -11,7 +11,7 @@ const initialTheme = findThemeById(
   prefState.activeThemeId || 'linear-dark',
   prefState.customThemes || {}
 );
-applyTheme(initialTheme, prefState.themeOverrides || {});
+applyTheme(initialTheme, prefState.themeOverrides || {}, prefState.highContrast || false);
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

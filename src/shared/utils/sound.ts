@@ -4,21 +4,30 @@ type LegacyAudioWindow = Window & { webkitAudioContext?: typeof AudioContext };
 const AudioContextConstructor = typeof window === 'undefined'
   ? undefined
   : window.AudioContext || (window as LegacyAudioWindow).webkitAudioContext;
-const audioCtx = AudioContextConstructor ? new AudioContextConstructor() : null;
+
+// Lazy-create AudioContext on first use to avoid wasting resources if sound is never played
+let audioCtx: AudioContext | null = null;
+function getAudioContext(): AudioContext | null {
+  if (!audioCtx && AudioContextConstructor) {
+    audioCtx = new AudioContextConstructor();
+  }
+  return audioCtx;
+}
 
 export function playSound(type: SoundType) {
-  if (!audioCtx) return;
-  if (audioCtx.state === 'suspended') {
-    audioCtx.resume();
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  if (ctx.state === 'suspended') {
+    ctx.resume();
   }
 
-  const oscillator = audioCtx.createOscillator();
-  const gainNode = audioCtx.createGain();
+  const oscillator = ctx.createOscillator();
+  const gainNode = ctx.createGain();
 
   oscillator.connect(gainNode);
-  gainNode.connect(audioCtx.destination);
+  gainNode.connect(ctx.destination);
 
-  const now = audioCtx.currentTime;
+  const now = ctx.currentTime;
 
   if (type === 'pop') {
     // A soft, low-frequency pop

@@ -20,7 +20,14 @@ export function KeyboardShortcutsHelp() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === '?' && !e.metaKey && !e.ctrlKey && !(e.target instanceof HTMLInputElement) && !(e.target instanceof HTMLTextAreaElement)) {
+      const target = e.target as HTMLElement | null;
+      const isEditing =
+        target &&
+        (target instanceof HTMLInputElement ||
+          target instanceof HTMLTextAreaElement ||
+          target.isContentEditable);
+
+      if (e.key === '?' && !e.metaKey && !e.ctrlKey && !isEditing) {
         e.preventDefault();
         setShortcutsOpen(!useUIStore.getState().shortcutsOpen);
       }
@@ -30,7 +37,7 @@ export function KeyboardShortcutsHelp() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [setShortcutsOpen, shortcutsOpen]);
+  }, [setShortcutsOpen]);
 
   if (!shortcutsOpen) return null;
 

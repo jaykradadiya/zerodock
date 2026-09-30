@@ -39,6 +39,9 @@ export function useGlobalToolShortcuts() {
       }
 
       if (e.key === 'Backspace' && toolActions.onClear) {
+        const target = e.target as HTMLElement | null;
+        const isEditing = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+        if (isEditing) return;
         e.preventDefault();
         toolActions.onClear();
         addToast('Cleared', 'info');

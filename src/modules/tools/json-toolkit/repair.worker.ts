@@ -12,9 +12,9 @@ self.onmessage = (event: MessageEvent<WorkerMessage<{ code: string }>>) => {
   try {
     const repaired = jsonrepair(payload.code);
     self.postMessage({ id, type: 'SUCCESS', payload: repaired });
-  } catch (error: any) {
+  } catch (error: unknown) {
     const workerError: WorkerError = {
-      message: error.message || 'Could not auto-repair JSON',
+      message: error instanceof Error ? error.message : 'Could not auto-repair JSON',
     };
     self.postMessage({ id, type: 'ERROR', payload: workerError });
   }

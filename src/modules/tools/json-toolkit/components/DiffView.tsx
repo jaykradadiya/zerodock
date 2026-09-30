@@ -89,46 +89,10 @@ export function DiffView({
     }
   };
 
-  const handleEditorWillMount = (monaco: any) => {
-    monaco.editor.defineTheme('zerodock-dark', {
-      base: 'vs-dark',
-      inherit: true,
-      rules: [],
-      colors: {
-        'editor.background': '#16161A',
-        'editor.foreground': '#EAEAF0',
-        'editor.lineHighlightBackground': '#1C1C21',
-        'editorLineNumber.foreground': '#5E5E72',
-        'diffEditor.insertedTextBackground': '#10b98135',
-        'diffEditor.removedTextBackground': '#f43f5e35',
-        'diffEditor.insertedLineBackground': '#10b98115',
-        'diffEditor.removedLineBackground': '#f43f5e15',
-        'diffEditor.diagonalFill': '#ffffff0a',
-        'diffEditorOverview.insertedForeground': '#10b98188',
-        'diffEditorOverview.removedForeground': '#f43f5e88',
-      },
-    });
-    monaco.editor.defineTheme('zerodock-light', {
-      base: 'vs',
-      inherit: true,
-      rules: [],
-      colors: {
-        'editor.background': '#FFFFFF',
-        'editor.foreground': '#1A1A2E',
-        'editorLineNumber.foreground': '#8E8EA0',
-        'diffEditor.insertedTextBackground': '#10b98125',
-        'diffEditor.removedTextBackground': '#f43f5e25',
-        'diffEditor.insertedLineBackground': '#10b98110',
-        'diffEditor.removedLineBackground': '#f43f5e10',
-        'diffEditor.diagonalFill': '#0000000a',
-        'diffEditorOverview.insertedForeground': '#10b98188',
-        'diffEditorOverview.removedForeground': '#f43f5e88',
-      },
-    });
-
+  const handleEditorWillMount = () => {
     const prefState = usePreferenceStore.getState();
     const activeTheme = prefState.getActiveTheme();
-    applyTheme(activeTheme, prefState.themeOverrides);
+    applyTheme(activeTheme, prefState.themeOverrides, prefState.highContrast);
   };
 
   const updateDiffStatistics = useCallback((editor: any) => {
@@ -174,7 +138,7 @@ export function DiffView({
     }
   }, []);
 
-  const loadModels = async () => {
+  const loadModels = useCallback(async () => {
     if (!editorRef.current || !monacoRef.current) return;
     const monaco = monacoRef.current;
 
@@ -194,18 +158,24 @@ export function DiffView({
         modModel = monaco.editor.createModel(modContent, 'json', modUri);
       }
 
+      if (!editorRef.current || editorRef.current.isDisposed?.()) return;
+
       editorRef.current.setModel({
         original: origModel,
         modified: modModel,
       });
 
-      setTimeout(() => updateDiffStatistics(editorRef.current), 100);
+      setTimeout(() => {
+        if (editorRef.current && !editorRef.current.isDisposed?.()) {
+          updateDiffStatistics(editorRef.current);
+        }
+      }, 100);
     }
-  };
+  }, [originalModelId, modifiedModelId, getFileContent, updateDiffStatistics]);
 
   useEffect(() => {
     loadModels();
-  }, [originalModelId, modifiedModelId]);
+  }, [loadModels]);
 
   useEffect(() => {
     if (!editorRef.current) return;

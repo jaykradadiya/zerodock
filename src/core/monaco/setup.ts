@@ -14,10 +14,18 @@ import 'monaco-editor/esm/vs/basic-languages/css/css.contribution';
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker';
 
+declare global {
+  interface Window {
+    MonacoEnvironment?: {
+      getWorker(_: unknown, label: string): Worker;
+    };
+  }
+}
+
 // Configure Monaco Environment to use locally bundled web workers (zero external requests)
 if (typeof window !== 'undefined') {
-  (window as any).MonacoEnvironment = {
-    getWorker(_: any, label: string) {
+  window.MonacoEnvironment = {
+    getWorker(_: unknown, label: string) {
       if (label === 'json') {
         return new jsonWorker();
       }

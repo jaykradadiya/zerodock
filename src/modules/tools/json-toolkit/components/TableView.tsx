@@ -24,12 +24,12 @@ interface TableViewProps {
 interface PathOption {
   label: string;
   path: string;
-  value: any;
+  value: unknown;
   dotPath: string;
 }
 
 // Recursively traverse JSON to collect paths of nested arrays and objects
-function getPathOptions(value: any, path: string[] = [], depth = 0, options: PathOption[] = []): PathOption[] {
+function getPathOptions(value: unknown, path: string[] = [], depth = 0, options: PathOption[] = []): PathOption[] {
   if (value === null || typeof value !== 'object' || depth > 8) return options;
 
   const dotPath = path.join('.');
@@ -256,7 +256,7 @@ export function TableView({ jsonString, panelLayout = 'full', onToggleLayout }: 
     }
   };
 
-  const renderCell = (value: any, drillInKey?: string) => {
+  const renderCell = (value: unknown, drillInKey?: string) => {
     if (value === null) return <span className="text-[var(--zd-text-muted)] italic">null</span>;
     if (value === undefined) return <span className="text-[var(--zd-text-muted)]"></span>;
     if (typeof value === 'boolean') return <span className="text-[var(--zd-accent)] font-mono">{String(value)}</span>;
@@ -289,6 +289,19 @@ export function TableView({ jsonString, panelLayout = 'full', onToggleLayout }: 
         <TableIcon className="w-12 h-12 mb-4 text-[var(--zd-text-muted)]" />
         <p className="text-sm font-medium">{error}</p>
         <p className="text-xs mt-2 max-w-md">Ensure your JSON matches the expected structure.</p>
+        {selectedPath !== '[]' && (
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedPath('[]');
+              setSortCol(null);
+              setSortDesc(false);
+            }}
+            className="mt-4 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[var(--zd-primary)] text-[var(--zd-primary-foreground)] shadow-xs hover:opacity-95 transition-opacity cursor-pointer"
+          >
+            Reset to Root
+          </button>
+        )}
       </div>
     );
   }

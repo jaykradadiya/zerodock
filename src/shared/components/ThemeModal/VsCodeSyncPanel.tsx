@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import type { ThemeDefinition, ThemeTokens } from '../../../core/theme/types';
 import { Download, Copy, Check, Upload, FileCode2, ArrowRight } from 'lucide-react';
 import { exportToVsCodeSnippet, parseThemeImport } from '../../../core/theme/vscodeMapper';
@@ -20,17 +20,18 @@ export function VsCodeSyncPanel({
   const [copiedSnippet, setCopiedSnippet] = useState(false);
   const [copiedZeroDock, setCopiedZeroDock] = useState(false);
 
-  const vsCodeSnippet = exportToVsCodeSnippet(effectiveTokens);
+  const vsCodeSnippet = useMemo(() => exportToVsCodeSnippet(effectiveTokens), [effectiveTokens]);
 
-  const zeroDockExportData: ThemeDefinition = {
-    ...activeTheme,
-    id: activeTheme.isBuiltin ? `custom-${activeTheme.id}-${Date.now()}` : activeTheme.id,
-    name: activeTheme.isBuiltin ? `${activeTheme.name} (Custom)` : activeTheme.name,
-    tokens: effectiveTokens,
-    isBuiltin: false,
-  };
-
-  const zeroDockExportString = JSON.stringify(zeroDockExportData, null, 2);
+  const zeroDockExportString = useMemo(() => {
+    const zeroDockExportData: ThemeDefinition = {
+      ...activeTheme,
+      id: activeTheme.isBuiltin ? `custom-${activeTheme.id}` : activeTheme.id,
+      name: activeTheme.isBuiltin ? `${activeTheme.name} (Custom)` : activeTheme.name,
+      tokens: effectiveTokens,
+      isBuiltin: false,
+    };
+    return JSON.stringify(zeroDockExportData, null, 2);
+  }, [activeTheme, effectiveTokens]);
 
   const handleImport = () => {
     setImportError(null);

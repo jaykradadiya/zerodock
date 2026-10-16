@@ -56,6 +56,8 @@ export interface ThemeDefinition {
   author?: string;
   isBuiltin?: boolean;
   isHighContrast?: boolean;
+  /** Optional companion theme used when switching between light and dark. */
+  pairedThemeId?: string;
   tokens: ThemeTokens;
 }
 

@@ -1,5 +1,6 @@
 import type { ThemeTokens } from '../../../core/theme/types';
 import { Search, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
+import { isDarkColor } from '../../../core/theme/colorUtils';
 
 interface ThemePreviewCardProps {
   tokens: ThemeTokens;
@@ -22,6 +23,7 @@ export function ThemePreviewCard({ tokens, themeName }: ThemePreviewCardProps) {
   const editorBg = tokens['editor.background'] || surface;
   const editorFg = tokens['editor.foreground'] || textPrimary;
   const editorLineNum = tokens['editorLineNumber.foreground'] || textMuted;
+  const primaryForeground = tokens['--zd-primary-foreground'] || (isDarkColor(primary) ? '#FFFFFF' : '#0A0A0A');
 
   return (
     <div
@@ -102,7 +104,7 @@ export function ThemePreviewCard({ tokens, themeName }: ThemePreviewCardProps) {
               <button
                 type="button"
                 className="px-3 py-1.5 rounded-lg text-xs font-semibold shadow-xs flex items-center gap-1.5"
-                style={{ backgroundColor: primary, color: bg }}
+                style={{ backgroundColor: primary, color: primaryForeground }}
               >
                 <Sparkles className="w-3 h-3" />
                 Primary Action
@@ -118,6 +120,24 @@ export function ThemePreviewCard({ tokens, themeName }: ThemePreviewCardProps) {
               >
                 Secondary
               </button>
+            </div>
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                type="button"
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold border-2"
+                style={{ backgroundColor: surface, borderColor: primary, color: primary }}
+              >
+                Focus state
+              </button>
+              <button
+                type="button"
+                disabled
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold opacity-45 cursor-not-allowed"
+                style={{ backgroundColor: surfaceRaised, color: textMuted }}
+              >
+                Disabled
+              </button>
+              <span className="text-[10px] font-semibold" style={{ color: error }}>Destructive</span>
             </div>
           </div>
         </div>

@@ -28,9 +28,12 @@ export function ShareLinkButton({
 
   const handleShare = async () => {
     try {
-      await navigator.clipboard.writeText(window.location.href);
+      // Workspace contents deliberately stay out of URLs. They can include private
+      // data and make links too long for browsers and messaging clients.
+      const cleanUrl = `${window.location.origin}${window.location.pathname}${window.location.search}`;
+      await navigator.clipboard.writeText(cleanUrl);
       setCopied(true);
-      addToast('Link copied — includes your current state', 'success');
+      addToast('Clean link copied', 'success');
       setTimeout(() => setCopied(false), 2000);
     } catch {
       addToast('Could not copy link', 'error');
@@ -42,7 +45,7 @@ export function ShareLinkButton({
       variant="secondary"
       size="sm"
       onClick={handleShare}
-      title="Copy shareable link with current state"
+      title="Copy clean shareable link"
       aria-label="Copy shareable link"
       className={className}
     >

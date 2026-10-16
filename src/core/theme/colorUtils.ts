@@ -60,6 +60,24 @@ export function getLuminance(hex: string): number {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
+/** WCAG relative contrast ratio for two opaque hex colors. */
+export function getContrastRatio(foreground: string, background: string): number | null {
+  if (!isValidHex(foreground) || !isValidHex(background)) return null;
+  const lighter = Math.max(getLuminance(foreground), getLuminance(background));
+  const darker = Math.min(getLuminance(foreground), getLuminance(background));
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+export function getContrastLabel(foreground: string, background: string): {
+  label: 'AAA' | 'AA' | 'Low contrast';
+  ratio: number | null;
+} {
+  const ratio = getContrastRatio(foreground, background);
+  if (ratio !== null && ratio >= 7) return { label: 'AAA', ratio };
+  if (ratio !== null && ratio >= 4.5) return { label: 'AA', ratio };
+  return { label: 'Low contrast', ratio };
+}
+
 export function isDarkColor(hex: string): boolean {
   return getLuminance(hex) < 0.35;
 }

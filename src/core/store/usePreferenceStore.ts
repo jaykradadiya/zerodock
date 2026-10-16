@@ -22,6 +22,7 @@ interface PreferenceState {
   toggleTheme: () => void;
   setThemeId: (themeId: string) => void;
   setThemeOverride: (key: keyof ThemeTokens, value: string) => void;
+  removeThemeOverride: (key: keyof ThemeTokens) => void;
   resetThemeOverrides: () => void;
   toggleHighContrast: () => void;
   setHighContrast: (enabled: boolean) => void;
@@ -67,9 +68,12 @@ export const usePreferenceStore = create<PreferenceState>()(
         set((state) => {
           const currentTheme = findThemeById(state.activeThemeId, state.customThemes);
           const nextMode: 'light' | 'dark' = currentTheme.mode === 'dark' ? 'light' : 'dark';
+          const pairedTheme = currentTheme.pairedThemeId
+            ? findThemeById(currentTheme.pairedThemeId, state.customThemes)
+            : undefined;
           const nextThemeId = state.highContrast
             ? (nextMode === 'light' ? 'github-light-high-contrast' : 'github-dark-high-contrast')
-            : (nextMode === 'light' ? 'geist-mono' : 'linear-dark');
+            : (pairedTheme?.mode === nextMode ? pairedTheme.id : (nextMode === 'light' ? 'geist-mono' : 'linear-dark'));
           const nextTheme = findThemeById(nextThemeId, state.customThemes);
 
           applyTheme(nextTheme, {}, state.highContrast);
@@ -104,6 +108,15 @@ export const usePreferenceStore = create<PreferenceState>()(
           return {
             themeOverrides: newOverrides,
           };
+        }),
+
+      removeThemeOverride: (key: keyof ThemeTokens) =>
+        set((state) => {
+          const newOverrides = { ...state.themeOverrides };
+          delete newOverrides[key];
+          const targetTheme = findThemeById(state.activeThemeId, state.customThemes);
+          applyTheme(targetTheme, newOverrides, state.highContrast);
+          return { themeOverrides: newOverrides };
         }),
 
       resetThemeOverrides: () =>

@@ -16,7 +16,6 @@ import type { ValidationError } from './validate.worker';
 import { useWorkspaceStore } from './store/workspaceStore';
 import { usePipelineStore } from '../../../core/store/usePipelineStore';
 import { useToastStore } from '../../../core/store/useToastStore';
-import { updateURLWithState, getStateFromURL } from '../../../shared/utils/state-share';
 import { exportToFile } from '../../../shared/utils/export';
 import { PathPanel } from './panels/PathPanel';
 import { jsonToSchema } from './lib/jsonToTypes';
@@ -268,11 +267,9 @@ export default function JsonFormatter() {
     }
   };
 
-  const urlRestoredRef = useRef(false);
-
   // Sync activeTabContent when switching tabs
   useEffect(() => {
-    if (activeTabId && urlRestoredRef.current) {
+    if (activeTabId) {
       getFileContent(activeTabId).then(setActiveTabContent);
     }
   }, [activeTabId, getFileContent]);
@@ -287,54 +284,25 @@ export default function JsonFormatter() {
     }
   };
 
-  // Initialize Workspace and restore URL state
+  // Initialize workspace. Document content remains in local workspace storage,
+  // never in the URL, to keep links short and prevent accidental data sharing.
   useEffect(() => {
     let isMounted = true;
     const initWorkspace = async () => {
       await initializeWorkspace();
       if (!isMounted) return;
-      const urlState = getStateFromURL<{
-        content?: unknown;
-        indent?: unknown;
-        sortKeys?: unknown;
-        smartFormat?: unknown;
-      }>();
-      if (urlState && typeof urlState === 'object') {
-        if (urlState.indent === 2 || urlState.indent === 4 || urlState.indent === 'tab') {
-          setIndent(urlState.indent);
-        }
-        if (typeof urlState.sortKeys === 'boolean') {
-          setSortKeys(urlState.sortKeys);
-        }
-        if (typeof urlState.smartFormat === 'boolean') {
-          setSmartFormat(urlState.smartFormat);
-        }
+      if (window.location.hash) {
+        window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
       }
     };
     initWorkspace();
     return () => { isMounted = false; };
   }, [initializeWorkspace]);
 
-  // Restore URL content into active tab once initialized or load active tab content on tab switch
+  // Load active tab content once the local workspace is initialized.
   useEffect(() => {
     if (!isLoading && activeTabId) {
       let isMounted = true;
-      if (!urlRestoredRef.current) {
-        urlRestoredRef.current = true;
-        const urlState = getStateFromURL<{ content?: unknown }>();
-        if (urlState && typeof urlState.content === 'string') {
-          const content = urlState.content;
-          updateTabContent(activeTabId, content).then(() => {
-            if (!isMounted) return;
-            setActiveTabContent(content);
-            if (editorRef.current?.setValue) {
-              editorRef.current.setValue(content);
-            }
-          });
-          return;
-        }
-      }
-
       getFileContent(activeTabId).then((content) => {
         if (!isMounted) return;
         setActiveTabContent(content);
@@ -347,19 +315,7 @@ export default function JsonFormatter() {
         isMounted = false;
       };
     }
-  }, [isLoading, activeTabId, getFileContent, updateTabContent]);
-
-  // Sync state to URL
-  useEffect(() => {
-    if (!isLoading && activeTabContent && activeTabContent.length < 30000) {
-      updateURLWithState({
-        content: activeTabContent,
-        indent,
-        sortKeys,
-        smartFormat
-      });
-    }
-  }, [activeTabContent, indent, sortKeys, smartFormat, isLoading]);
+  }, [isLoading, activeTabId, getFileContent]);
 
   const applyEditToEditor = useCallback((newText: string) => {
     const isSec = isSplit && focusedPaneRef.current === 'secondary';

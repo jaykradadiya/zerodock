@@ -16,13 +16,18 @@ import { usePreferenceStore } from '../../../core/store/usePreferenceStore';
 import { useUIStore, type ThemeModalTab } from '../../../core/store/useUIStore';
 import { getAllThemes } from '../../../core/theme/themeEngine';
 import { TOKEN_CATEGORIES } from '../../../core/theme/presets';
-import type { ThemeDefinition } from '../../../core/theme/types';
+import { getContrastLabel } from '../../../core/theme/colorUtils';
+import type { ThemeDefinition, ThemeTokens } from '../../../core/theme/types';
 import { ThemeCard } from './ThemeCard';
 import { ColorTokenEditor } from './ColorTokenEditor';
 import { ThemePreviewCard } from './ThemePreviewCard';
 import { VsCodeSyncPanel } from './VsCodeSyncPanel';
 import { Button } from '../ui/Button';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+
+const ESSENTIAL_TOKEN_KEYS: Array<keyof ThemeTokens> = [
+  '--zd-bg', '--zd-surface', '--zd-primary', '--zd-text-primary', '--zd-border', 'editor.background',
+];
 
 export function ThemeModal() {
   const { themeModalOpen, setThemeModalOpen, themeModalTab } = useUIStore();
@@ -34,6 +39,7 @@ export function ThemeModal() {
     toggleHighContrast,
     setThemeId,
     setThemeOverride,
+    removeThemeOverride,
     resetThemeOverrides,
     saveCustomTheme,
     deleteCustomTheme,
@@ -47,6 +53,7 @@ export function ThemeModal() {
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [newThemeName, setNewThemeName] = useState('');
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [showAdvancedTokens, setShowAdvancedTokens] = useState(false);
   const saveSuccessTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const modalRef = useRef<HTMLDivElement>(null);
@@ -100,6 +107,13 @@ export function ThemeModal() {
       return true;
     });
   }, [allThemes, search, filterMode]);
+  const essentialCategories = useMemo(
+    () => TOKEN_CATEGORIES.map((category) => ({
+      ...category,
+      tokens: category.tokens.filter((token) => ESSENTIAL_TOKEN_KEYS.includes(token.key)),
+    })).filter((category) => category.tokens.length > 0),
+    []
+  );
 
   const handleDuplicate = (themeToClone: ThemeDefinition) => {
     const clone: ThemeDefinition = {
@@ -354,6 +368,19 @@ export function ThemeModal() {
                     </div>
                   </div>
 
+                  {activeTheme.pairedThemeId && !highContrast && (() => {
+                    const companion = allThemes.find((theme) => theme.id === activeTheme.pairedThemeId);
+                    return companion ? (
+                      <button
+                        type="button"
+                        onClick={() => setThemeId(companion.id)}
+                        className="mb-3 text-xs font-semibold text-[var(--zd-primary)] hover:underline cursor-pointer"
+                      >
+                        Switch to paired {companion.mode} theme: {companion.name}
+                      </button>
+                    ) : null;
+                  })()}
+
                   <ThemePreviewCard
                     tokens={effectiveTokens}
                     themeName={activeTheme.name}
@@ -405,7 +432,16 @@ export function ThemeModal() {
 
                 {/* Token Categories */}
                 <div className="space-y-6">
-                  {TOKEN_CATEGORIES.map((category) => (
+                  <div className="rounded-xl border border-[var(--zd-primary)]/25 bg-[var(--zd-primary-soft)] p-3.5">
+                    <div className="flex items-center justify-between gap-3 mb-1">
+                      <div>
+                        <h4 className="text-xs font-bold text-[var(--zd-text-primary)]">Essential colors</h4>
+                        <p className="text-[11px] text-[var(--zd-text-muted)]">Start with the six tokens that define the entire workbench.</p>
+                      </div>
+                      <span className="text-[10px] font-semibold text-[var(--zd-primary)]">Recommended</span>
+                    </div>
+                  </div>
+                  {essentialCategories.map((category) => (
                     <div key={category.id} className="flex flex-col gap-2.5">
                       <div className="border-b border-[var(--zd-border)] pb-1.5">
                         <h4 className="text-xs font-bold text-[var(--zd-text-primary)] uppercase tracking-wider">
@@ -422,6 +458,12 @@ export function ThemeModal() {
                             effectiveTokens[token.key] || activeTheme.tokens[token.key] || '#000000';
                           const defaultValue = activeTheme.tokens[token.key] || '#000000';
                           const isOverridden = Boolean(themeOverrides[token.key]);
+                          const contrastBackground = token.key.startsWith('editor')
+                            ? (effectiveTokens['editor.background'] || effectiveTokens['--zd-surface'])
+                            : effectiveTokens['--zd-bg'];
+                          const contrast = token.key.includes('text') || token.key === 'editor.foreground'
+                            ? getContrastLabel(currentValue, contrastBackground)
+                            : undefined;
 
                           return (
                             <ColorTokenEditor
@@ -432,14 +474,34 @@ export function ThemeModal() {
                               currentValue={currentValue}
                               defaultValue={defaultValue}
                               isOverridden={isOverridden}
+                              contrast={contrast}
                               onChange={(key, val) => setThemeOverride(key, val)}
-                              onReset={(key) => {
-                                const newOverrides = { ...themeOverrides };
-                                delete newOverrides[key];
-                                setThemeOverride(key, defaultValue);
-                              }}
+                              onReset={removeThemeOverride}
                             />
                           );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                  <div className="pt-1">
+                    <Button size="sm" variant="secondary" onClick={() => setShowAdvancedTokens((value) => !value)} className="text-xs">
+                      {showAdvancedTokens ? 'Hide advanced tokens' : 'Show advanced tokens'}
+                    </Button>
+                  </div>
+                  {showAdvancedTokens && TOKEN_CATEGORIES.map((category) => ({
+                    ...category,
+                    tokens: category.tokens.filter((token) => !ESSENTIAL_TOKEN_KEYS.includes(token.key)),
+                  })).filter((category) => category.tokens.length > 0).map((category) => (
+                    <div key={category.id} className="flex flex-col gap-2.5">
+                      <div className="border-b border-[var(--zd-border)] pb-1.5">
+                        <h4 className="text-xs font-bold text-[var(--zd-text-primary)] uppercase tracking-wider">{category.label}</h4>
+                        <p className="text-[11px] text-[var(--zd-text-muted)]">{category.description}</p>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                        {category.tokens.map((token) => {
+                          const currentValue = effectiveTokens[token.key] || activeTheme.tokens[token.key] || '#000000';
+                          const defaultValue = activeTheme.tokens[token.key] || '#000000';
+                          return <ColorTokenEditor key={token.key} tokenKey={token.key} label={token.label} description={token.description} currentValue={currentValue} defaultValue={defaultValue} isOverridden={Boolean(themeOverrides[token.key])} onChange={setThemeOverride} onReset={removeThemeOverride} />;
                         })}
                       </div>
                     </div>

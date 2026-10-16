@@ -10,6 +10,7 @@ interface ColorTokenEditorProps {
   currentValue: string;
   defaultValue: string;
   isOverridden: boolean;
+  contrast?: { label: 'AAA' | 'AA' | 'Low contrast'; ratio: number | null };
   onChange: (tokenKey: keyof ThemeTokens, hexValue: string) => void;
   onReset: (tokenKey: keyof ThemeTokens) => void;
 }
@@ -21,6 +22,7 @@ export function ColorTokenEditor({
   currentValue,
   defaultValue,
   isOverridden,
+  contrast,
   onChange,
   onReset,
 }: ColorTokenEditorProps) {
@@ -72,6 +74,18 @@ export function ColorTokenEditor({
           </span>
           {isOverridden && (
             <span className="w-1.5 h-1.5 rounded-full bg-[var(--zd-primary)]" title="Modified" />
+          )}
+          {contrast && (
+            <span
+              title={contrast.ratio ? `${contrast.ratio.toFixed(2)}:1 contrast ratio` : 'Contrast unavailable for this color format'}
+              className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border ${
+                contrast.label === 'Low contrast'
+                  ? 'text-[var(--zd-warning)] border-[var(--zd-warning)]/35 bg-[var(--zd-warning-soft)]'
+                  : 'text-[var(--zd-success)] border-[var(--zd-success)]/35 bg-[var(--zd-success-soft)]'
+              }`}
+            >
+              {contrast.label}
+            </span>
           )}
         </div>
         <p className="text-[11px] text-[var(--zd-text-muted)] mt-0.5 leading-snug">

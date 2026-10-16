@@ -1,6 +1,6 @@
 import jmespath from 'jmespath';
 
-export type FilterType = 'jmespath' | 'jsonpath' | 'dotpath' | 'javascript';
+export type FilterType = 'jmespath' | 'jsonpath' | 'dotpath';
 
 export interface FilterTypeOption {
   id: FilterType;
@@ -33,13 +33,7 @@ export const FILTER_TYPES: FilterTypeOption[] = [
     description: 'Simple dot-separated property accessor with wildcard (*) support',
     defaultQuery: '*',
   },
-  {
-    id: 'javascript',
-    label: 'JavaScript',
-    placeholder: 'e.g. return data.charge?.id;',
-    description: 'Full JavaScript logic with filter, map, reduce, or custom functions',
-    defaultQuery: 'return data;',
-  },
+
 ];
 
 export interface QuerySuggestion {
@@ -68,144 +62,6 @@ export const PRESET_CATEGORIES: { id: PresetCategory | 'all'; label: string }[] 
 ];
 
 export const PRESET_SNIPPETS: Record<FilterType, QueryPreset[]> = {
-  javascript: [
-    // Filters
-    {
-      label: 'Filter: Number Greater Than',
-      description: 'Filter items where amount exceeds threshold',
-      query: 'return data.charge?.fee_details?.filter(x => x.amount > 1000);',
-      category: 'filters',
-      exampleOutput: '[\n  {\n    "type": "application_fee",\n    "amount": 279900,\n    "currency": "usd"\n  }\n]',
-    },
-    {
-      label: 'Filter: String Contains',
-      description: 'Case-insensitive substring match',
-      query: 'return data.charge?.fee_details?.filter(x => x.description?.toLowerCase().includes("fees"));',
-      category: 'filters',
-      exampleOutput: '[\n  {\n    "type": "stripe_fee",\n    "amount": 14530,\n    "description": "Stripe processing fees"\n  }\n]',
-    },
-    {
-      label: 'Filter: Regex Pattern Match',
-      description: 'Filter matching regular expression',
-      query: 'return data.charge?.fee_details?.filter(x => /stripe/i.test(x.type));',
-      category: 'filters',
-      exampleOutput: '[\n  {\n    "type": "stripe_fee",\n    "amount": 14530,\n    "description": "Stripe processing fees"\n  }\n]',
-    },
-    {
-      label: 'Filter: Non-Null Values',
-      description: 'Filter items with truthy / present property',
-      query: 'return data.charge?.fee_details?.filter(x => x.application !== null);',
-      category: 'filters',
-      exampleOutput: '[\n  {\n    "type": "application_fee",\n    "application": "ca_QJGL3fYsZPlpQ7TF..."\n  }\n]',
-    },
-    {
-      label: 'Filter: Boolean Check',
-      description: 'Filter items where flag is true',
-      query: 'return data.charge?.fee_details?.filter(x => Boolean(x.paid ?? true));',
-      category: 'filters',
-      exampleOutput: '[\n  {\n    "type": "application_fee",\n    "paid": true\n  }\n]',
-    },
-
-    // Math & Aggregations
-    {
-      label: 'Math: Sum Field Values',
-      description: 'Calculate total sum across all array items',
-      query: 'return (data.charge?.fee_details || []).reduce((acc, x) => acc + (x.amount || 0), 0);',
-      category: 'aggregations',
-      exampleOutput: '294430',
-    },
-    {
-      label: 'Math: Average Value',
-      description: 'Compute arithmetic mean of a numeric field',
-      query: 'const items = data.charge?.fee_details || [];\nconst sum = items.reduce((acc, x) => acc + (x.amount || 0), 0);\nreturn items.length ? (sum / items.length) : 0;',
-      category: 'aggregations',
-      exampleOutput: '147215',
-    },
-    {
-      label: 'Math: Max / Min Value',
-      description: 'Extract maximum and minimum values',
-      query: 'const amounts = (data.charge?.fee_details || []).map(x => x.amount || 0);\nreturn { min: Math.min(...amounts), max: Math.max(...amounts) };',
-      category: 'aggregations',
-      exampleOutput: '{\n  "min": 14530,\n  "max": 279900\n}',
-    },
-    {
-      label: 'Math: Group By Property',
-      description: 'Group array items by category key',
-      query: 'const items = data.charge?.fee_details || [];\nreturn items.reduce((acc, x) => {\n  const k = x.type || "other";\n  (acc[k] = acc[k] || []).push(x);\n  return acc;\n}, {});',
-      category: 'aggregations',
-      exampleOutput: '{\n  "application_fee": [\n    { "amount": 279900 }\n  ],\n  "stripe_fee": [\n    { "amount": 14530 }\n  ]\n}',
-    },
-    {
-      label: 'Math: Value Frequencies',
-      description: 'Count occurrences of each distinct value',
-      query: 'const items = data.charge?.fee_details || [];\nreturn items.reduce((acc, x) => {\n  acc[x.type] = (acc[x.type] || 0) + 1;\n  return acc;\n}, {});',
-      category: 'aggregations',
-      exampleOutput: '{\n  "application_fee": 1,\n  "stripe_fee": 1\n}',
-    },
-
-    // Transforms
-    {
-      label: 'Pluck: Select Specific Fields',
-      description: 'Extract subset of properties into clean objects',
-      query: 'return (data.charge?.fee_details || []).map(x => ({\n  type: x.type,\n  amount: x.amount\n}));',
-      category: 'transforms',
-      exampleOutput: '[\n  {\n    "type": "application_fee",\n    "amount": 279900\n  },\n  {\n    "type": "stripe_fee",\n    "amount": 14530\n  }\n]',
-    },
-    {
-      label: 'Map: Array to Lookup Map',
-      description: 'Convert array of objects into keyed dictionary',
-      query: 'return Object.fromEntries(\n  (data.charge?.fee_details || []).map(x => [x.type, x.amount])\n);',
-      category: 'transforms',
-      exampleOutput: '{\n  "application_fee": 279900,\n  "stripe_fee": 14530\n}',
-    },
-    {
-      label: 'Flatten: Nested Arrays',
-      description: 'Flatten arrays or extract sub-properties',
-      query: 'return Object.values(data).flatMap(v => Array.isArray(v) ? v : [v]);',
-      category: 'transforms',
-      exampleOutput: '[\n  { "type": "application_fee", "amount": 279900 },\n  { "type": "stripe_fee", "amount": 14530 }\n]',
-    },
-
-    // Sort & Slice
-    {
-      label: 'Sort: Ascending',
-      description: 'Sort items by numeric property low to high',
-      query: 'return [...(data.charge?.fee_details || [])].sort((a, b) => (a.amount || 0) - (b.amount || 0));',
-      category: 'sort',
-      exampleOutput: '[\n  { "amount": 14530 },\n  { "amount": 279900 }\n]',
-    },
-    {
-      label: 'Sort: Descending',
-      description: 'Sort items by numeric property high to low',
-      query: 'return [...(data.charge?.fee_details || [])].sort((a, b) => (b.amount || 0) - (a.amount || 0));',
-      category: 'sort',
-      exampleOutput: '[\n  { "amount": 279900 },\n  { "amount": 14530 }\n]',
-    },
-    {
-      label: 'Slice: First 5 Items',
-      description: 'Pagination slice of array',
-      query: 'return (data.charge?.fee_details || []).slice(0, 5);',
-      category: 'sort',
-      exampleOutput: '[\n  { "type": "application_fee", "amount": 279900 }\n]',
-    },
-
-    // Inspection
-    {
-      label: 'Keys: Object Property Names',
-      description: 'List all top-level keys',
-      query: 'return Object.keys(data.charge || data);',
-      category: 'inspection',
-      exampleOutput: '[\n  "id",\n  "paid",\n  "amount",\n  "currency",\n  "fee_details"\n]',
-    },
-    {
-      label: 'Entries: Key-Value Pairs',
-      description: 'List key/value tuples',
-      query: 'return Object.entries(data.charge || data);',
-      category: 'inspection',
-      exampleOutput: '[\n  ["id", "ch_3Tk02PMGE..."],\n  ["paid", true]\n]',
-    },
-  ],
-
   jmespath: [
     // Filters
     {
@@ -461,24 +317,6 @@ export function generateSmartSuggestions(data: any, filterType: FilterType): Que
         }
       });
     }
-  } else if (filterType === 'javascript') {
-    if (Array.isArray(data)) {
-      if (data.length > 0 && typeof data[0] === 'object' && data[0] !== null) {
-        Object.keys(data[0]).slice(0, 6).forEach((k) => {
-          suggestions.push({ query: `return data.map(x => x.${k});`, label: `map(.${k})`, category: 'property' });
-        });
-      }
-    } else {
-      Object.keys(data).slice(0, 8).forEach((k) => {
-        suggestions.push({ query: `return data.${k};`, label: `data.${k}`, category: 'property' });
-        const val = data[k];
-        if (val && typeof val === 'object' && !Array.isArray(val)) {
-          Object.keys(val).slice(0, 4).forEach((subK) => {
-            suggestions.push({ query: `return data.${k}.${subK};`, label: `data.${k}.${subK}`, category: 'property' });
-          });
-        }
-      });
-    }
   }
 
   return suggestions;
@@ -544,20 +382,7 @@ export function generateQuickFilterChips(data: any, filterType: FilterType): Qui
       }
       chips.push({ label: 'Count', iconType: 'count', query: `length(${p})` });
     }
-  } else if (filterType === 'javascript') {
-    chips.push({ label: 'Object.keys', iconType: 'keys', query: 'return Object.keys(data);' });
-    if (targetArray) {
-      const accessor = arrayPath ? `data.${arrayPath}` : 'data';
-      if (numField) {
-        chips.push({ label: `Sum: ${numField}`, iconType: 'sum', query: `return (${accessor} || []).reduce((s, x) => s + (x.${numField} || 0), 0);` });
-        chips.push({ label: `Filter: ${numField} > 0`, iconType: 'filter', query: `return (${accessor} || []).filter(x => (x.${numField} || 0) > 0);` });
-        chips.push({ label: `Sort: ${numField} DESC`, iconType: 'sort', query: `return [...(${accessor} || [])].sort((a, b) => (b.${numField} || 0) - (a.${numField} || 0));` });
-      }
-      if (strField) {
-        chips.push({ label: `Pluck: ${strField}`, iconType: 'pluck', query: `return (${accessor} || []).map(x => x.${strField});` });
-      }
-      chips.push({ label: 'Length', iconType: 'count', query: `return (${accessor} || []).length;` });
-    }
+
   } else if (filterType === 'jsonpath') {
     chips.push({ label: '$ (Root)', iconType: 'keys', query: '$' });
     if (targetArray) {
@@ -736,27 +561,11 @@ export function evaluateQuery(data: any, query: string, type: FilterType): Query
       return { success: true, result: res };
     }
 
-    if (type === 'javascript') {
-      const trimmed = query.trim();
-      let codeToRun = trimmed;
-
-      // Support implicit return for expressions without explicit return
-      if (!trimmed.includes('return') && !trimmed.includes(';')) {
-        codeToRun = `return (${trimmed});`;
-      }
-
-      try {
-        const fn = new Function('data', codeToRun);
-        const res = fn(data);
-        return { success: true, result: res };
-      } catch (innerErr: unknown) {
-        if (codeToRun !== trimmed) {
-          const fn = new Function('data', trimmed);
-          const res = fn(data);
-          return { success: true, result: res };
-        }
-        throw innerErr;
-      }
+    if ((type as string) === 'javascript') {
+      return {
+        success: false,
+        error: 'Arbitrary JavaScript execution is disabled for privacy and security. Please use JMESPath, JSONPath, or DotPath.',
+      };
     }
 
     return { success: false, error: `Unsupported filter type: ${type}` };

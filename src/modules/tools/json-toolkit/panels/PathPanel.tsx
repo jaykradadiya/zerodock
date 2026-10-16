@@ -50,8 +50,6 @@ export interface PathPanelProps extends ToolkitPanelProps {
 
 function getDialectIcon(type: FilterType, className = 'w-3.5 h-3.5 shrink-0') {
   switch (type) {
-    case 'javascript':
-      return <Code2 className={cn('text-amber-400', className)} />;
     case 'jmespath':
       return <Compass className={cn('text-purple-400', className)} />;
     case 'jsonpath':
@@ -90,8 +88,8 @@ export function PathPanel({
   panelLayout = 'split',
   onToggleLayout,
 }: PathPanelProps) {
-  const [filterType, setFilterType] = useState<FilterType>('javascript');
-  const [query, setQuery] = useState('return data;');
+  const [filterType, setFilterType] = useState<FilterType>('jmespath');
+  const [query, setQuery] = useState('@');
   const [output, setOutput] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [evalDurationMs, setEvalDurationMs] = useState<number | null>(null);
@@ -688,9 +686,7 @@ export function PathPanel({
                 const targetQuery =
                   filterType === 'jsonpath'
                     ? `$.${key}`
-                    : filterType === 'javascript'
-                      ? `return data.${key};`
-                      : key;
+                    : key;
                 return (
                   <button
                     key={key}

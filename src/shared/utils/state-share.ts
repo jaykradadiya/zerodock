@@ -14,13 +14,31 @@ export function encodeStateToHash<T>(state: T): string {
 }
 
 /**
- * Decodes a compressed Base64 string from the URL back into the state object.
+ * Safe reviver to eliminate prototype pollution keys
+ */
+function safeJsonReviver(key: string, value: unknown): unknown {
+  if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+    return undefined;
+  }
+  return value;
+}
+
+/**
+ * Decodes a compressed Base64 string from the URL back into the state object safely.
  */
 export function decodeStateFromHash<T>(hash: string): T | null {
   try {
+    if (!hash || typeof hash !== 'string' || hash.length > 2_000_000) {
+      return null;
+    }
     const jsonString = LZString.decompressFromEncodedURIComponent(hash);
     if (jsonString) {
-      return JSON.parse(jsonString) as T;
+      // Guard against decompression bombs / excessive memory allocation
+      if (jsonString.length > 5_000_000) {
+        console.warn('ZeroDock: Decoded URL state exceeds maximum allowed size.');
+        return null;
+      }
+      return JSON.parse(jsonString, safeJsonReviver) as T;
     }
   } catch (error: unknown) {
     console.error('Failed to decode state:', error);

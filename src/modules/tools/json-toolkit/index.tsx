@@ -294,15 +294,21 @@ export default function JsonFormatter() {
       await initializeWorkspace();
       if (!isMounted) return;
       const urlState = getStateFromURL<{
-        content?: string;
-        indent?: number | 'tab';
-        sortKeys?: boolean;
-        smartFormat?: boolean;
+        content?: unknown;
+        indent?: unknown;
+        sortKeys?: unknown;
+        smartFormat?: unknown;
       }>();
-      if (urlState) {
-        if (urlState.indent !== undefined) setIndent(urlState.indent);
-        if (urlState.sortKeys !== undefined) setSortKeys(urlState.sortKeys);
-        if (urlState.smartFormat !== undefined) setSmartFormat(urlState.smartFormat);
+      if (urlState && typeof urlState === 'object') {
+        if (urlState.indent === 2 || urlState.indent === 4 || urlState.indent === 'tab') {
+          setIndent(urlState.indent);
+        }
+        if (typeof urlState.sortKeys === 'boolean') {
+          setSortKeys(urlState.sortKeys);
+        }
+        if (typeof urlState.smartFormat === 'boolean') {
+          setSmartFormat(urlState.smartFormat);
+        }
       }
     };
     initWorkspace();
@@ -315,13 +321,14 @@ export default function JsonFormatter() {
       let isMounted = true;
       if (!urlRestoredRef.current) {
         urlRestoredRef.current = true;
-        const urlState = getStateFromURL<{ content?: string }>();
-        if (urlState?.content) {
-          updateTabContent(activeTabId, urlState.content).then(() => {
+        const urlState = getStateFromURL<{ content?: unknown }>();
+        if (urlState && typeof urlState.content === 'string') {
+          const content = urlState.content;
+          updateTabContent(activeTabId, content).then(() => {
             if (!isMounted) return;
-            setActiveTabContent(urlState.content!);
+            setActiveTabContent(content);
             if (editorRef.current?.setValue) {
-              editorRef.current.setValue(urlState.content!);
+              editorRef.current.setValue(content);
             }
           });
           return;

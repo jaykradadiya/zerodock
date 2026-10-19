@@ -709,7 +709,6 @@ export function PathPanel({
             language="json"
             value={output}
             readOnly
-            showSendTo={false}
             error={error}
             placeholder={`Enter a ${activeOption.label} expression above...`}
             downloadFileName="query_result.json"

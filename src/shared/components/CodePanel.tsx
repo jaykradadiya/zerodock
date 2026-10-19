@@ -2,7 +2,6 @@ import React from 'react';
 import { Trash2, Download, Sparkles, AlertCircle, FileInput } from 'lucide-react';
 import { CodeEditor } from './CodeEditor';
 import { CopyButton } from './CopyButton';
-import { SendToButton } from './SendToButton';
 import { exportToFile } from '../utils/export';
 import { useToolRoute } from '../context/ToolRouteContext';
 import { Badge, Button, SectionLabel, Textarea, cn } from './ui';
@@ -36,8 +35,6 @@ export interface CodePanelProps {
   footer?: React.ReactNode;
   children?: React.ReactNode;
   emptyMessage?: string;
-  showSendTo?: boolean;
-  sendToTargets?: { id: string; name: string; route: string }[];
 }
 
 function PanelPlaceholder({ message, isOutput }: { message: string; isOutput?: boolean }) {
@@ -83,8 +80,6 @@ export function CodePanel({
   footer,
   children,
   emptyMessage,
-  showSendTo,
-  sendToTargets,
 }: CodePanelProps) {
   const toolRoute = useToolRoute();
 
@@ -110,9 +105,6 @@ export function CodePanel({
     if (sample && onChange) onChange(sample);
   };
   const canSample = Boolean((onSample || toolRoute?.getSample()) && !readOnly);
-
-  const pipelineTargets = sendToTargets ?? toolRoute?.pipelineTargets ?? [];
-  const shouldShowSendTo = (showSendTo ?? readOnly) && value && value.trim() && pipelineTargets.length > 0;
 
   const borderClasses = [
     borderRight ? 'border-b md:border-b-0 md:border-r border-[var(--zd-border)]' : '',
@@ -175,10 +167,6 @@ export function CodePanel({
               <Download className="w-3.5 h-3.5 text-[var(--zd-primary)]" />
               <span className="hidden sm:inline">Download</span>
             </Button>
-          )}
-
-          {shouldShowSendTo && (
-            <SendToButton data={value!} targets={pipelineTargets} />
           )}
 
           {shouldShowCopy && value && (

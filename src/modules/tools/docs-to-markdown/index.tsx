@@ -215,11 +215,6 @@ export default function DocsToMarkdownTool() {
               downloadMimeType="text/markdown"
               placeholder="Your converted Markdown will appear here."
               emptyMessage="Waiting for Google Docs input..."
-              showSendTo={Boolean(markdownOutput)}
-              sendToTargets={[
-                { id: 'markdown-chat', name: 'Markdown for Chat', route: '/markdown-chat' },
-                { id: 'json-toolkit', name: 'JSON Toolkit', route: '/json-toolkit' },
-              ]}
               className={cn(
                 'flex-1 min-h-0 h-full',
                 mobileTab === 'output' ? 'flex' : 'hidden md:flex md:flex-1'

@@ -202,11 +202,6 @@ export default function MarkdownChatTool() {
               placeholder="Your converted message will appear here."
               emptyMessage="Waiting for Markdown input..."
               footer={styles[currentApp].description}
-              showSendTo={Boolean(output)}
-              sendToTargets={[
-                { id: 'docs-to-markdown', name: 'Docs to Markdown', route: '/docs-to-markdown' },
-                { id: 'json-toolkit', name: 'JSON Toolkit', route: '/json-toolkit' },
-              ]}
               className={cn(
                 'flex-1 min-h-0 h-full',
                 mobileTab === 'output' ? 'flex' : 'hidden md:flex md:flex-1'

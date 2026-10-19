@@ -41,8 +41,8 @@ interface PreferenceState {
 export const usePreferenceStore = create<PreferenceState>()(
   persist(
     (set, get) => ({
-      theme: 'light',
-      activeThemeId: 'warm-paper',
+      theme: 'dark',
+      activeThemeId: 'linear-dark',
       customThemes: {},
       themeOverrides: {},
       highContrast: false,
@@ -161,7 +161,7 @@ export const usePreferenceStore = create<PreferenceState>()(
         set((state) => {
           const updated = { ...state.customThemes };
           delete updated[themeId];
-          const fallbackId = 'warm-paper';
+          const fallbackId = 'linear-dark';
           const fallbackTheme = findThemeById(fallbackId);
           if (state.activeThemeId === themeId) {
             applyTheme(fallbackTheme, {}, state.highContrast);
@@ -203,7 +203,7 @@ export const usePreferenceStore = create<PreferenceState>()(
     {
       name: 'zerodock-preferences',
       storage: createJSONStorage(() => idbStorage),
-      version: 2,
+      version: 3,
       migrate: (persistedState: unknown, version: number) => {
         if (version === 0 && persistedState && typeof persistedState === 'object') {
           const state = persistedState as Record<string, unknown>;
@@ -213,13 +213,12 @@ export const usePreferenceStore = create<PreferenceState>()(
             state.activeThemeId = 'geist-mono';
           }
         }
-        // Move installations still using the former out-of-the-box theme to Warm Paper,
-        // while preserving every explicit theme choice.
-        if (version < 2 && persistedState && typeof persistedState === 'object') {
+        // Restore Linear Obsidian as default theme for installations on warm-paper
+        if (version < 3 && persistedState && typeof persistedState === 'object') {
           const state = persistedState as Record<string, unknown>;
-          if (state.activeThemeId === 'linear-dark') {
-            state.activeThemeId = 'warm-paper';
-            state.theme = 'light';
+          if (state.activeThemeId === 'warm-paper') {
+            state.activeThemeId = 'linear-dark';
+            state.theme = 'dark';
             state.themeOverrides = {};
           }
         }
@@ -227,7 +226,7 @@ export const usePreferenceStore = create<PreferenceState>()(
       },
       onRehydrateStorage: () => (state) => {
         if (state) {
-          const active = findThemeById(state.activeThemeId || 'warm-paper', state.customThemes || {});
+          const active = findThemeById(state.activeThemeId || 'linear-dark', state.customThemes || {});
           applyTheme(active, state.themeOverrides || {}, state.highContrast || false);
         }
       },

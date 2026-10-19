@@ -12,6 +12,8 @@ const jsonTargets = ['json-toolkit']
 const defaultPipelineTargets: Record<string, { id: string; name: string; route: string }[]> = {
   'json-path': jsonTargets,
   'json-toolkit': jsonTargets,
+  'docs-to-markdown': ['markdown-chat', 'json-toolkit'].map(byId).filter(Boolean) as { id: string; name: string; route: string }[],
+  'markdown-chat': ['docs-to-markdown', 'json-toolkit'].map(byId).filter(Boolean) as { id: string; name: string; route: string }[],
 };
 
 export function getPipelineTargets(toolId: string) {

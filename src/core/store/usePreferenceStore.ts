@@ -3,7 +3,6 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { idbStorage } from './idbStorage';
 import type { ThemeDefinition, ThemeTokens } from '../theme/types';
 import { applyTheme, findThemeById, resolveEffectiveTokens } from '../theme/themeEngine';
-import { BUILTIN_THEMES } from '../theme/presets';
 
 interface PreferenceState {
   theme: 'light' | 'dark';
@@ -42,8 +41,8 @@ interface PreferenceState {
 export const usePreferenceStore = create<PreferenceState>()(
   persist(
     (set, get) => ({
-      theme: 'dark',
-      activeThemeId: 'linear-dark',
+      theme: 'light',
+      activeThemeId: 'warm-paper',
       customThemes: {},
       themeOverrides: {},
       highContrast: false,
@@ -162,8 +161,8 @@ export const usePreferenceStore = create<PreferenceState>()(
         set((state) => {
           const updated = { ...state.customThemes };
           delete updated[themeId];
-          const fallbackId = 'linear-dark';
-          const fallbackTheme = BUILTIN_THEMES[0];
+          const fallbackId = 'warm-paper';
+          const fallbackTheme = findThemeById(fallbackId);
           if (state.activeThemeId === themeId) {
             applyTheme(fallbackTheme, {}, state.highContrast);
             return {
@@ -204,7 +203,7 @@ export const usePreferenceStore = create<PreferenceState>()(
     {
       name: 'zerodock-preferences',
       storage: createJSONStorage(() => idbStorage),
-      version: 1,
+      version: 2,
       migrate: (persistedState: unknown, version: number) => {
         if (version === 0 && persistedState && typeof persistedState === 'object') {
           const state = persistedState as Record<string, unknown>;
@@ -214,11 +213,21 @@ export const usePreferenceStore = create<PreferenceState>()(
             state.activeThemeId = 'geist-mono';
           }
         }
+        // Move installations still using the former out-of-the-box theme to Warm Paper,
+        // while preserving every explicit theme choice.
+        if (version < 2 && persistedState && typeof persistedState === 'object') {
+          const state = persistedState as Record<string, unknown>;
+          if (state.activeThemeId === 'linear-dark') {
+            state.activeThemeId = 'warm-paper';
+            state.theme = 'light';
+            state.themeOverrides = {};
+          }
+        }
         return persistedState as PreferenceState;
       },
       onRehydrateStorage: () => (state) => {
         if (state) {
-          const active = findThemeById(state.activeThemeId || 'linear-dark', state.customThemes || {});
+          const active = findThemeById(state.activeThemeId || 'warm-paper', state.customThemes || {});
           applyTheme(active, state.themeOverrides || {}, state.highContrast || false);
         }
       },

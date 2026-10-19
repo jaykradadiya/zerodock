@@ -29,7 +29,7 @@ export function ToolPage({
   return (
     <div
       id="main-content"
-      className={cn('zd-tool-fill relative h-full flex-1 min-h-0', padding, maxWidth, className)}
+      className={cn('zd-tool-fill relative h-full flex-1 min-h-0 scroll-mt-14', padding, maxWidth, className)}
     >
       {children}
     </div>
@@ -122,11 +122,12 @@ export function ToolHeader({
 interface ToolWorkspaceProps {
   children: React.ReactNode;
   toolbar?: React.ReactNode;
+  footer?: React.ReactNode;
   className?: string;
   compact?: boolean;
 }
 
-export function ToolWorkspace({ children, toolbar, className = '', compact = false }: ToolWorkspaceProps) {
+export function ToolWorkspace({ children, toolbar, footer, className = '', compact = false }: ToolWorkspaceProps) {
   const zenMode = useUIStore((s) => s.zenMode);
   const isCompact = compact || zenMode;
 
@@ -140,6 +141,7 @@ export function ToolWorkspace({ children, toolbar, className = '', compact = fal
     >
       {toolbar}
       <div className="zd-tool-fill overflow-hidden">{children}</div>
+      {footer}
     </div>
   );
 }
